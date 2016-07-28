@@ -1262,7 +1262,7 @@ int _mmcamcorder_video_average_framerate(MMHandleType handle);
 void __mmcamcorder_force_stop(mmf_camcorder_t *hcamcorder);
 void _mmcamcorder_sound_focus_cb(int id, mm_sound_focus_type_e focus_type,
 	mm_sound_focus_state_e focus_state, const char *reason_for_change,
-	const char *additional_info, void *user_data);
+	int option, const char *additional_info, void *user_data);
 void _mmcamcorder_sound_focus_watch_cb(int id, mm_sound_focus_type_e focus_type, mm_sound_focus_state_e focus_state,
 	const char *reason_for_change, const char *additional_info, void *user_data);
 void _mmcamcorder_sound_signal_callback(mm_sound_signal_name_t signal, int value, void *user_data);

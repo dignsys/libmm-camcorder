@@ -3286,7 +3286,7 @@ DROP_MESSAGE:
 
 void _mmcamcorder_sound_focus_cb(int id, mm_sound_focus_type_e focus_type,
 	mm_sound_focus_state_e focus_state, const char *reason_for_change,
-	const char *additional_info, void *user_data)
+	int option, const char *additional_info, void *user_data)
 {
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(user_data);
 	int current_state = MM_CAMCORDER_STATE_NONE;
