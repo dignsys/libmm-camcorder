@@ -535,11 +535,6 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 		}
 	}
 
-	ret = _mmcamcorder_resource_create_resource_set(&hcamcorder->resource_manager);
-	if (ret != MM_ERROR_NONE) {
-		goto _ERR_DEFAULT_VALUE_INIT;
-	}
-
 	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 #endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 
@@ -1155,6 +1150,11 @@ int _mmcamcorder_realize(MMHandleType handle)
 			_mmcam_dbg_warn("NULL dpm_policy");
 		}
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
+		ret = _mmcamcorder_resource_create_resource_set(&hcamcorder->resource_manager);
+		if (ret != MM_ERROR_NONE) {
+			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
+		}
+
 		hcamcorder->resource_manager.acquire_count = 0;
 
 		/* prepare resource manager for camera */

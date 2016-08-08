@@ -257,8 +257,9 @@ static void __mmcamcorder_resource_release_cb(mrp_res_context_t *cx, const mrp_r
 int _mmcamcorder_resource_create_resource_set(MMCamcorderResourceManager *resource_manager)
 {
 	if (resource_manager->rset) {
-		_mmcam_dbg_err(" - resource set was already created");
-		return MM_ERROR_RESOURCE_INVALID_STATE;
+		_mmcam_dbg_warn(" - resource set was already created, delete it");
+		mrp_res_delete_resource_set(resource_manager->rset);
+		resource_manager->rset = NULL;
 	}
 
 	resource_manager->rset = mrp_res_create_resource_set(resource_manager->context,
