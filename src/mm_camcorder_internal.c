@@ -223,18 +223,10 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 		goto _ERR_DEFAULT_VALUE_INIT;
 	}
 
-	/* get DPM context for camera/microphone restriction */
-	hcamcorder->dpm_context = dpm_context_create();
-	if (hcamcorder->dpm_context) {
-		hcamcorder->dpm_policy = dpm_context_acquire_restriction_policy(hcamcorder->dpm_context);
-		if (hcamcorder->dpm_policy == NULL) {
-			_mmcam_dbg_err("dpm_context_acquire_restriction_policy failed");
-			dpm_context_destroy(hcamcorder->dpm_context);
-			hcamcorder->dpm_context = NULL;
-		}
-	}
+	/* get DPM handle for camera/microphone restriction */
+	hcamcorder->dpm_handle = dpm_manager_create();
 
-	_mmcam_dbg_warn("DPM context %p, policy %p", hcamcorder->dpm_context, hcamcorder->dpm_policy);
+	_mmcam_dbg_warn("DPM handle %p", hcamcorder->dpm_handle);
 
 	if (info->videodev_type != MM_VIDEO_DEVICE_NONE) {
 		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
@@ -412,8 +404,8 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 		}
 
 		/* add DPM camera policy changed callback */
-		if (hcamcorder->dpm_context) {
-			ret = dpm_context_add_policy_changed_cb(hcamcorder->dpm_context, "camera",
+		if (hcamcorder->dpm_handle) {
+			ret = dpm_add_policy_changed_cb(hcamcorder->dpm_handle, "camera",
 				_mmcamcorder_dpm_camera_policy_changed_cb, (void *)hcamcorder, &hcamcorder->dpm_camera_cb_id);
 			if (ret != DPM_ERROR_NONE) {
 				_mmcam_dbg_err("add DPM changed cb failed, keep going...");
@@ -566,25 +558,20 @@ _ERR_DEFAULT_VALUE_INIT:
 	}
 
 	/* release DPM related handle */
-	if (hcamcorder->dpm_context) {
-		_mmcam_dbg_log("release DPM context %p, camera changed cb id %d",
-			hcamcorder->dpm_context, hcamcorder->dpm_camera_cb_id);
+	if (hcamcorder->dpm_handle) {
+		_mmcam_dbg_log("release DPM handle %p, camera changed cb id %d",
+			hcamcorder->dpm_handle, hcamcorder->dpm_camera_cb_id);
 
 		/* remove camera policy changed callback */
 		if (hcamcorder->dpm_camera_cb_id > 0) {
-			dpm_context_remove_policy_changed_cb(hcamcorder->dpm_context, hcamcorder->dpm_camera_cb_id);
+			dpm_remove_policy_changed_cb(hcamcorder->dpm_handle, hcamcorder->dpm_camera_cb_id);
 			hcamcorder->dpm_camera_cb_id = 0;
 		} else {
 			_mmcam_dbg_warn("invalid dpm camera cb id %d", hcamcorder->dpm_camera_cb_id);
 		}
 
-		if (hcamcorder->dpm_policy) {
-			dpm_context_release_restriction_policy(hcamcorder->dpm_context, hcamcorder->dpm_policy);
-			hcamcorder->dpm_policy = NULL;
-		}
-
-		dpm_context_destroy(hcamcorder->dpm_context);
-		hcamcorder->dpm_context = NULL;
+		dpm_manager_destroy(hcamcorder->dpm_handle);
+		hcamcorder->dpm_handle = NULL;
 	}
 
 	/* Remove attributes */
@@ -790,26 +777,21 @@ int _mmcamcorder_destroy(MMHandleType handle)
 		hcamcorder->software_version = NULL;
 	}
 
-	/* release DPM related handle */
-	if (hcamcorder->dpm_context) {
-		_mmcam_dbg_log("release DPM context %p, camera changed cb id %d",
-			hcamcorder->dpm_context, hcamcorder->dpm_camera_cb_id);
+	/* release DPM handle */
+	if (hcamcorder->dpm_handle) {
+		_mmcam_dbg_log("release DPM handle %p, camera changed cb id %d",
+			hcamcorder->dpm_handle, hcamcorder->dpm_camera_cb_id);
 
 		/* remove camera policy changed callback */
 		if (hcamcorder->dpm_camera_cb_id > 0) {
-			dpm_context_remove_policy_changed_cb(hcamcorder->dpm_context, hcamcorder->dpm_camera_cb_id);
+			dpm_remove_policy_changed_cb(hcamcorder->dpm_handle, hcamcorder->dpm_camera_cb_id);
 			hcamcorder->dpm_camera_cb_id = 0;
 		} else {
 			_mmcam_dbg_warn("invalid dpm camera cb id %d", hcamcorder->dpm_camera_cb_id);
 		}
 
-		if (hcamcorder->dpm_policy) {
-			dpm_context_release_restriction_policy(hcamcorder->dpm_context, hcamcorder->dpm_policy);
-			hcamcorder->dpm_policy = NULL;
-		}
-
-		dpm_context_destroy(hcamcorder->dpm_context);
-		hcamcorder->dpm_context = NULL;
+		dpm_manager_destroy(hcamcorder->dpm_handle);
+		hcamcorder->dpm_handle = NULL;
 	}
 
 	/* join task thread */
@@ -1135,8 +1117,8 @@ int _mmcamcorder_realize(MMHandleType handle)
 		int dpm_camera_state = DPM_ALLOWED;
 
 		/* check camera policy from DPM */
-		if (hcamcorder->dpm_policy) {
-			if (dpm_restriction_get_camera_state(hcamcorder->dpm_policy, &dpm_camera_state) == DPM_ERROR_NONE) {
+		if (hcamcorder->dpm_handle) {
+			if (dpm_restriction_get_camera_state(hcamcorder->dpm_handle, &dpm_camera_state) == DPM_ERROR_NONE) {
 				_mmcam_dbg_log("DPM camera state %d", dpm_camera_state);
 				if (dpm_camera_state == DPM_DISALLOWED) {
 					_mmcam_dbg_err("CAMERA DISALLOWED by DPM");
@@ -1147,7 +1129,7 @@ int _mmcamcorder_realize(MMHandleType handle)
 				_mmcam_dbg_err("get DPM camera state failed, keep going...");
 			}
 		} else {
-			_mmcam_dbg_warn("NULL dpm_policy");
+			_mmcam_dbg_warn("NULL dpm_handle");
 		}
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
 		ret = _mmcamcorder_resource_create_resource_set(&hcamcorder->resource_manager);
@@ -1804,8 +1786,8 @@ int _mmcamcorder_record(MMHandleType handle)
 	hcamcorder->error_code = MM_ERROR_NONE;
 
 	/* check mic policy from DPM */
-	if (hcamcorder->dpm_policy) {
-		if (dpm_restriction_get_microphone_state(hcamcorder->dpm_policy, &dpm_mic_state) == DPM_ERROR_NONE) {
+	if (hcamcorder->dpm_handle) {
+		if (dpm_restriction_get_microphone_state(hcamcorder->dpm_handle, &dpm_mic_state) == DPM_ERROR_NONE) {
 			_mmcam_dbg_log("DPM mic state %d", dpm_mic_state);
 			if (dpm_mic_state == DPM_DISALLOWED) {
 				_mmcam_dbg_err("MIC DISALLOWED by DPM");
@@ -1816,7 +1798,7 @@ int _mmcamcorder_record(MMHandleType handle)
 			_mmcam_dbg_err("get DPM mic state failed, keep going...");
 		}
 	} else {
-		_mmcam_dbg_warn("NULL dpm_policy");
+		_mmcam_dbg_warn("NULL dpm_handle");
 	}
 
 	ret = hcamcorder->command((MMHandleType)hcamcorder, _MMCamcorder_CMD_RECORD);

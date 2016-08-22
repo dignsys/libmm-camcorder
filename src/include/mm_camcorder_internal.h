@@ -774,8 +774,7 @@ typedef struct mmf_camcorder {
 	_MMCamcorderGDbusCbInfo gdbus_info_solo_sound;          /**< Informations for the gbus cb of solo sound play */
 
 	/* DPM(device policy manager) */
-	dpm_context_h dpm_context;                              /**< DPM context handle */
-	dpm_restriction_policy_h dpm_policy;                    /**< DPM restriction policy handle */
+	device_policy_manager_h dpm_handle;                     /**< DPM handle */
 	int dpm_camera_cb_id;                                   /**< DPM camera policy changed callback id */
 
 	/* Storage */
