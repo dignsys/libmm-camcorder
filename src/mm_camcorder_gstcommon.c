@@ -669,10 +669,55 @@ pipeline_creation_error:
 }
 
 
+void _mmcamcorder_set_encoder_bitrate(MMCamcorderEncoderType type, int codec, int bitrate, GstElement *element)
+{
+	int set_value = 0;
+
+	if (!element) {
+		_mmcam_dbg_warn("NULL element, will be applied later - type %d, bitrate %d", type, bitrate);
+		return;
+	}
+
+	if (bitrate <= 0) {
+		_mmcam_dbg_warn("[type %d, codec %d] too small bitrate[%d], use default",
+			type, codec, bitrate);
+		return;
+	}
+
+	if (type == MM_CAMCORDER_ENCODER_TYPE_AUDIO) {
+		/* audio encoder bitrate setting */
+		switch (codec) {
+		case MM_AUDIO_CODEC_AMR:
+			set_value = __mmcamcorder_get_amrnb_bitrate_mode(bitrate);
+			_mmcam_dbg_log("Set AMR encoder mode [%d]", set_value);
+			MMCAMCORDER_G_OBJECT_SET(element, "band-mode", set_value);
+			break;
+		case MM_AUDIO_CODEC_MP3:
+			set_value = bitrate / 1000;
+			_mmcam_dbg_log("Set MP3 encoder bitrate [%d] kbps", set_value);
+			MMCAMCORDER_G_OBJECT_SET(element, "bitrate", set_value);
+			break;
+		case MM_AUDIO_CODEC_AAC:
+			_mmcam_dbg_log("Set AAC encoder bitrate [%d] bps", bitrate);
+			MMCAMCORDER_G_OBJECT_SET(element, "bitrate", bitrate);
+			break;
+		default:
+			_mmcam_dbg_warn("Not AMR, MP3 and AAC codec, need to add code for audio bitrate");
+			break;
+		}
+	} else {
+		/* video encoder bitrate setting */
+		_mmcam_dbg_log("Set video encoder bitrate %d", bitrate);
+		MMCAMCORDER_G_OBJECT_SET(element, "bitrate", bitrate);
+	}
+
+	return;
+}
+
+
 int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebinProfile profile)
 {
 	int err = MM_ERROR_NONE;
-	int result = 0;
 	int channel = 0;
 	int audio_enc = 0;
 	int v_bitrate = 0;
@@ -1021,39 +1066,22 @@ int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebin
 	}
 
 	if (profile == MM_CAMCORDER_ENCBIN_PROFILE_VIDEO) {
-		/* video encoder attribute setting */
-		if (v_bitrate > 0) {
-			MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_VENC].gst, "bitrate", v_bitrate);
-		} else {
-			_mmcam_dbg_warn("video bitrate is too small[%d], so skip setting. Use DEFAULT value.", v_bitrate);
-		}
-
+		/* property setting in ini */
 		_mmcamcorder_conf_set_value_element_property(sc->encode_element[_MMCAMCORDER_ENCSINK_VENC].gst, VideoencElement);
+
+		/* bitrate setting */
+		_mmcamcorder_set_encoder_bitrate(MM_CAMCORDER_ENCODER_TYPE_VIDEO, 0,
+			v_bitrate, sc->encode_element[_MMCAMCORDER_ENCSINK_VENC].gst);
 	}
 
 	if (sc->audio_disable == FALSE &&
 	    profile != MM_CAMCORDER_ENCBIN_PROFILE_IMAGE) {
-		/* audio encoder attribute setting */
-		if (a_bitrate > 0) {
-			switch (audio_enc) {
-			case MM_AUDIO_CODEC_AMR:
-				result = __mmcamcorder_get_amrnb_bitrate_mode(a_bitrate);
-				_mmcam_dbg_log("Set AMR encoder[%s] mode [%d]", gst_element_aenc_name, result);
-				MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_AENC].gst, "band-mode", result);
-				break;
-			case MM_AUDIO_CODEC_AAC:
-				_mmcam_dbg_log("Set AAC encoder[%s] bitrate [%d]", gst_element_aenc_name, a_bitrate);
-				MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_AENC].gst, "bitrate", a_bitrate);
-				break;
-			default:
-				_mmcam_dbg_log("Audio codec is not AMR or AAC... you need to implement setting function for audio encoder bit-rate");
-				break;
-			}
-		} else {
-			_mmcam_dbg_warn("Setting bitrate is too small, so skip setting. Use DEFAULT value.");
-		}
-
+		/* property setting in ini */
 		_mmcamcorder_conf_set_value_element_property(sc->encode_element[_MMCAMCORDER_ENCSINK_AENC].gst, AudioencElement);
+
+		/* bitrate setting */
+		_mmcamcorder_set_encoder_bitrate(MM_CAMCORDER_ENCODER_TYPE_AUDIO, audio_enc,
+			a_bitrate, sc->encode_element[_MMCAMCORDER_ENCSINK_AENC].gst);
 	}
 
 	_mmcam_dbg_log("Element creation complete");

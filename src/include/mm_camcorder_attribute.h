@@ -344,6 +344,7 @@ bool _mmcamcorder_commit_capture_sound_enable(MMHandleType handle, int attr_idx,
 bool _mmcamcorder_commit_audio_volume(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 bool _mmcamcorder_commit_audio_input_route(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 bool _mmcamcorder_commit_audio_disable(MMHandleType handle, int attr_idx, const mmf_value_t *value);
+bool _mmcamcorder_commit_camera_format(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 bool _mmcamcorder_commit_camera_fps(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 bool _mmcamcorder_commit_camera_recording_motion_rate(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 bool _mmcamcorder_commit_camera_width(MMHandleType handle, int attr_idx, const mmf_value_t *value);
@@ -363,6 +364,8 @@ bool _mmcamcorder_commit_camera_video_stabilization(MMHandleType handle, int att
 bool _mmcamcorder_commit_camera_rotate(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 bool _mmcamcorder_commit_image_encoder_quality(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 bool _mmcamcorder_commit_target_filename(MMHandleType handle, int attr_idx, const mmf_value_t *value);
+bool _mmcamcorder_commit_encoder_bitrate(MMHandleType handle, int attr_idx, const mmf_value_t *value);
+bool _mmcamcorder_commit_recording_max_limit(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 bool _mmcamcorder_commit_filter(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 bool _mmcamcorder_commit_filter_scene_mode(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 bool _mmcamcorder_commit_filter_flip(MMHandleType handle, int attr_idx, const mmf_value_t *value);
@@ -383,6 +386,7 @@ bool _mmcamcorder_commit_encoded_preview_bitrate(MMHandleType handle, int attr_i
 bool _mmcamcorder_commit_encoded_preview_gop_interval(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 bool _mmcamcorder_commit_pid_for_sound_focus(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 bool _mmcamcorder_commit_sound_stream_info(MMHandleType handle, int attr_idx, const mmf_value_t *value);
+bool _mmcamcorder_commit_tag(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 
 
 /**

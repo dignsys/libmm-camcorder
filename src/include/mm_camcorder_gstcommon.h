@@ -68,6 +68,14 @@ typedef enum _MMCamcorderEncodebinProfile {
 	MM_CAMCORDER_ENCBIN_PROFILE_NUM
 } MMCamcorderEncodebinProfile;
 
+/**
+* Encoder Type
+*/
+typedef enum _MMCamcorderEncoderType {
+	MM_CAMCORDER_ENCODER_TYPE_AUDIO,
+	MM_CAMCORDER_ENCODER_TYPE_VIDEO
+} MMCamcorderEncoderType;
+
 /*=======================================================================================
 | STRUCTURE DEFINITIONS									|
 ========================================================================================*/
@@ -171,6 +179,7 @@ bool _mmcamcorder_set_camera_resolution(MMHandleType handle, int width, int heig
 bool _mmcamcorder_set_encoded_preview_bitrate(MMHandleType handle, int bitrate);
 bool _mmcamcorder_set_encoded_preview_gop_interval(MMHandleType handle, int gop);
 bool _mmcamcorder_set_sound_stream_info(GstElement *element, char *stream_type, int stream_index);
+void _mmcamcorder_set_encoder_bitrate(MMCamcorderEncoderType type, int codec, int bitrate, GstElement *element);
 #ifdef __cplusplus
 }
 #endif
