@@ -4522,41 +4522,64 @@ bool _mmcamcorder_commit_pid_for_sound_focus(MMHandleType handle, int attr_idx, 
 
 	new_pid = value->value.i_val;
 
-	_mmcam_dbg_log("Commit : pid %d, current sound_focus_register %d, sound_focus_id %d",
-		new_pid, hcamcorder->sound_focus_register, hcamcorder->sound_focus_id);
+	_mmcam_dbg_log("Commit : pid %d, current focus id %d, subscribe id %u",
+		new_pid, hcamcorder->sound_focus_id, hcamcorder->sound_focus_subscribe_id);
 
-	/* unregister sound focus before set new one */
-	if (hcamcorder->sound_focus_register && hcamcorder->sound_focus_id > 0) {
-		if (MM_ERROR_NONE != mm_sound_unregister_focus(hcamcorder->sound_focus_id)) {
-			_mmcam_dbg_err("mm_sound_unregister_focus[id %d] failed", hcamcorder->sound_focus_id);
-		} else {
-			_mmcam_dbg_log("mm_sound_unregister_focus[id %d] done", hcamcorder->sound_focus_id);
-		}
-	} else {
-		_mmcam_dbg_log("no need to unregister sound focus");
+	/* unregister sound focus and unsubscribe sound signal before set new one */
+	if (hcamcorder->sound_focus_id > 0) {
+		mm_sound_unregister_focus(hcamcorder->sound_focus_id);
+		_mmcam_dbg_log("unregister sound focus done");
+		hcamcorder->sound_focus_id = 0;
 	}
 
-	/* register sound focus */
-	if (hcamcorder->sound_focus_register) {
-		hcamcorder->sound_focus_id = 0;
-		if (MM_ERROR_NONE != mm_sound_focus_get_id(&hcamcorder->sound_focus_id)) {
-			_mmcam_dbg_err("mm_sound_focus_get_uniq failed");
-			hcamcorder->error_code = MM_ERROR_POLICY_BLOCKED;
-			return FALSE;
-		}
+	if (hcamcorder->sound_focus_subscribe_id > 0) {
+		mm_sound_unsubscribe_signal(hcamcorder->sound_focus_subscribe_id);
+		_mmcam_dbg_log("unsubscribe sound signal done");
+		hcamcorder->sound_focus_subscribe_id = 0;
+	}
 
-		ret = mm_sound_register_focus_for_session(hcamcorder->sound_focus_id,
-			new_pid, "media", _mmcamcorder_sound_focus_cb, hcamcorder);
-		if (ret != MM_ERROR_NONE) {
-			_mmcam_dbg_err("mm_sound_register_focus failed");
-			hcamcorder->error_code = MM_ERROR_POLICY_BLOCKED;
-			return FALSE;
-		}
+	ret = _mm_session_util_read_information(new_pid, &hcamcorder->session_type, &hcamcorder->session_flags);
+	if (ret == MM_ERROR_NONE) {
+		if (hcamcorder->session_type == MM_SESSION_TYPE_REPLACED_BY_STREAM) {
+			hcamcorder->sound_focus_register = FALSE;
+			_mmcam_dbg_warn("no need to use sound focus internally");
+		} else {
+			ret = mm_sound_focus_get_id(&hcamcorder->sound_focus_id);
+			if (ret != MM_ERROR_NONE) {
+				_mmcam_dbg_err("mm_sound_focus_get_id failed");
+				hcamcorder->error_code = MM_ERROR_POLICY_BLOCKED;
+				return FALSE;
+			}
 
-		_mmcam_dbg_log("mm_sound_register_focus done - id %d, session type %d, flags 0x%x",
-			hcamcorder->sound_focus_id, hcamcorder->session_type, hcamcorder->session_flags);
+			ret = mm_sound_register_focus_for_session(hcamcorder->sound_focus_id,
+				new_pid, "media", _mmcamcorder_sound_focus_cb, hcamcorder);
+			if (ret != MM_ERROR_NONE) {
+				_mmcam_dbg_err("mm_sound_register_focus_for_session failed 0x%x", ret);
+				hcamcorder->sound_focus_id = 0;
+				hcamcorder->error_code = MM_ERROR_POLICY_BLOCKED;
+				return FALSE;
+			}
+
+			hcamcorder->sound_focus_register = TRUE;
+
+			_mmcam_dbg_log("mm_sound_register_focus_for_session done - id %d, session type %d, flags 0x%x",
+				hcamcorder->sound_focus_id, hcamcorder->session_type, hcamcorder->session_flags);
+		}
 	} else {
-		_mmcam_dbg_log("no need to register sound focus");
+		hcamcorder->session_type = 0;
+		hcamcorder->session_flags = 0;
+		hcamcorder->sound_focus_register = TRUE;
+
+		_mmcam_dbg_warn("read session info failed. sound focus watch cb will be set.");
+
+		ret = mm_sound_subscribe_signal_for_daemon(MM_SOUND_SIGNAL_RELEASE_INTERNAL_FOCUS,
+			new_pid, &hcamcorder->sound_focus_subscribe_id,
+			(mm_sound_signal_callback)_mmcamcorder_sound_signal_callback, (void*)hcamcorder);
+		if (ret != MM_ERROR_NONE) {
+			_mmcam_dbg_err("subscribe sound signal failed [0x%x]", ret);
+			hcamcorder->error_code = MM_ERROR_POLICY_BLOCKED;
+			return FALSE;
+		}
 	}
 
 	return TRUE;

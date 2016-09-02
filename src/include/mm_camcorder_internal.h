@@ -34,6 +34,8 @@
 #include <mm_attrs.h>
 #include <mm_attrs_private.h>
 #include <mm_message.h>
+#include <mm_session.h>
+#include <mm_session_private.h>
 #include <mm_sound_focus.h>
 #include <vconf.h>
 #include <gst/video/video-format.h>
@@ -743,6 +745,7 @@ typedef struct mmf_camcorder {
 	int sound_focus_register;                               /**< Use sound focus internally */
 	int sound_focus_id;                                     /**< id for sound focus */
 	int sound_focus_watch_id;                               /**< id for sound focus watch */
+	unsigned int sound_focus_subscribe_id;                  /**< subscribe id for sound focus signal */
 	int interrupt_code;                                     /**< Interrupt code */
 	int acquired_focus;                                     /**< Current acquired focus */
 	int session_type;                                       /**< Session type */
@@ -1260,8 +1263,9 @@ void __mmcamcorder_force_stop(mmf_camcorder_t *hcamcorder);
 void _mmcamcorder_sound_focus_cb(int id, mm_sound_focus_type_e focus_type,
 	mm_sound_focus_state_e focus_state, const char *reason_for_change,
 	const char *additional_info, void *user_data);
-void _mmcamcorder_sound_focus_watch_cb(mm_sound_focus_type_e focus_type, mm_sound_focus_state_e focus_state,
+void _mmcamcorder_sound_focus_watch_cb(int id, mm_sound_focus_type_e focus_type, mm_sound_focus_state_e focus_state,
 	const char *reason_for_change, const char *additional_info, void *user_data);
+void _mmcamcorder_sound_signal_callback(mm_sound_signal_name_t signal, int value, void *user_data);
 
 /* device policy manager */
 void _mmcamcorder_dpm_camera_policy_changed_cb(const char *name, const char *value, void *user_data);
