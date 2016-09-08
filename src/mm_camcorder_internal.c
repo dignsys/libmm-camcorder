@@ -65,6 +65,22 @@
 #define __MMCAMCORDER_RESOURCE_WAIT_TIME        5
 #endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 
+#define __MMCAMCORDER_DBUS_OBJECT               "/org/tizen/MMCamcorder"
+#define __MMCAMCORDER_DBUS_INTERFACE_CAMERA     "org.tizen.MMCamcorder.Camera"
+#define __MMCAMCORDER_DBUS_INTERFACE_RECORDER   "org.tizen.MMCamcorder.Recorder"
+#define __MMCAMCORDER_DBUS_SIGNAL_STATE_CHANGED "DeviceStateChanged"
+
+enum {
+	CAMERA_DEVICE_STATE_NULL,       /**< Not opened */
+	CAMERA_DEVICE_STATE_OPENED,     /**< Opened */
+	CAMERA_DEVICE_STATE_WORKING     /**< Now previewing or capturing or is being used for video recording */
+};
+
+enum {
+	RECORDER_DEVICE_STATE_NULL,     /**< Not recording */
+	RECORDER_DEVICE_STATE_RECORDING /**< Now recording */
+};
+
 
 /*---------------------------------------------------------------------------------------
 |    LOCAL FUNCTION PROTOTYPES:								|
@@ -161,6 +177,14 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 	g_cond_init(&hcamcorder->task_thread_cond);
 	hcamcorder->task_thread_state = _MMCAMCORDER_SOUND_STATE_NONE;
 
+	if (info->videodev_type != MM_VIDEO_DEVICE_NONE) {
+		/* init for gdbus */
+		g_mutex_init(&hcamcorder->gdbus_info_sound.sync_mutex);
+		g_cond_init(&hcamcorder->gdbus_info_sound.sync_cond);
+		g_mutex_init(&hcamcorder->gdbus_info_solo_sound.sync_mutex);
+		g_cond_init(&hcamcorder->gdbus_info_solo_sound.sync_cond);
+	}
+
 	/* create task thread */
 	hcamcorder->task_thread = g_thread_try_new("MMCAM_TASK_THREAD",
 		(GThreadFunc)_mmcamcorder_util_task_thread_func, (gpointer)hcamcorder, NULL);
@@ -192,6 +216,14 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 	if (!(hcamcorder->attributes)) {
 		_mmcam_dbg_err("_mmcamcorder_create::alloc attribute error.");
 
+		ret = MM_ERROR_CAMCORDER_RESOURCE_CREATION;
+		goto _ERR_DEFAULT_VALUE_INIT;
+	}
+
+	/* init for gdbus */
+	hcamcorder->gdbus_conn = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
+	if (hcamcorder->gdbus_conn == NULL) {
+		_mmcam_dbg_err("failed to get gdbus");
 		ret = MM_ERROR_CAMCORDER_RESOURCE_CREATION;
 		goto _ERR_DEFAULT_VALUE_INIT;
 	}
@@ -563,6 +595,13 @@ _ERR_DEFAULT_VALUE_INIT:
 	g_cond_clear(&hcamcorder->snd_info.open_cond);
 	g_mutex_clear(&hcamcorder->restart_preview_lock);
 
+	if (info->videodev_type != MM_VIDEO_DEVICE_NONE) {
+		g_mutex_clear(&hcamcorder->gdbus_info_sound.sync_mutex);
+		g_cond_clear(&hcamcorder->gdbus_info_sound.sync_cond);
+		g_mutex_clear(&hcamcorder->gdbus_info_solo_sound.sync_mutex);
+		g_cond_clear(&hcamcorder->gdbus_info_solo_sound.sync_cond);
+	}
+
 	if (hcamcorder->conf_ctrl)
 		_mmcamcorder_conf_release_info((MMHandleType)hcamcorder, &hcamcorder->conf_ctrl);
 
@@ -795,6 +834,16 @@ int _mmcamcorder_destroy(MMHandleType handle)
 	g_mutex_clear(&hcamcorder->restart_preview_lock);
 	g_mutex_clear(&hcamcorder->task_thread_lock);
 	g_cond_clear(&hcamcorder->task_thread_cond);
+
+	if (hcamcorder->type != MM_CAMCORDER_MODE_AUDIO) {
+		g_mutex_clear(&hcamcorder->gdbus_info_sound.sync_mutex);
+		g_cond_clear(&hcamcorder->gdbus_info_sound.sync_cond);
+		g_mutex_clear(&hcamcorder->gdbus_info_solo_sound.sync_mutex);
+		g_cond_clear(&hcamcorder->gdbus_info_solo_sound.sync_cond);
+	}
+
+	g_object_unref(hcamcorder->gdbus_conn);
+	hcamcorder->gdbus_conn = NULL;
 
 	/* Release handle */
 	memset(hcamcorder, 0x00, sizeof(mmf_camcorder_t));
@@ -1199,6 +1248,13 @@ int _mmcamcorder_realize(MMHandleType handle)
 
 	_mmcamcorder_set_state(handle, state_TO);
 
+	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE) {
+		int value = hcamcorder->device_type << 16 | CAMERA_DEVICE_STATE_OPENED;
+
+		_mmcamcorder_emit_dbus_signal(hcamcorder->gdbus_conn, __MMCAMCORDER_DBUS_OBJECT,
+			__MMCAMCORDER_DBUS_INTERFACE_CAMERA, __MMCAMCORDER_DBUS_SIGNAL_STATE_CHANGED, value);
+	}
+
 	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);
 
 	return MM_ERROR_NONE;
@@ -1381,6 +1437,13 @@ int _mmcamcorder_unrealize(MMHandleType handle)
 		hcamcorder->acquired_focus = 0;
 	}
 
+	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE) {
+		int value = hcamcorder->device_type << 16 | CAMERA_DEVICE_STATE_NULL;
+
+		_mmcamcorder_emit_dbus_signal(hcamcorder->gdbus_conn, __MMCAMCORDER_DBUS_OBJECT,
+			__MMCAMCORDER_DBUS_INTERFACE_CAMERA, __MMCAMCORDER_DBUS_SIGNAL_STATE_CHANGED, value);
+	}
+
 	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);
 
 	_mmcamcorder_set_state(handle, state_TO);
@@ -1435,22 +1498,8 @@ int _mmcamcorder_start(MMHandleType handle)
 	hcamcorder->error_code = MM_ERROR_NONE;
 
 	/* set attributes related sensor */
-	if (hcamcorder->type != MM_CAMCORDER_MODE_AUDIO) {
-		/* init for gdbus */
-		hcamcorder->gdbus_conn = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
-		if (hcamcorder->gdbus_conn == NULL) {
-			_mmcam_dbg_err("failed to get gdbus");
-			ret = MM_ERROR_CAMCORDER_RESOURCE_CREATION;
-			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
-		}
-
-		g_mutex_init(&hcamcorder->gdbus_info_sound.sync_mutex);
-		g_cond_init(&hcamcorder->gdbus_info_sound.sync_cond);
-		g_mutex_init(&hcamcorder->gdbus_info_solo_sound.sync_mutex);
-		g_cond_init(&hcamcorder->gdbus_info_solo_sound.sync_cond);
-
+	if (hcamcorder->type != MM_CAMCORDER_MODE_AUDIO)
 		_mmcamcorder_set_attribute_to_camsensor(handle);
-	}
 
 	ret = hcamcorder->command((MMHandleType)hcamcorder, _MMCamcorder_CMD_PREVIEW_START);
 	if (ret != MM_ERROR_NONE) {
@@ -1463,6 +1512,13 @@ int _mmcamcorder_start(MMHandleType handle)
 	}
 
 	_mmcamcorder_set_state(handle, state_TO);
+
+	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE) {
+		int value = hcamcorder->device_type << 16 | CAMERA_DEVICE_STATE_WORKING;
+
+		_mmcamcorder_emit_dbus_signal(hcamcorder->gdbus_conn, __MMCAMCORDER_DBUS_OBJECT,
+			__MMCAMCORDER_DBUS_INTERFACE_CAMERA, __MMCAMCORDER_DBUS_SIGNAL_STATE_CHANGED, value);
+	}
 
 	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);
 
@@ -1533,6 +1589,9 @@ int _mmcamcorder_stop(MMHandleType handle)
 	_mmcamcorder_set_state(handle, state_TO);
 
 	if (hcamcorder->type != MM_CAMCORDER_MODE_AUDIO) {
+		int value = hcamcorder->device_type << 16 | CAMERA_DEVICE_STATE_OPENED;
+
+		/* unsubscribe remained unsubscribed signal */
 		g_mutex_lock(&hcamcorder->gdbus_info_sound.sync_mutex);
 		if (hcamcorder->gdbus_info_sound.subscribe_id > 0) {
 			_mmcam_dbg_warn("subscribe_id[%u] is remained. remove it.", hcamcorder->gdbus_info_sound.subscribe_id);
@@ -1547,13 +1606,9 @@ int _mmcamcorder_stop(MMHandleType handle)
 		}
 		g_mutex_unlock(&hcamcorder->gdbus_info_solo_sound.sync_mutex);
 
-		g_object_unref(hcamcorder->gdbus_conn);
-		hcamcorder->gdbus_conn = NULL;
-
-		g_mutex_clear(&hcamcorder->gdbus_info_sound.sync_mutex);
-		g_cond_clear(&hcamcorder->gdbus_info_sound.sync_cond);
-		g_mutex_clear(&hcamcorder->gdbus_info_solo_sound.sync_mutex);
-		g_cond_clear(&hcamcorder->gdbus_info_solo_sound.sync_cond);
+		/* emit signal for camera device state */
+		_mmcamcorder_emit_dbus_signal(hcamcorder->gdbus_conn, __MMCAMCORDER_DBUS_OBJECT,
+			__MMCAMCORDER_DBUS_INTERFACE_CAMERA, __MMCAMCORDER_DBUS_SIGNAL_STATE_CHANGED, value);
 	}
 
 	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);

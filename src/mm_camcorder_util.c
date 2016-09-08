@@ -2232,3 +2232,25 @@ static gboolean _mmcamcorder_convert_NV12_to_I420(unsigned char *src, guint widt
 
 	return TRUE;
 }
+
+
+void _mmcamcorder_emit_dbus_signal(GDBusConnection *conn, const char *object_name,
+	const char *interface_name, const char *signal_name, int value)
+{
+	if (!conn || !object_name || !interface_name || !signal_name) {
+		_mmcam_dbg_err("NULL pointer %p %p %p %p",
+			conn, object_name, interface_name, signal_name);
+	}
+
+	if (!g_dbus_connection_emit_signal(conn, NULL,
+		object_name, interface_name, signal_name,
+		g_variant_new("(i)", value), NULL)) {
+		_mmcam_dbg_warn("failed to emit signal");
+	} else {
+		_mmcam_dbg_log("emit signal done - value 0x%.8x", value);
+		g_dbus_connection_flush(conn, NULL, NULL, NULL);
+		_mmcam_dbg_log("signal flush done");
+	}
+
+	return;
+}
