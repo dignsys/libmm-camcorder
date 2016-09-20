@@ -71,14 +71,20 @@
 #define __MMCAMCORDER_DBUS_SIGNAL_STATE_CHANGED "DeviceStateChanged"
 
 enum {
-	CAMERA_DEVICE_STATE_NULL,       /**< Not opened */
+	CAMERA_DEVICE_STATE_NULL = 0,   /**< Not opened */
 	CAMERA_DEVICE_STATE_OPENED,     /**< Opened */
 	CAMERA_DEVICE_STATE_WORKING     /**< Now previewing or capturing or is being used for video recording */
 };
 
 enum {
-	RECORDER_DEVICE_STATE_NULL,     /**< Not recording */
-	RECORDER_DEVICE_STATE_RECORDING /**< Now recording */
+	RECORDER_TYPE_AUDIO = 0,        /**< Audio only recorder */
+	RECORDER_TYPE_VIDEO             /**< Video recorder (audio is optional) */
+};
+
+enum {
+	RECORDER_DEVICE_STATE_NULL = 0,     /**< No recorder is working */
+	RECORDER_DEVICE_STATE_RECORDING,    /**< Now recording */
+	RECORDER_DEVICE_STATE_PAUSED        /**< All recordings are paused */
 };
 
 
@@ -642,7 +648,6 @@ int _mmcamcorder_destroy(MMHandleType handle)
 {
 	int ret = MM_ERROR_NONE;
 	int state = MM_CAMCORDER_STATE_NONE;
-	int state_FROM = MM_CAMCORDER_STATE_NULL;
 #ifdef _MMCAMCORDER_RM_SUPPORT
 	int iret = RM_OK;
 #endif /* _MMCAMCORDER_RM_SUPPORT */
@@ -666,7 +671,7 @@ int _mmcamcorder_destroy(MMHandleType handle)
 	}
 
 	state = _mmcamcorder_get_state(handle);
-	if (state != state_FROM) {
+	if (state != MM_CAMCORDER_STATE_NULL) {
 		_mmcam_dbg_err("Wrong state(%d)", state);
 		ret = MM_ERROR_CAMCORDER_INVALID_STATE;
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
@@ -869,8 +874,6 @@ int _mmcamcorder_realize(MMHandleType handle)
 	int ret = MM_ERROR_NONE;
 	int ret_sound = MM_ERROR_NONE;
 	int state = MM_CAMCORDER_STATE_NONE;
-	int state_FROM = MM_CAMCORDER_STATE_NULL;
-	int state_TO = MM_CAMCORDER_STATE_READY;
 	int display_surface_type = MM_DISPLAY_SURFACE_OVERLAY;
 	int pid_for_sound_focus = 0;
 	double motion_rate = _MMCAMCORDER_DEFAULT_RECORDING_MOTION_RATE;
@@ -899,7 +902,7 @@ int _mmcamcorder_realize(MMHandleType handle)
 	}
 
 	state = _mmcamcorder_get_state(handle);
-	if (state != state_FROM) {
+	if (state != MM_CAMCORDER_STATE_NULL) {
 		_mmcam_dbg_err("Wrong state(%d)", state);
 		ret = MM_ERROR_CAMCORDER_INVALID_STATE;
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
@@ -1246,7 +1249,7 @@ int _mmcamcorder_realize(MMHandleType handle)
 		goto _ERR_CAMCORDER_CMD;
 	}
 
-	_mmcamcorder_set_state(handle, state_TO);
+	_mmcamcorder_set_state(handle, MM_CAMCORDER_STATE_READY);
 
 	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE) {
 		int value = hcamcorder->device_type << 16 | CAMERA_DEVICE_STATE_OPENED;
@@ -1320,8 +1323,6 @@ int _mmcamcorder_unrealize(MMHandleType handle)
 {
 	int ret = MM_ERROR_NONE;
 	int state = MM_CAMCORDER_STATE_NONE;
-	int state_FROM = MM_CAMCORDER_STATE_READY;
-	int state_TO = MM_CAMCORDER_STATE_NULL;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 
@@ -1340,7 +1341,7 @@ int _mmcamcorder_unrealize(MMHandleType handle)
 	}
 
 	state = _mmcamcorder_get_state(handle);
-	if (state != state_FROM) {
+	if (state != MM_CAMCORDER_STATE_READY) {
 		_mmcam_dbg_err("Wrong state(%d)", state);
 		ret = MM_ERROR_CAMCORDER_INVALID_STATE;
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
@@ -1446,7 +1447,7 @@ int _mmcamcorder_unrealize(MMHandleType handle)
 
 	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);
 
-	_mmcamcorder_set_state(handle, state_TO);
+	_mmcamcorder_set_state(handle, MM_CAMCORDER_STATE_NULL);
 
 	return MM_ERROR_NONE;
 
@@ -1464,8 +1465,6 @@ int _mmcamcorder_start(MMHandleType handle)
 {
 	int ret = MM_ERROR_NONE;
 	int state = MM_CAMCORDER_STATE_NONE;
-	int state_FROM = MM_CAMCORDER_STATE_READY;
-	int state_TO = MM_CAMCORDER_STATE_PREPARE;
 
 	_MMCamcorderSubContext *sc = NULL;
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
@@ -1488,7 +1487,7 @@ int _mmcamcorder_start(MMHandleType handle)
 	}
 
 	state = _mmcamcorder_get_state(handle);
-	if (state != state_FROM) {
+	if (state != MM_CAMCORDER_STATE_READY) {
 		_mmcam_dbg_err("Wrong state(%d)", state);
 		ret = MM_ERROR_CAMCORDER_INVALID_STATE;
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
@@ -1511,7 +1510,7 @@ int _mmcamcorder_start(MMHandleType handle)
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 	}
 
-	_mmcamcorder_set_state(handle, state_TO);
+	_mmcamcorder_set_state(handle, MM_CAMCORDER_STATE_PREPARE);
 
 	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE) {
 		int value = hcamcorder->device_type << 16 | CAMERA_DEVICE_STATE_WORKING;
@@ -1556,8 +1555,6 @@ int _mmcamcorder_stop(MMHandleType handle)
 {
 	int ret = MM_ERROR_NONE;
 	int state = MM_CAMCORDER_STATE_NONE;
-	int state_FROM = MM_CAMCORDER_STATE_PREPARE;
-	int state_TO = MM_CAMCORDER_STATE_READY;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 
@@ -1576,7 +1573,7 @@ int _mmcamcorder_stop(MMHandleType handle)
 	}
 
 	state = _mmcamcorder_get_state(handle);
-	if (state != state_FROM) {
+	if (state != MM_CAMCORDER_STATE_PREPARE) {
 		_mmcam_dbg_err("Wrong state(%d)", state);
 		ret = MM_ERROR_CAMCORDER_INVALID_STATE;
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
@@ -1586,7 +1583,7 @@ int _mmcamcorder_stop(MMHandleType handle)
 	if (ret != MM_ERROR_NONE)
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 
-	_mmcamcorder_set_state(handle, state_TO);
+	_mmcamcorder_set_state(handle, MM_CAMCORDER_STATE_READY);
 
 	if (hcamcorder->type != MM_CAMCORDER_MODE_AUDIO) {
 		int value = hcamcorder->device_type << 16 | CAMERA_DEVICE_STATE_OPENED;
@@ -1633,7 +1630,6 @@ int _mmcamcorder_capture_start(MMHandleType handle)
 	int state_FROM_0 = MM_CAMCORDER_STATE_PREPARE;
 	int state_FROM_1 = MM_CAMCORDER_STATE_RECORDING;
 	int state_FROM_2 = MM_CAMCORDER_STATE_PAUSED;
-	int state_TO = MM_CAMCORDER_STATE_CAPTURING;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 
@@ -1687,7 +1683,7 @@ int _mmcamcorder_capture_start(MMHandleType handle)
 
 	/* Do not change state when recording snapshot capture */
 	if (state == state_FROM_0)
-		_mmcamcorder_set_state(handle, state_TO);
+		_mmcamcorder_set_state(handle, MM_CAMCORDER_STATE_CAPTURING);
 
 	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);
 
@@ -1716,8 +1712,6 @@ int _mmcamcorder_capture_stop(MMHandleType handle)
 {
 	int ret = MM_ERROR_NONE;
 	int state = MM_CAMCORDER_STATE_NONE;
-	int state_FROM = MM_CAMCORDER_STATE_CAPTURING;
-	int state_TO = MM_CAMCORDER_STATE_PREPARE;
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 
 	_mmcam_dbg_log("");
@@ -1735,7 +1729,7 @@ int _mmcamcorder_capture_stop(MMHandleType handle)
 	}
 
 	state = _mmcamcorder_get_state(handle);
-	if (state != state_FROM) {
+	if (state != MM_CAMCORDER_STATE_CAPTURING) {
 		_mmcam_dbg_err("Wrong state(%d)", state);
 		ret = MM_ERROR_CAMCORDER_INVALID_STATE;
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
@@ -1745,7 +1739,7 @@ int _mmcamcorder_capture_stop(MMHandleType handle)
 	if (ret != MM_ERROR_NONE)
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 
-	_mmcamcorder_set_state(handle, state_TO);
+	_mmcamcorder_set_state(handle, MM_CAMCORDER_STATE_PREPARE);
 
 	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);
 
@@ -1766,10 +1760,8 @@ int _mmcamcorder_record(MMHandleType handle)
 {
 	int ret = MM_ERROR_NONE;
 	int state = MM_CAMCORDER_STATE_NONE;
-	int state_FROM1 = MM_CAMCORDER_STATE_PREPARE;
-	int state_FROM2 = MM_CAMCORDER_STATE_PAUSED;
-	int state_TO = MM_CAMCORDER_STATE_RECORDING;
 	int dpm_mic_state = DPM_ALLOWED;
+	int device_state = 0;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 
@@ -1788,7 +1780,7 @@ int _mmcamcorder_record(MMHandleType handle)
 	}
 
 	state = _mmcamcorder_get_state(handle);
-	if (state != state_FROM1 && state != state_FROM2) {
+	if (state != MM_CAMCORDER_STATE_PREPARE && state != MM_CAMCORDER_STATE_PAUSED) {
 		_mmcam_dbg_err("Wrong state(%d)", state);
 		ret = MM_ERROR_CAMCORDER_INVALID_STATE;
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
@@ -1823,7 +1815,20 @@ int _mmcamcorder_record(MMHandleType handle)
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 	}
 
-	_mmcamcorder_set_state(handle, state_TO);
+	_mmcamcorder_set_state(handle, MM_CAMCORDER_STATE_RECORDING);
+
+	if (state == MM_CAMCORDER_STATE_PREPARE)
+		device_state = RECORDER_DEVICE_STATE_NULL << 8 | RECORDER_DEVICE_STATE_RECORDING;
+	else
+		device_state = RECORDER_DEVICE_STATE_PAUSED << 8 | RECORDER_DEVICE_STATE_RECORDING;
+
+	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE)
+		device_state = RECORDER_TYPE_VIDEO << 16 | device_state;
+	else
+		device_state = RECORDER_TYPE_AUDIO << 16 | device_state;
+
+	_mmcamcorder_emit_dbus_signal(hcamcorder->gdbus_conn, __MMCAMCORDER_DBUS_OBJECT,
+		__MMCAMCORDER_DBUS_INTERFACE_RECORDER, __MMCAMCORDER_DBUS_SIGNAL_STATE_CHANGED, device_state);
 
 	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);
 
@@ -1852,8 +1857,7 @@ int _mmcamcorder_pause(MMHandleType handle)
 {
 	int ret = MM_ERROR_NONE;
 	int state = MM_CAMCORDER_STATE_NONE;
-	int state_FROM = MM_CAMCORDER_STATE_RECORDING;
-	int state_TO = MM_CAMCORDER_STATE_PAUSED;
+	int device_state = 0;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 
@@ -1872,7 +1876,7 @@ int _mmcamcorder_pause(MMHandleType handle)
 	}
 
 	state = _mmcamcorder_get_state(handle);
-	if (state != state_FROM) {
+	if (state != MM_CAMCORDER_STATE_RECORDING) {
 		_mmcam_dbg_err("Wrong state(%d)", state);
 		ret = MM_ERROR_CAMCORDER_INVALID_STATE;
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
@@ -1882,7 +1886,17 @@ int _mmcamcorder_pause(MMHandleType handle)
 	if (ret != MM_ERROR_NONE)
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 
-	_mmcamcorder_set_state(handle, state_TO);
+	_mmcamcorder_set_state(handle, MM_CAMCORDER_STATE_PAUSED);
+
+	device_state = RECORDER_DEVICE_STATE_RECORDING << 8 | RECORDER_DEVICE_STATE_PAUSED;
+
+	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE)
+		device_state = RECORDER_TYPE_VIDEO << 16 | device_state;
+	else
+		device_state = RECORDER_TYPE_AUDIO << 16 | device_state;
+
+	_mmcamcorder_emit_dbus_signal(hcamcorder->gdbus_conn, __MMCAMCORDER_DBUS_OBJECT,
+		__MMCAMCORDER_DBUS_INTERFACE_RECORDER, __MMCAMCORDER_DBUS_SIGNAL_STATE_CHANGED, device_state);
 
 	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);
 
@@ -1903,9 +1917,7 @@ int _mmcamcorder_commit(MMHandleType handle)
 {
 	int ret = MM_ERROR_NONE;
 	int state = MM_CAMCORDER_STATE_NONE;
-	int state_FROM1 = MM_CAMCORDER_STATE_RECORDING;
-	int state_FROM2 = MM_CAMCORDER_STATE_PAUSED;
-	int state_TO = MM_CAMCORDER_STATE_PREPARE;
+	int device_state = 0;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 
@@ -1924,7 +1936,7 @@ int _mmcamcorder_commit(MMHandleType handle)
 	}
 
 	state = _mmcamcorder_get_state(handle);
-	if (state != state_FROM1 && state != state_FROM2) {
+	if (state != MM_CAMCORDER_STATE_RECORDING && state != MM_CAMCORDER_STATE_PAUSED) {
 		_mmcam_dbg_err("Wrong state(%d)", state);
 		ret = MM_ERROR_CAMCORDER_INVALID_STATE;
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
@@ -1937,9 +1949,22 @@ int _mmcamcorder_commit(MMHandleType handle)
 	if (ret != MM_ERROR_NONE)
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 
-	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);
+	_mmcamcorder_set_state(handle, MM_CAMCORDER_STATE_PREPARE);
 
-	_mmcamcorder_set_state(handle, state_TO);
+	if (state == MM_CAMCORDER_STATE_RECORDING)
+		device_state = RECORDER_DEVICE_STATE_RECORDING << 8 | RECORDER_DEVICE_STATE_NULL;
+	else
+		device_state = RECORDER_DEVICE_STATE_PAUSED << 8 | RECORDER_DEVICE_STATE_NULL;
+
+	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE)
+		device_state = RECORDER_TYPE_VIDEO << 16 | device_state;
+	else
+		device_state = RECORDER_TYPE_AUDIO << 16 | device_state;
+
+	_mmcamcorder_emit_dbus_signal(hcamcorder->gdbus_conn, __MMCAMCORDER_DBUS_OBJECT,
+		__MMCAMCORDER_DBUS_INTERFACE_RECORDER, __MMCAMCORDER_DBUS_SIGNAL_STATE_CHANGED, device_state);
+
+	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);
 
 	return MM_ERROR_NONE;
 
@@ -1958,9 +1983,7 @@ int _mmcamcorder_cancel(MMHandleType handle)
 {
 	int ret = MM_ERROR_NONE;
 	int state = MM_CAMCORDER_STATE_NONE;
-	int state_FROM1 = MM_CAMCORDER_STATE_RECORDING;
-	int state_FROM2 = MM_CAMCORDER_STATE_PAUSED;
-	int state_TO = MM_CAMCORDER_STATE_PREPARE;
+	int device_state = 0;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 
@@ -1979,7 +2002,7 @@ int _mmcamcorder_cancel(MMHandleType handle)
 	}
 
 	state = _mmcamcorder_get_state(handle);
-	if (state != state_FROM1 && state != state_FROM2) {
+	if (state != MM_CAMCORDER_STATE_RECORDING && state != MM_CAMCORDER_STATE_PAUSED) {
 		_mmcam_dbg_err("Wrong state(%d)", state);
 		ret = MM_ERROR_CAMCORDER_INVALID_STATE;
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
@@ -1989,7 +2012,20 @@ int _mmcamcorder_cancel(MMHandleType handle)
 	if (ret != MM_ERROR_NONE)
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 
-	_mmcamcorder_set_state(handle, state_TO);
+	_mmcamcorder_set_state(handle, MM_CAMCORDER_STATE_PREPARE);
+
+	if (state == MM_CAMCORDER_STATE_RECORDING)
+		device_state = RECORDER_DEVICE_STATE_RECORDING << 8 | RECORDER_DEVICE_STATE_NULL;
+	else
+		device_state = RECORDER_DEVICE_STATE_PAUSED << 8 | RECORDER_DEVICE_STATE_NULL;
+
+	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE)
+		device_state = RECORDER_TYPE_VIDEO << 16 | device_state;
+	else
+		device_state = RECORDER_TYPE_AUDIO << 16 | device_state;
+
+	_mmcamcorder_emit_dbus_signal(hcamcorder->gdbus_conn, __MMCAMCORDER_DBUS_OBJECT,
+		__MMCAMCORDER_DBUS_INTERFACE_RECORDER, __MMCAMCORDER_DBUS_SIGNAL_STATE_CHANGED, device_state);
 
 	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);
 
