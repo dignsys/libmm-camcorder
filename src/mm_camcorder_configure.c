@@ -1671,11 +1671,11 @@ int _mmcamcorder_conf_get_value_int(MMHandleType handle, camera_conf* configure_
 	}
 
 	if (_mmcamcorder_conf_get_default_value_int(handle, configure_info->type, category, name, value)) {
-		/* _mmcam_dbg_log("Get[%s] int[%d]", name, *value); */
+		 /*_mmcam_dbg_log("Get[%s] int[%d]", name, *value);*/
 		return TRUE;
 	}
 
-	_mmcam_dbg_warn("Faild to get int... check it...Category[%d],Name[%s]", category, name);
+	_mmcam_dbg_err("Faild to get int... check it...Category[%d],Name[%s]", category, name);
 
 	return FALSE;
 }
@@ -1787,7 +1787,7 @@ _mmcamcorder_conf_get_value_int_pair_array(camera_conf* configure_info, int cate
 
 	*value = NULL;
 
-	_mmcam_dbg_warn("Faild to get int pair array... check it...Category[%d],Name[%s]", category, name);
+	/*_mmcam_dbg_warn("Faild to get int pair array... check it...Category[%d],Name[%s]", category, name);*/
 
 	return FALSE;
 }
@@ -1812,18 +1812,18 @@ int _mmcamcorder_conf_get_value_string(MMHandleType handle, camera_conf* configu
 
 			if (!strcmp(((type_string*)(info->detail_info[i]))->name , name)) {
 				*value = ((type_string*)(info->detail_info[i]))->value;
-				/* _mmcam_dbg_log( "Get[%s] string[%s]", name, *value ); */
+				 /*_mmcam_dbg_log( "Get[%s] string[%s]", name, *value ? *value : "NULL" );*/
 				return TRUE;
 			}
 		}
 	}
 
 	if (_mmcamcorder_conf_get_default_value_string(handle, configure_info->type, category, name, value)) {
-		/* _mmcam_dbg_log("Get[%s]string[%s]", name, *value); */
+		/*_mmcam_dbg_log( "Get[%s] string[%s]", name, *value ? *value : "NULL" );*/
 		return TRUE;
 	}
 
-	_mmcam_dbg_warn("Faild to get string... check it...Category[%d],Name[%s]", category, name);
+	_mmcam_dbg_err("Faild to get string... check it...Category[%d],Name[%s]", category, name);
 
 	return FALSE;
 }
@@ -2054,7 +2054,7 @@ _mmcamcorder_conf_get_default_value_int(MMHandleType handle, int type, int categ
 		}
 	}
 
-	_mmcam_dbg_warn("Failed to get default int... check it... Type[%d],Category[%d],Name[%s]", type, category, name);
+	_mmcam_dbg_err("Failed to get default int... check it... Type[%d],Category[%d],Name[%s]", type, category, name);
 
 	return FALSE;
 }
@@ -2084,7 +2084,7 @@ int _mmcamcorder_conf_get_default_value_string(MMHandleType handle, int type, in
 		for (i = 0 ; i < count_value ; i++) {
 			if (!strcmp(hcamcorder->conf_main_info_table[category][i].name, name)) {
 				*value = hcamcorder->conf_main_info_table[category][i].value_string;
-				_mmcam_dbg_log("Get[%s] default string[%s]", name, *value);
+				/*_mmcam_dbg_log("Get[%s] default string[%s]", name, *value ? *value : "NULL");*/
 				return TRUE;
 			}
 		}
@@ -2092,7 +2092,7 @@ int _mmcamcorder_conf_get_default_value_string(MMHandleType handle, int type, in
 		for (i = 0 ; i < count_value ; i++) {
 			if (!strcmp(hcamcorder->conf_ctrl_info_table[category][i].name, name)) {
 				*value = hcamcorder->conf_ctrl_info_table[category][i].value_string;
-				_mmcam_dbg_log("Get[%s] default string[%s]", name, *value);
+				/*_mmcam_dbg_log("Get[%s] default string[%s]", name, *value ? *value : "NULL");*/
 				return TRUE;
 			}
 		}

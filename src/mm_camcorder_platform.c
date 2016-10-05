@@ -940,6 +940,9 @@ int __mmcamcorder_set_info_to_attr(MMHandleType handle, _MMCamcorderInfoConverti
 			info[i].conv_type);
 		*/
 
+		if (ret != MM_ERROR_NONE)
+			break;
+
 		if (info[i].type == CONFIGURE_TYPE_MAIN) {
 			conf_info = hcamcorder->conf_main;
 			/*_mmcam_dbg_log("MAIN configure [%s]", info[i].keyword);*/
@@ -955,7 +958,7 @@ int __mmcamcorder_set_info_to_attr(MMHandleType handle, _MMCamcorderInfoConverti
 
 			if (!_mmcamcorder_conf_get_value_int(handle, conf_info, info[i].category, info[i].keyword, &ivalue)) {
 				ret = MM_ERROR_CAMCORDER_CREATE_CONFIGURE;
-				break;	/* skip to set */
+				break; /* skip to set */
 			}
 
 			ret = mm_attrs_set_int(MMF_CAMCORDER_ATTRS(hcamcorder), info[i].attr_idx, ivalue);
@@ -968,10 +971,8 @@ int __mmcamcorder_set_info_to_attr(MMHandleType handle, _MMCamcorderInfoConverti
 			int idefault = 0;
 			type_int_array *tarray = NULL;
 
-			if (!_mmcamcorder_conf_get_value_int_array(conf_info, info[i].category, info[i].keyword, &tarray)) {
-				ret = MM_ERROR_CAMCORDER_CREATE_CONFIGURE;
-				break;	/* skip to set */
-			}
+			if (!_mmcamcorder_conf_get_value_int_array(conf_info, info[i].category, info[i].keyword, &tarray))
+				break; /* skip to set, but not error */
 
 			if (tarray) {
 				idefault = tarray->default_value;
@@ -1006,10 +1007,8 @@ int __mmcamcorder_set_info_to_attr(MMHandleType handle, _MMCamcorderInfoConverti
 		{
 			type_int_range *irange = NULL;
 
-			if (!_mmcamcorder_conf_get_value_int_range(conf_info, info[i].category, info[i].keyword, &irange)) {
-				ret = MM_ERROR_CAMCORDER_CREATE_CONFIGURE;
-				break;	/* skip to set */
-			}
+			if (!_mmcamcorder_conf_get_value_int_range(conf_info, info[i].category, info[i].keyword, &irange))
+				break; /* skip to set, but not error */
 
 			if (irange) {
 				/* _mmcam_dbg_log("INT Range. m:%d, s:%d, min=%d, max=%d", info[i].main_key, info[i].sub_key1, irange->min, irange->max); */
@@ -1029,7 +1028,7 @@ int __mmcamcorder_set_info_to_attr(MMHandleType handle, _MMCamcorderInfoConverti
 
 			if (!_mmcamcorder_conf_get_value_string(handle, conf_info, info[i].category, info[i].keyword, &cString)) {
 				ret = MM_ERROR_CAMCORDER_CREATE_CONFIGURE;
-				break;	/* skip to set */
+				break; /* skip to set */
 			}
 
 			/* _mmcam_dbg_log("String. m:%d, s:%d, cString=%s", info[i].main_key, info[i].sub_key1, cString); */
@@ -1048,10 +1047,8 @@ int __mmcamcorder_set_info_to_attr(MMHandleType handle, _MMCamcorderInfoConverti
 
 			/*_mmcam_dbg_log("INT PAIR Array. type:%d, attr_idx:%d, attr_idx_pair:%d", info[i].type, info[i].attr_idx, info[i].attr_idx_pair);*/
 
-			if (!_mmcamcorder_conf_get_value_int_pair_array(conf_info, info[i].category, info[i].keyword, &pair_array)) {
-				ret = MM_ERROR_CAMCORDER_CREATE_CONFIGURE;
-				break;	/* skip to set */
-			}
+			if (!_mmcamcorder_conf_get_value_int_pair_array(conf_info, info[i].category, info[i].keyword, &pair_array))
+				break; /* skip to set, but not error */
 
 			if (pair_array && pair_array->count > 0) {
 				/* "mmf_attrs_set_valid_type" initializes spec value in attribute, so allocated memory could be missed */
