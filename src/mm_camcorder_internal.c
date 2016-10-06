@@ -882,7 +882,7 @@ int _mmcamcorder_realize(MMHandleType handle)
 	char *socket_path = NULL;
 	int socket_path_len;
 #ifdef _MMCAMCORDER_RM_SUPPORT
-		int iret = RM_OK;
+	int iret = RM_OK;
 #endif /* _MMCAMCORDER_RM_SUPPORT */
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
@@ -980,7 +980,7 @@ int _mmcamcorder_realize(MMHandleType handle)
 #ifdef _MMCAMCORDER_RM_SUPPORT
 	int preview_format = MM_PIXEL_FORMAT_NV12;
 	int qret = RM_OK;
-	int qret_avail = RM_OK;
+	int qret_avail = 0; /* 0: not available, 1: available */
 	rm_consumer_info rci;
 	int app_pid = 0;
 	int resource_count = 0;
@@ -1022,7 +1022,7 @@ int _mmcamcorder_realize(MMHandleType handle)
 
 		qret = rm_query(hcamcorder->rm_handle, RM_QUERY_ALLOCATION, &(hcamcorder->request_resources), &qret_avail);
 
-		if (qret != RM_OK || qret_avail != RM_OK) {
+		if (qret != RM_OK || qret_avail != 1) {
 			_mmcam_dbg_log("Resource manager main device request fail");
 
 			resource_count = 0;
