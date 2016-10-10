@@ -2240,6 +2240,7 @@ void _mmcamcorder_emit_dbus_signal(GDBusConnection *conn, const char *object_nam
 	if (!conn || !object_name || !interface_name || !signal_name) {
 		_mmcam_dbg_err("NULL pointer %p %p %p %p",
 			conn, object_name, interface_name, signal_name);
+		return;
 	}
 
 	if (!g_dbus_connection_emit_signal(conn, NULL,

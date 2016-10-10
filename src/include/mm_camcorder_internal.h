@@ -1270,8 +1270,9 @@ void _mmcamcorder_sound_signal_callback(mm_sound_signal_name_t signal, int value
 /* device policy manager */
 void _mmcamcorder_dpm_camera_policy_changed_cb(const char *name, const char *value, void *user_data);
 
-/* For hand over the server's caps information to client */
-int _mmcamcorder_get_video_caps(MMHandleType handle, char **caps);
+/* Emit dbus signal */
+void _mmcamcorder_emit_signal(MMHandleType handle, const char *object_name,
+	const char *interface_name, const char *signal_name, int value);
 
 #ifdef __cplusplus
 }

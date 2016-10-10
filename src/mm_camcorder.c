@@ -421,7 +421,12 @@ int mm_camcorder_stop_focusing(MMHandleType camcorder)
 	return error;
 }
 
-int mm_camcorder_get_video_caps(MMHandleType handle, char **caps)
+void mm_camcorder_emit_signal(MMHandleType camcorder, const char *object_name,
+	const char *interface_name, const char *signal_name, int value)
 {
-	return _mmcamcorder_get_video_caps(handle, caps);
+	mmf_return_if_fail((void *)camcorder);
+
+	_mmcamcorder_emit_signal(camcorder,object_name, interface_name, signal_name, value);
+
+	return;
 }
