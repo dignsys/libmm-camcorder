@@ -166,6 +166,7 @@ int _mmcamcorder_vframe_stablize(MMHandleType handle);
 gboolean _mmcamcorder_get_device_info(MMHandleType handle);
 int _mmcamcorder_get_eos_message(MMHandleType handle);
 void _mmcamcorder_remove_element_handle(MMHandleType handle, void *element, int first_elem, int last_elem);
+int _mmcamcorder_check_codec_fileformat_compatibility(const char *codec_type, int codec, int file_format);
 int _mmcamcorder_check_audiocodec_fileformat_compatibility(MMHandleType handle);
 int _mmcamcorder_check_videocodec_fileformat_compatibility(MMHandleType handle);
 bool _mmcamcorder_set_display_rotation(MMHandleType handle, int display_rotate, int videosink_index);

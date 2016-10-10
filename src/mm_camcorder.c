@@ -430,3 +430,10 @@ void mm_camcorder_emit_signal(MMHandleType camcorder, const char *object_name,
 
 	return;
 }
+
+int mm_camcorder_check_codec_fileformat_compatibility(const char *codec_type, int codec, int file_format)
+{
+	mmf_return_val_if_fail(codec_type, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);
+
+	return _mmcamcorder_check_codec_fileformat_compatibility(codec_type, codec, file_format);
+}

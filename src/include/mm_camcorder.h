@@ -3282,6 +3282,9 @@ int mm_camcorder_stop_focusing(MMHandleType camcorder);
 void mm_camcorder_emit_signal(MMHandleType camcorder, const char *object_name,
 	const char *interface_name, const char *signal_name, int value);
 
+/* check compatability between codec and file format */
+int mm_camcorder_check_codec_fileformat_compatibility(const char *codec_type, int codec, int file_format);
+
 /**
 	@}
  */

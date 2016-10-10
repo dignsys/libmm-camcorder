@@ -159,7 +159,7 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 	/* init for sound thread */
 	g_mutex_init(&hcamcorder->task_thread_lock);
 	g_cond_init(&hcamcorder->task_thread_cond);
-	hcamcorder->task_thread_state = _MMCAMCORDER_SOUND_STATE_NONE;
+	hcamcorder->task_thread_state = _MMCAMCORDER_TASK_THREAD_STATE_NONE;
 
 	if (info->videodev_type != MM_VIDEO_DEVICE_NONE) {
 		/* init for gdbus */

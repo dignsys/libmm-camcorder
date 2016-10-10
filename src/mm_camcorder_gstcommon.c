@@ -2023,6 +2023,43 @@ void _mmcamcorder_remove_element_handle(MMHandleType handle, void *element, int 
 }
 
 
+int _mmcamcorder_check_codec_fileformat_compatibility(const char *codec_type, int codec, int file_format)
+{
+	mmf_return_val_if_fail(codec_type, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);
+
+	/* Check compatibility between codec and file format */
+	if (!strcmp(codec_type, MMCAM_AUDIO_ENCODER)) {
+		if (codec > MM_AUDIO_CODEC_INVALID && codec < MM_AUDIO_CODEC_NUM &&
+			file_format > MM_FILE_FORMAT_INVALID && file_format < MM_FILE_FORMAT_NUM) {
+			if (audiocodec_fileformat_compatibility_table[codec][file_format] == 0) {
+				_mmcam_dbg_err("Audio codec[%d] and file format[%d] compatibility FAILED.", codec, file_format);
+				return MM_ERROR_CAMCORDER_ENCODER_WRONG_TYPE;
+			}
+
+			_mmcam_dbg_log("Audio codec[%d] and file format[%d] compatibility SUCCESS.", codec, file_format);
+		} else {
+			_mmcam_dbg_err("Audio codec[%d] or file format[%d] is INVALID.", codec, file_format);
+			return MM_ERROR_CAMCORDER_ENCODER_WRONG_TYPE;
+		}
+	} else if (!strcmp(codec_type, MMCAM_VIDEO_ENCODER)) {
+		if (codec > MM_VIDEO_CODEC_INVALID && codec < MM_VIDEO_CODEC_NUM &&
+			file_format > MM_FILE_FORMAT_INVALID && file_format < MM_FILE_FORMAT_NUM) {
+			if (videocodec_fileformat_compatibility_table[ codec][file_format] == 0) {
+				_mmcam_dbg_err("Video codec[%d] and file format[%d] compatibility FAILED.", codec, file_format);
+				return MM_ERROR_CAMCORDER_ENCODER_WRONG_TYPE;
+			}
+
+			_mmcam_dbg_log("Video codec[%d] and file format[%d] compatibility SUCCESS.", codec, file_format);
+		} else {
+			_mmcam_dbg_err("Video codec[%d] or file format[%d] is INVALID.", codec, file_format);
+			return MM_ERROR_CAMCORDER_ENCODER_WRONG_TYPE;
+		}
+	}
+
+	return MM_ERROR_NONE;
+}
+
+
 int _mmcamcorder_check_audiocodec_fileformat_compatibility(MMHandleType handle)
 {
 	int err = MM_ERROR_NONE;
@@ -2032,9 +2069,9 @@ int _mmcamcorder_check_audiocodec_fileformat_compatibility(MMHandleType handle)
 	char *err_name = NULL;
 
 	err = mm_camcorder_get_attributes(handle, &err_name,
-									  MMCAM_AUDIO_ENCODER, &audio_codec,
-									  MMCAM_FILE_FORMAT, &file_format,
-									  NULL);
+		MMCAM_AUDIO_ENCODER, &audio_codec,
+		MMCAM_FILE_FORMAT, &file_format,
+		NULL);
 	if (err != MM_ERROR_NONE) {
 		_mmcam_dbg_warn("Get attrs fail. (%s:%x)", err_name, err);
 		SAFE_FREE(err_name);
@@ -2042,23 +2079,9 @@ int _mmcamcorder_check_audiocodec_fileformat_compatibility(MMHandleType handle)
 	}
 
 	/* Check compatibility between audio codec and file format */
-	if (audio_codec > MM_AUDIO_CODEC_INVALID && audio_codec < MM_AUDIO_CODEC_NUM &&
-	    file_format > MM_FILE_FORMAT_INVALID && file_format < MM_FILE_FORMAT_NUM) {
-		if (audiocodec_fileformat_compatibility_table[audio_codec][file_format] == 0) {
-			_mmcam_dbg_err("Audio codec[%d] and file format[%d] compatibility FAILED.",
-				audio_codec, file_format);
-			return MM_ERROR_CAMCORDER_ENCODER_WRONG_TYPE;
-		}
+	err = _mmcamcorder_check_codec_fileformat_compatibility(MMCAM_AUDIO_ENCODER, audio_codec, file_format);
 
-		_mmcam_dbg_log("Audio codec[%d] and file format[%d] compatibility SUCCESS.",
-			audio_codec, file_format);
-	} else {
-		_mmcam_dbg_err("Audio codec[%d] or file format[%d] is INVALID.",
-			audio_codec, file_format);
-		return MM_ERROR_CAMCORDER_ENCODER_WRONG_TYPE;
-	}
-
-	return MM_ERROR_NONE;
+	return err;
 }
 
 
@@ -2080,24 +2103,10 @@ int _mmcamcorder_check_videocodec_fileformat_compatibility(MMHandleType handle)
 		return err;
 	}
 
-	/* Check compatibility between audio codec and file format */
-	if (video_codec > MM_VIDEO_CODEC_INVALID && video_codec < MM_VIDEO_CODEC_NUM &&
-	    file_format > MM_FILE_FORMAT_INVALID && file_format < MM_FILE_FORMAT_NUM) {
-		if (videocodec_fileformat_compatibility_table[video_codec][file_format] == 0) {
-			_mmcam_dbg_err("Video codec[%d] and file format[%d] compatibility FAILED.",
-				video_codec, file_format);
-			return MM_ERROR_CAMCORDER_ENCODER_WRONG_TYPE;
-		}
+	/* Check compatibility between video codec and file format */
+	err = _mmcamcorder_check_codec_fileformat_compatibility(MMCAM_VIDEO_ENCODER, video_codec, file_format);
 
-		_mmcam_dbg_log("Video codec[%d] and file format[%d] compatibility SUCCESS.",
-			video_codec, file_format);
-	} else {
-		_mmcam_dbg_err("Video codec[%d] or file format[%d] is INVALID.",
-			video_codec, file_format);
-		return MM_ERROR_CAMCORDER_ENCODER_WRONG_TYPE;
-	}
-
-	return MM_ERROR_NONE;
+	return err;
 }
 
 
