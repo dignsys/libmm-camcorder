@@ -371,7 +371,7 @@ int _mmcamcorder_create_preview_elements(MMHandleType handle)
 
 		g_object_set(G_OBJECT(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst), "socket-path", socket_path, NULL);
 	} else {
-		if (hcamcorder->use_videoconvert && !strcmp(videosink_name, "waylandsink")) {
+		if (hcamcorder->use_videoconvert && (!strcmp(videosink_name, "waylandsink") || !strcmp(videosink_name, "directvideosink"))) {
 			/* get video convert name */
 			_mmcamcorder_conf_get_value_element_name(sc->VideoconvertElement, &videoconvert_name);
 
@@ -1379,7 +1379,7 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 			_mmcam_dbg_err("display handle(eavs object) is NULL");
 			return MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
 		}
-	} else if (!strcmp(videosink_name, "waylandsink")) {
+	} else if (!strcmp(videosink_name, "waylandsink") || !strcmp(videosink_name, "directvideosink")) {
 		MMCamWaylandInfo *wl_info = (MMCamWaylandInfo *)overlay;
 
 		if (wl_info) {
@@ -1387,12 +1387,6 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 			gst_video_overlay_set_wl_window_wl_surface_id(GST_VIDEO_OVERLAY(vsink), (guintptr)wl_info->global_surface_id);
 			gst_video_overlay_set_render_rectangle(GST_VIDEO_OVERLAY(vsink),
 				wl_info->window_x, wl_info->window_y, wl_info->window_width, wl_info->window_height);
-#ifdef _MMCAMCORDER_RM_SUPPORT
-			if (hcamcorder->request_resources.category_id[0] == RM_CATEGORY_VIDEO_DECODER_SUB)
-				display_scaler = 1;
-
-			MMCAMCORDER_G_OBJECT_SET(vsink, "device-scaler", display_scaler);
-#endif /* _MMCAMCORDER_RM_SUPPORT */
 		} else {
 			_mmcam_dbg_warn("Handle is NULL. skip setting.");
 		}
@@ -1405,7 +1399,7 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 
 	/* Set attribute */
 	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "waylandsink") ||
-	    !strcmp(videosink_name, "evaspixmapsink")) {
+	    !strcmp(videosink_name, "evaspixmapsink") || !strcmp(videosink_name, "directvideosink")) {
 		/* set rotation */
 		MMCAMCORDER_G_OBJECT_SET(vsink, "rotate", rotation);
 
@@ -2133,7 +2127,8 @@ bool _mmcamcorder_set_display_rotation(MMHandleType handle, int display_rotate, 
 		}
 
 		if (!strcmp(videosink_name, "waylandsink") || !strcmp(videosink_name, "xvimagesink") ||
-			!strcmp(videosink_name, "evasimagesink") || !strcmp(videosink_name, "evaspixmapsink")) {
+			!strcmp(videosink_name, "evasimagesink") || !strcmp(videosink_name, "evaspixmapsink") ||
+			!strcmp(videosink_name, "directvideosink")) {
 			MMCAMCORDER_G_OBJECT_SET(sc->element[videosink_index].gst, "rotate", display_rotate);
 			_mmcam_dbg_log("Set display-rotate [%d] done.", display_rotate);
 			return TRUE;
@@ -2171,7 +2166,8 @@ bool _mmcamcorder_set_display_flip(MMHandleType handle, int display_flip, int vi
 		}
 
 		if (!strcmp(videosink_name, "waylandsink") || !strcmp(videosink_name, "xvimagesink") ||
-			!strcmp(videosink_name, "evasimagesink") || !strcmp(videosink_name, "evaspixmapsink")) {
+			!strcmp(videosink_name, "evasimagesink") || !strcmp(videosink_name, "evaspixmapsink") ||
+			!strcmp(videosink_name, "directvideosink")) {
 			MMCAMCORDER_G_OBJECT_SET(sc->element[videosink_index].gst, "flip", display_flip);
 			_mmcam_dbg_log("Set display flip [%d] done.", display_flip);
 			return TRUE;
