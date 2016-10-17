@@ -1285,10 +1285,10 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 {
 	int err = MM_ERROR_NONE;
 	int size = 0;
-	int retx = 0;
-	int rety = 0;
-	int retwidth = 0;
-	int retheight = 0;
+	int rect_x = 0;
+	int rect_y = 0;
+	int rect_width = 0;
+	int rect_height = 0;
 	int visible = 0;
 	int rotation = MM_DISPLAY_ROTATION_NONE;
 	int flip = MM_FLIP_NONE;
@@ -1324,10 +1324,10 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 
 	/* Get video display information */
 	err = mm_camcorder_get_attributes(handle, &err_name,
-		MMCAM_DISPLAY_RECT_X, &retx,
-		MMCAM_DISPLAY_RECT_Y, &rety,
-		MMCAM_DISPLAY_RECT_WIDTH, &retwidth,
-		MMCAM_DISPLAY_RECT_HEIGHT, &retheight,
+		MMCAM_DISPLAY_RECT_X, &rect_x,
+		MMCAM_DISPLAY_RECT_Y, &rect_y,
+		MMCAM_DISPLAY_RECT_WIDTH, &rect_width,
+		MMCAM_DISPLAY_RECT_HEIGHT, &rect_height,
 		MMCAM_DISPLAY_ROTATION, &rotation,
 		MMCAM_DISPLAY_FLIP, &flip,
 		MMCAM_DISPLAY_VISIBLE, &visible,
@@ -1428,12 +1428,17 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 		MMCAMCORDER_G_OBJECT_SET(vsink, "zoom", zoom_level);
 
 		if (display_geometry_method == MM_DISPLAY_METHOD_CUSTOM_ROI) {
-			g_object_set(vsink,
-				"dst-roi-x", retx,
-				"dst-roi-y", rety,
-				"dst-roi-w", retwidth,
-				"dst-roi-h", retheight,
-				NULL);
+			if (!strcmp(videosink_name, "waylandsink")) {
+			    gst_video_overlay_set_render_rectangle(GST_VIDEO_OVERLAY(vsink),
+					rect_x, rect_y, rect_width, rect_height);
+			} else {
+				g_object_set(vsink,
+					"dst-roi-x", rect_x,
+					"dst-roi-y", rect_y,
+					"dst-roi-w", rect_width,
+					"dst-roi-h", rect_height,
+					NULL);
+			}
 		}
 	}
 
