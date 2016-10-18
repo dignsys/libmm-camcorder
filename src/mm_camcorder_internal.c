@@ -905,7 +905,7 @@ int _mmcamcorder_realize(MMHandleType handle)
 			/* acquire sound focus */
 			_mmcam_dbg_log("PAUSE_OTHERS - acquire sound focus");
 
-			ret_sound = mm_sound_acquire_focus(0, FOCUS_FOR_BOTH, NULL);
+			ret_sound = mm_sound_acquire_focus(hcamcorder->sound_focus_id, FOCUS_FOR_BOTH, NULL);
 			if (ret_sound != MM_ERROR_NONE) {
 				_mmcam_dbg_err("mm_sound_acquire_focus failed [0x%x]", ret_sound);
 
@@ -1256,7 +1256,7 @@ _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK:
 	}
 
 	if (hcamcorder->acquired_focus > 0) {
-		mm_sound_release_focus(0, hcamcorder->acquired_focus, NULL);
+		mm_sound_release_focus(hcamcorder->sound_focus_id, hcamcorder->acquired_focus, NULL);
 		_mmcam_dbg_warn("release sound focus [focus %d] done", hcamcorder->acquired_focus);
 		hcamcorder->acquired_focus = 0;
 	}
@@ -1399,7 +1399,7 @@ int _mmcamcorder_unrealize(MMHandleType handle)
 		}
 
 		if (hcamcorder->acquired_focus > 0) {
-			mm_sound_release_focus(0, hcamcorder->acquired_focus, NULL);
+			mm_sound_release_focus(hcamcorder->sound_focus_id, hcamcorder->acquired_focus, NULL);
 			_mmcam_dbg_warn("release sound focus [focus %d] done", hcamcorder->acquired_focus);
 			hcamcorder->acquired_focus = 0;
 		}
