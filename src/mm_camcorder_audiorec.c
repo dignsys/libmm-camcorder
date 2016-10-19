@@ -442,6 +442,8 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 				err = _mmcamcorder_get_storage_info(dir_name, hcamcorder->root_directory, &hcamcorder->storage_info);
 				if (err != 0) {
 					_mmcam_dbg_err("get storage info failed");
+					g_free(dir_name);
+					dir_name = NULL;
 					return MM_ERROR_OUT_OF_STORAGE;
 				}
 

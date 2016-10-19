@@ -1832,7 +1832,7 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_push_buffer_to_record(Gst
 	/* push buffer in appsrc to encode */
 	if (!sc->info_video) {
 		_mmcam_dbg_warn("sc->info_video is NULL!!");
-		return FALSE;
+		return GST_PAD_PROBE_DROP;
 	}
 
 	if (sc->info_video->push_encoding_buffer == PUSH_ENCODING_BUFFER_RUN &&

@@ -557,6 +557,8 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 				ret = _mmcamcorder_get_storage_info(dir_name, hcamcorder->root_directory, &hcamcorder->storage_info);
 				if (ret != 0) {
 					_mmcam_dbg_err("get storage info failed");
+					g_free(dir_name);
+					dir_name = NULL;
 					return MM_ERROR_OUT_OF_STORAGE;
 				}
 
