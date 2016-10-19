@@ -642,6 +642,7 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 
 				MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_QUE].gst, "empty-buffers", TRUE);
 				MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_QUE].gst, "empty-buffers", TRUE);
+				MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "keep-camera-preview", TRUE);
 
 				ret = _mmcamcorder_gst_set_state(handle, pipeline, GST_STATE_READY);
 
@@ -654,6 +655,7 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 
 				MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_QUE].gst, "empty-buffers", FALSE);
 				MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_QUE].gst, "empty-buffers", FALSE);
+				MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "keep-camera-preview", FALSE);
 
 				if (ret != MM_ERROR_NONE)
 					goto _ERR_CAMCORDER_VIDEO_COMMAND;
@@ -930,6 +932,7 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 			/* restart preview */
 			MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_QUE].gst, "empty-buffers", TRUE);
 			MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_QUE].gst, "empty-buffers", TRUE);
+			MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "keep-camera-preview", TRUE);
 
 			ret = _mmcamcorder_gst_set_state(handle, pipeline, GST_STATE_READY);
 
@@ -941,6 +944,7 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 
 			MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_QUE].gst, "empty-buffers", FALSE);
 			MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_QUE].gst, "empty-buffers", FALSE);
+			MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "keep-camera-preview", FALSE);
 
 			if (ret != MM_ERROR_NONE)
 				goto _ERR_CAMCORDER_VIDEO_COMMAND;
@@ -1198,6 +1202,7 @@ int _mmcamcorder_video_handle_eos(MMHandleType handle)
 		/* block queue */
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_QUE].gst, "empty-buffers", TRUE);
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_QUE].gst, "empty-buffers", TRUE);
+		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "keep-camera-preview", TRUE);
 
 		_mmcam_dbg_log("Set state of pipeline as READY");
 		ret = _mmcamcorder_gst_set_state(handle, sc->element[_MMCAMCORDER_MAIN_PIPE].gst, GST_STATE_READY);
@@ -1211,6 +1216,8 @@ int _mmcamcorder_video_handle_eos(MMHandleType handle)
 		/* unblock queue */
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_QUE].gst, "empty-buffers", FALSE);
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_QUE].gst, "empty-buffers", FALSE);
+		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "keep-camera-preview", FALSE);
+
 		if (ret != MM_ERROR_NONE) {
 			msg.id = MM_MESSAGE_CAMCORDER_ERROR;
 			msg.param.code = ret;
