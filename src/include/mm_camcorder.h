@@ -1289,6 +1289,11 @@ extern "C" {
 #define MMCAM_DISPLAY_REUSE_HINT                "display-reuse-hint"
 #define MMCAM_DISPLAY_REUSE_ELEMENT             "display-reuse-element"
 
+/**
+ * The GBbus connection from outside
+ */
+#define MMCAM_GDBUS_CONNECTION                  "gdbus-connection"
+
 /*=======================================================================================
 | ENUM DEFINITIONS									|
 ========================================================================================*/

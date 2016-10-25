@@ -1576,6 +1576,17 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			{0},
 			{0},
 			NULL,
+		},
+		{
+			MM_CAM_GDBUS_CONNECTION,
+			"gdbus-connection",
+			MMF_VALUE_TYPE_DATA,
+			MM_ATTRS_FLAG_RW,
+			{(void*)NULL},
+			MM_ATTRS_VALID_TYPE_NONE,
+			{0},
+			{0},
+			NULL,
 		}
 	};
 
