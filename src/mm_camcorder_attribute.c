@@ -1731,6 +1731,7 @@ _mmcamcorder_set_attributes(MMHandleType handle, char **err_attr_name, const cha
 	MMHandleType attrs = 0;
 	int ret = MM_ERROR_NONE;
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
+	va_list var_args_copy;
 
 	mmf_return_val_if_fail(handle, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);
 	/*mmf_return_val_if_fail(err_attr_name, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);*/
@@ -1739,6 +1740,9 @@ _mmcamcorder_set_attributes(MMHandleType handle, char **err_attr_name, const cha
 		_mmcam_dbg_err("Another command is running.");
 		return MM_ERROR_CAMCORDER_CMD_IS_RUNNING;
 	}
+
+	/* copy var_args to keep original var_args */
+	va_copy(var_args_copy, var_args);
 
 	attrs = MMF_CAMCORDER_ATTRS(handle);
 	if (attrs) {
@@ -1750,8 +1754,11 @@ _mmcamcorder_set_attributes(MMHandleType handle, char **err_attr_name, const cha
 
 	if (ret == MM_ERROR_NONE) {
 		hcamcorder->error_code = MM_ERROR_NONE;
-		ret = mm_attrs_set_valist(attrs, err_attr_name, attribute_name, var_args);
+		/* In 64bit environment, unexpected result is returned if var_args is used again. */
+		ret = mm_attrs_set_valist(attrs, err_attr_name, attribute_name, var_args_copy);
 	}
+
+	va_end(var_args_copy);
 
 	_MMCAMCORDER_UNLOCK_CMD(handle);
 
