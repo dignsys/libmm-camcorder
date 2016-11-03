@@ -163,8 +163,11 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 
 	if (info->videodev_type != MM_VIDEO_DEVICE_NONE) {
 		/* init for gdbus */
+		hcamcorder->gdbus_info_sound.mm_handle = hcamcorder;
 		g_mutex_init(&hcamcorder->gdbus_info_sound.sync_mutex);
 		g_cond_init(&hcamcorder->gdbus_info_sound.sync_cond);
+
+		hcamcorder->gdbus_info_solo_sound.mm_handle = hcamcorder;
 		g_mutex_init(&hcamcorder->gdbus_info_solo_sound.sync_mutex);
 		g_cond_init(&hcamcorder->gdbus_info_solo_sound.sync_cond);
 	}

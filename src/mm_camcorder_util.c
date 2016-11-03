@@ -162,6 +162,7 @@ static void __gdbus_stream_eos_cb(GDBusConnection *connection,
 {
 	int played_idx = 0;
 	_MMCamcorderGDbusCbInfo *gdbus_info = NULL;
+	mmf_camcorder_t *hcamcorder = NULL;
 
 	_mmcam_dbg_log("entered");
 
@@ -171,13 +172,14 @@ static void __gdbus_stream_eos_cb(GDBusConnection *connection,
 	}
 
 	gdbus_info = (_MMCamcorderGDbusCbInfo *)user_data;
+	hcamcorder = (mmf_camcorder_t *)gdbus_info->mm_handle;
 
 	g_variant_get(param, "(i)", &played_idx);
 
 	g_mutex_lock(&gdbus_info->sync_mutex);
 
-	_mmcam_dbg_log("gdbus_info->param %d, played_idx : %d",
-		gdbus_info->param, played_idx);
+	_mmcam_dbg_log("gdbus_info->param %d, played_idx : %d, handle : %p",
+		gdbus_info->param, played_idx, hcamcorder);
 
 	if (gdbus_info->param == played_idx) {
 		g_dbus_connection_signal_unsubscribe(connection, gdbus_info->subscribe_id);

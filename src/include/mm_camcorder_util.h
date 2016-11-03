@@ -181,6 +181,7 @@ typedef struct {
 	int param;
 	int is_playing;
 	guint subscribe_id;
+	void *mm_handle;
 } _MMCamcorderGDbusCbInfo;
 
 /**
