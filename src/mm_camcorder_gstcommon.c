@@ -2136,11 +2136,11 @@ bool _mmcamcorder_set_display_rotation(MMHandleType handle, int display_rotate, 
 			!strcmp(videosink_name, "directvideosink")) {
 			MMCAMCORDER_G_OBJECT_SET(sc->element[videosink_index].gst, "rotate", display_rotate);
 			_mmcam_dbg_log("Set display-rotate [%d] done.", display_rotate);
-			return TRUE;
 		} else {
-			_mmcam_dbg_warn("videosink[%s] does not support DISPLAY_ROTATION.", videosink_name);
-			return FALSE;
+			_mmcam_dbg_warn("[%s] does not support DISPLAY_ROTATION, but no error", videosink_name);
 		}
+
+		return TRUE;
 	} else {
 		_mmcam_dbg_err("Videosink element is null");
 		return FALSE;
@@ -2175,11 +2175,11 @@ bool _mmcamcorder_set_display_flip(MMHandleType handle, int display_flip, int vi
 			!strcmp(videosink_name, "directvideosink")) {
 			MMCAMCORDER_G_OBJECT_SET(sc->element[videosink_index].gst, "flip", display_flip);
 			_mmcam_dbg_log("Set display flip [%d] done.", display_flip);
-			return TRUE;
 		} else {
-			_mmcam_dbg_warn("videosink[%s] does not support DISPLAY_FLIP", videosink_name);
-			return FALSE;
+			_mmcam_dbg_warn("[%s] does not support DISPLAY_FLIP, but no error", videosink_name);
 		}
+
+		return TRUE;
 	} else {
 		_mmcam_dbg_err("Videosink element is null");
 		return FALSE;

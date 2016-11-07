@@ -3801,11 +3801,11 @@ bool _mmcamcorder_commit_display_mode(MMHandleType handle, int attr_idx, const m
 	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "waylandsink")) {
 		_mmcam_dbg_log("Commit : display mode [%d]", value->value.i_val);
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "display-mode", value->value.i_val);
-		return TRUE;
 	} else {
-		_mmcam_dbg_warn("Commit : This element [%s] does not support display mode", videosink_name);
-		return FALSE;
+		_mmcam_dbg_warn("[%s] does not support display mode, but no error", videosink_name);
 	}
+
+	return TRUE;
 }
 
 
@@ -3895,11 +3895,11 @@ bool _mmcamcorder_commit_display_visible(MMHandleType handle, int attr_idx, cons
 		!strcmp(videosink_name, "evaspixmapsink") || !strcmp(videosink_name, "evasimagesink")) {
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "visible", value->value.i_val);
 		_mmcam_dbg_log("Set visible [%d] done.", value->value.i_val);
-		return TRUE;
 	} else {
-		_mmcam_dbg_warn("videosink[%s] does not support VISIBLE.", videosink_name);
-		return FALSE;
+		_mmcam_dbg_warn("[%s] does not support VISIBLE, but no error", videosink_name);
 	}
+
+	return TRUE;
 }
 
 
@@ -3940,11 +3940,11 @@ bool _mmcamcorder_commit_display_geometry_method(MMHandleType handle, int attr_i
 	    !strcmp(videosink_name, "evaspixmapsink") || !strcmp(videosink_name, "evasimagesink")) {
 		method = value->value.i_val;
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "display-geometry-method", method);
-		return TRUE;
 	} else {
-		_mmcam_dbg_warn("videosink[%s] does not support geometry method.", videosink_name);
-		return FALSE;
+		_mmcam_dbg_warn("[%s] does not support geometry method, but no error", videosink_name);
 	}
+
+	return TRUE;
 }
 
 
