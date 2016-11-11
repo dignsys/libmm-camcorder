@@ -41,6 +41,8 @@
 /*-----------------------------------------------------------------------
 |    LOCAL VARIABLE DEFINITIONS						|
 -----------------------------------------------------------------------*/
+#define DEFAULT_AUDIO_BUFFER_INTERVAL   50
+
 
 char *get_new_string(char* src_string)
 {
@@ -641,6 +643,7 @@ void _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf** configu
 		{ "AudioDevice",          CONFIGURE_VALUE_INT_ARRAY, {NULL} },
 		{ "AudiosrcElement",      CONFIGURE_VALUE_ELEMENT, {&_audiosrc_element_default} },
 		{ "AudiomodemsrcElement", CONFIGURE_VALUE_ELEMENT, {&_audiomodemsrc_element_default} },
+		{ "AudioBufferInterval",  CONFIGURE_VALUE_INT,     {.value_int = DEFAULT_AUDIO_BUFFER_INTERVAL} },
 	};
 
 	/* [VideoOutput] matching table */

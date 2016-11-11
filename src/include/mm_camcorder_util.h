@@ -315,6 +315,9 @@ int _mmcamcorder_send_sound_play_message(GDBusConnection *conn, _MMCamcorderGDbu
 void _mmcamcorder_emit_dbus_signal(GDBusConnection *conn, const char *object_name,
 	const char *interface_name, const char *signal_name, int value);
 
+/* audio buffer */
+int _mmcamcorder_get_audiosrc_blocksize(int samplerate, int format, int channel, int interval, int *blocksize);
+
 #ifdef __cplusplus
 }
 #endif

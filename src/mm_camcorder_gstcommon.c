@@ -480,6 +480,8 @@ int _mmcamcorder_create_audiosrc_bin(MMHandleType handle)
 	char *stream_type = NULL;
 	char stream_type_len = 0;
 	int stream_index = 0;
+	int buffer_interval = 0;
+	int blocksize = 0;
 
 	GstCaps *caps = NULL;
 	GstPad *pad = NULL;
@@ -561,6 +563,17 @@ int _mmcamcorder_create_audiosrc_bin(MMHandleType handle)
 
 	/* set audiosrc properties in ini configuration */
 	_mmcamcorder_conf_set_value_element_property(sc->encode_element[_MMCAMCORDER_AUDIOSRC_SRC].gst, AudiosrcElement);
+
+	/* set block size */
+	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
+		CONFIGURE_CATEGORY_MAIN_AUDIO_INPUT,
+		"AudioBufferInterval",
+		&buffer_interval);
+
+	if (_mmcamcorder_get_audiosrc_blocksize(rate, format, channel, buffer_interval, &blocksize)) {
+		_mmcam_dbg_log("set audiosrc block size %d", blocksize);
+		MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_AUDIOSRC_SRC].gst, "blocksize", blocksize);
+	}
 
 	_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_AUDIOSRC_FILT, "capsfilter", "audiosrc_capsfilter", element_list, err);
 

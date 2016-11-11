@@ -2257,3 +2257,26 @@ void _mmcamcorder_emit_dbus_signal(GDBusConnection *conn, const char *object_nam
 
 	return;
 }
+
+
+int _mmcamcorder_get_audiosrc_blocksize(int samplerate, int format, int channel, int interval, int *blocksize)
+{
+	int depth = 8;
+
+	if (!blocksize) {
+		_mmcam_dbg_err("NULL ptr");
+		return FALSE;
+	}
+
+	if (samplerate == 0 || channel == 0 || interval == 0) {
+		_mmcam_dbg_err("invalid param %d %d %d", samplerate, channel, interval);
+		return FALSE;
+	}
+
+	if (format == MM_CAMCORDER_AUDIO_FORMAT_PCM_S16_LE)
+		depth = 16;
+
+	*blocksize = samplerate * depth * channel * interval / 8000;
+
+	return TRUE;
+}
