@@ -62,7 +62,7 @@
 #define DPM_DISALLOWED                          0
 
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
-#define __MMCAMCORDER_RESOURCE_WAIT_TIME        5
+#define __MMCAMCORDER_RESOURCE_WAIT_TIME        3
 #endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 
 
