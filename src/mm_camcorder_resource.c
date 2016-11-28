@@ -450,9 +450,11 @@ int _mmcamcorder_resource_manager_deinit(MMCamcorderResourceManager *resource_ma
 		resource_manager->mrp_loop = NULL;
 	}
 
-	g_thread_join(resource_manager->starter);
-	g_thread_unref(resource_manager->starter);
-	resource_manager->starter = NULL;
+	if (resource_manager->starter) {
+		g_thread_join(resource_manager->starter);
+		g_thread_unref(resource_manager->starter);
+		resource_manager->starter = NULL;
+	}
 
 	if (resource_manager->mloop) {
 		_mmcam_dbg_log("destroy resource mainloop");
