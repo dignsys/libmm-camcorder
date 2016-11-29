@@ -38,7 +38,6 @@ libmmfcamcorder_la_CFLAGS = -I$(srcdir)/include \
 			     $(GST_PLUGIN_BASE_CFLAGS) \
 			     $(GST_VIDEO_CFLAGS) \
 			     $(GST_APP_CFLAGS) \
-			     $(GST_WAYLAND_CFLAGS) \
 			     $(EXIF_CFLAGS) \
 			     $(MM_COMMON_CFLAGS) \
 			     $(MMSOUND_CFLAGS) \
@@ -58,7 +57,6 @@ libmmfcamcorder_la_LIBADD = \
 			    $(GST_PLUGIN_BASE_LIBS) \
 			    $(GST_VIDEO_LIBS) \
 			    $(GST_APP_LIBS) \
-			    $(GST_WAYLAND_LIBS) \
 			    $(MM_COMMON_LIBS) \
 			    $(EXIF_LIBS) \
 			    $(MMSOUND_LIBS) \

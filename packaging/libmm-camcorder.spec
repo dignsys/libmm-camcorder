@@ -1,7 +1,7 @@
 Name:       libmm-camcorder
 Summary:    Camera and recorder library
 Version:    0.10.95
-Release:    0
+Release:    1
 Group:      Multimedia/Libraries
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
@@ -18,8 +18,6 @@ BuildRequires:  pkgconfig(mmutil-jpeg)
 BuildRequires:  pkgconfig(gstreamer-base-1.0)
 BuildRequires:  pkgconfig(gstreamer-video-1.0)
 BuildRequires:  pkgconfig(gstreamer-app-1.0)
-BuildRequires:  pkgconfig(gstreamer-wayland-1.0)
-BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(libtbm)
 BuildRequires:  pkgconfig(storage)

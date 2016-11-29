@@ -25,7 +25,6 @@
 #include <gst/audio/audio-format.h>
 #include <gst/video/videooverlay.h>
 #include <gst/video/cameracontrol.h>
-#include <gst/wayland/wayland.h>
 
 #include <sys/time.h>
 #include <unistd.h>

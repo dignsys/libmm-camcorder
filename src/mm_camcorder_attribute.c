@@ -29,7 +29,6 @@
 #include <gst/video/colorbalance.h>
 #include <gst/video/cameracontrol.h>
 #include <gst/video/videooverlay.h>
-#include <gst/wayland/wayland.h>
 
 /*-----------------------------------------------------------------------
 |    MACRO DEFINITIONS:							|
