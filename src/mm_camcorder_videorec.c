@@ -105,6 +105,7 @@ static gboolean __mmcamcorder_video_stream_cb(GstElement *element, GstSample *sa
 		}
 
 		GST_BUFFER_PTS(buffer) = GST_BUFFER_PTS(buffer) - sc->info_video->base_video_ts;
+		GST_BUFFER_DTS(buffer) = GST_BUFFER_PTS(buffer);
 
 		ret = gst_app_src_push_buffer((GstAppSrc *)sc->encode_element[_MMCAMCORDER_ENCSINK_SRC].gst, buffer);
 		if (ret != GST_FLOW_OK && ret != GST_FLOW_FLUSHING) {
@@ -1682,6 +1683,7 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_audio_disable(GstPad *pad
 		}
 
 		GST_BUFFER_PTS(buffer) = b_time * (videoinfo->record_timestamp_ratio);
+		GST_BUFFER_DTS(buffer) = GST_BUFFER_PTS(buffer);
 	}
 
 	return GST_PAD_PROBE_OK;
