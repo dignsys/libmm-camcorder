@@ -110,7 +110,7 @@ static int __gdbus_method_call_sync(GDBusConnection *conn, const char *bus_name,
 	if (is_sync) {
 		dbus_reply = g_dbus_connection_call_sync(conn,
 			bus_name, object, iface, method, args, NULL,
-			G_DBUS_CALL_FLAGS_NONE, G_DBUS_REPLY_TIMEOUT, NULL, NULL);
+			G_DBUS_CALL_FLAGS_NONE, G_DBUS_TIMEOUT, NULL, NULL);
 		if (dbus_reply) {
 			_mmcam_dbg_log("Method Call '%s.%s' Success", iface, method);
 			*result = dbus_reply;
@@ -120,7 +120,7 @@ static int __gdbus_method_call_sync(GDBusConnection *conn, const char *bus_name,
 		}
 	} else {
 		g_dbus_connection_call(conn, bus_name, object, iface, method, args, NULL,
-			G_DBUS_CALL_FLAGS_NONE, G_DBUS_REPLY_TIMEOUT, NULL, NULL, NULL);
+			G_DBUS_CALL_FLAGS_NONE, G_DBUS_TIMEOUT, NULL, NULL, NULL);
 	}
 
 	return ret;
@@ -870,7 +870,7 @@ int _mmcamcorder_send_sound_play_message(GDBusConnection *conn, _MMCamcorderGDbu
 	g_mutex_unlock(&gdbus_info->sync_mutex);
 
 	if (sync_play && ret == MM_ERROR_NONE)
-		ret = __gdbus_wait_for_cb_return(gdbus_info, G_DBUS_CB_TIMEOUT_MSEC);
+		ret = __gdbus_wait_for_cb_return(gdbus_info, G_DBUS_TIMEOUT);
 
 	return ret;
 }

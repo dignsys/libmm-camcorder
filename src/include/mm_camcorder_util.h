@@ -238,8 +238,7 @@ typedef struct {
 /*=======================================================================================
 | CONSTANT DEFINITIONS									|
 ========================================================================================*/
-#define G_DBUS_CB_TIMEOUT_MSEC                  3000
-#define G_DBUS_REPLY_TIMEOUT                    (120 * 1000)
+#define G_DBUS_TIMEOUT                          3000
 #define FAT32_FILE_SYSTEM_MAX_SIZE              (4294967295UL)     /* 4 GigaByte - 1 byte */
 #define NANO_SEC_PER_MILI_SEC                   1000000
 #define _MMCAMCORDER_HANDLER_CATEGORY_ALL \
