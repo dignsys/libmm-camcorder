@@ -3782,7 +3782,8 @@ void __mmcamcorder_force_stop(mmf_camcorder_t *hcamcorder)
 			_mmcam_dbg_warn("Stop recording.");
 
 			while ((itr_cnt--) && ((result = _mmcamcorder_commit((MMHandleType)hcamcorder)) != MM_ERROR_NONE)) {
-				_mmcam_dbg_warn("Can't commit.(%x)", result);
+				_mmcam_dbg_warn("Can't commit.(%x), cancel it.", result);
+				_mmcamcorder_cancel((MMHandleType)hcamcorder);
 			}
 
 			break;

@@ -1,7 +1,7 @@
 Name:       libmm-camcorder
 Summary:    Camera and recorder library
-Version:    0.10.97
-Release:    1
+Version:    0.10.98
+Release:    0
 Group:      Multimedia/Libraries
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz

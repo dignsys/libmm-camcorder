@@ -170,6 +170,7 @@ gboolean _mmcamcorder_sound_finalize(MMHandleType handle)
 int _mmcamcorder_sound_solo_play(MMHandleType handle, const char *sample_name, gboolean sync_play)
 {
 	int sound_enable = TRUE;
+	int current_state = MM_CAMCORDER_STATE_NONE;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 
@@ -178,6 +179,12 @@ int _mmcamcorder_sound_solo_play(MMHandleType handle, const char *sample_name, g
 	_mmcam_dbg_log("START : [%s]", sample_name);
 
 	_mmcamcorder_sound_solo_play_wait(handle);
+
+	current_state = _mmcamcorder_get_state(handle);
+	if (current_state < MM_CAMCORDER_STATE_PREPARE) {
+		_mmcam_dbg_warn("invalid state %d", current_state);
+		return FALSE;
+	}
 
 	/* check sound play enable */
 	mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL,
@@ -222,7 +229,7 @@ void _mmcamcorder_sound_solo_play_wait(MMHandleType handle)
 
 		_mmcam_dbg_log("Wait for signal");
 
-		end_time = g_get_monotonic_time() + (2 * G_TIME_SPAN_SECOND);
+		end_time = g_get_monotonic_time() + G_TIME_SPAN_SECOND;
 
 		if (g_cond_wait_until(&hcamcorder->gdbus_info_solo_sound.sync_cond,
 			&hcamcorder->gdbus_info_solo_sound.sync_mutex, end_time)) {
