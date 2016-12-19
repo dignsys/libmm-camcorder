@@ -318,28 +318,34 @@ static int __mmcamcorder_resource_set_release_cb(MMCamcorderResourceManager *res
 	return ret;
 }
 
-static gpointer __mmcamcorder_launch_glib_murphy_loop(void *user_data)
-{
-	MMCamcorderResourceManager *resource_manager= (MMCamcorderResourceManager *)user_data;
-
-	_mmcam_dbg_log("Run mrp_loop");
-
-	g_main_loop_run(resource_manager->mrp_loop);
-
-	_mmcam_dbg_log("Murphy glib loop exit");
-
-	return NULL;
-}
-
 int _mmcamcorder_resource_manager_init(MMCamcorderResourceManager *resource_manager, void *user_data)
 {
+	GMainContext *mrp_ctx = NULL;
+	GMainLoop *mrp_loop = NULL;
+
 	MMCAMCORDER_CHECK_RESOURCE_MANAGER_INSTANCE(resource_manager);
 
-	GMainContext *mrp_ctx = g_main_context_new();
-	resource_manager->mrp_loop = g_main_loop_new(mrp_ctx, TRUE);
-	resource_manager->mloop = mrp_mainloop_glib_get(resource_manager->mrp_loop);
-	resource_manager->starter = g_thread_new(NULL, (GThreadFunc)__mmcamcorder_launch_glib_murphy_loop, resource_manager);
+	mrp_ctx = g_main_context_new();
+	if (!mrp_ctx) {
+		_mmcam_dbg_err("failed to get create glib context for mrp");
+		return MM_ERROR_RESOURCE_INTERNAL;
+	}
+
+	mrp_loop = g_main_loop_new(mrp_ctx, TRUE);
+
 	g_main_context_unref(mrp_ctx);
+	mrp_ctx = NULL;
+
+	if (!mrp_loop) {
+		_mmcam_dbg_err("failed to get create glib loop for mrp");
+		return MM_ERROR_RESOURCE_INTERNAL;
+	}
+
+	resource_manager->mloop = mrp_mainloop_glib_get(mrp_loop);
+
+	g_main_loop_unref(mrp_loop);
+	mrp_loop = NULL;
+
 	if (!resource_manager->mloop) {
 		_mmcam_dbg_err("failed to get mainloop for mrp");
 		return MM_ERROR_RESOURCE_INTERNAL;
@@ -348,8 +354,10 @@ int _mmcamcorder_resource_manager_init(MMCamcorderResourceManager *resource_mana
 	resource_manager->context = mrp_res_create(resource_manager->mloop, __mmcamcorder_resource_state_callback, user_data);
 	if (!resource_manager->context) {
 		_mmcam_dbg_err("could not get context for mrp");
+
 		mrp_mainloop_destroy(resource_manager->mloop);
 		resource_manager->mloop = NULL;
+
 		return MM_ERROR_RESOURCE_INTERNAL;
 	}
 
@@ -444,20 +452,9 @@ int _mmcamcorder_resource_manager_deinit(MMCamcorderResourceManager *resource_ma
 		resource_manager->context = NULL;
 	}
 
-	if (resource_manager->mrp_loop) {
-		g_main_loop_quit(resource_manager->mrp_loop);
-		g_main_loop_unref(resource_manager->mrp_loop);
-		resource_manager->mrp_loop = NULL;
-	}
-
-	if (resource_manager->starter) {
-		g_thread_join(resource_manager->starter);
-		g_thread_unref(resource_manager->starter);
-		resource_manager->starter = NULL;
-	}
-
 	if (resource_manager->mloop) {
 		_mmcam_dbg_log("destroy resource mainloop");
+		mrp_mainloop_quit(resource_manager->mloop, 0);
 		mrp_mainloop_destroy(resource_manager->mloop);
 		resource_manager->mloop = NULL;
 	}

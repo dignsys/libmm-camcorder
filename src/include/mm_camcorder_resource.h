@@ -42,8 +42,6 @@ typedef struct {
 	void *user_data;
 	int acquire_count;
 	int acquire_remain;
-	GThread *starter;
-	GMainLoop *mrp_loop;
 } MMCamcorderResourceManager;
 
 int _mmcamcorder_resource_manager_init(MMCamcorderResourceManager *resource_manager, void *user_data);
