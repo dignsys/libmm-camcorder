@@ -820,7 +820,8 @@ int _mmcamcorder_send_sound_play_message(GDBusConnection *conn, _MMCamcorderGDbu
 {
 	int get_value = 0;
 	int ret = MM_ERROR_NONE;
-	GVariant *params = NULL, *result = NULL;
+	GVariant *params = NULL;
+	GVariant *result = NULL;
 	guint subs_id = 0;
 
 	if (!conn || !gdbus_info) {
@@ -873,6 +874,42 @@ int _mmcamcorder_send_sound_play_message(GDBusConnection *conn, _MMCamcorderGDbu
 		ret = __gdbus_wait_for_cb_return(gdbus_info, G_DBUS_TIMEOUT);
 
 	return ret;
+}
+
+
+void _mmcamcorder_request_dpm_popup(GDBusConnection *conn, const char *restricted_policy)
+{
+	int ret = MM_ERROR_NONE;
+	gboolean get_value = 0;
+	GVariant *params = NULL;
+	GVariant *result = NULL;
+
+	if (!conn || !restricted_policy) {
+		_mmcam_dbg_err("Invalid parameter %p %p", conn, restricted_policy);
+		return;
+	}
+
+	params = g_variant_new("(s)", restricted_policy);
+	result = g_variant_new("(b)", get_value);
+
+	ret = __gdbus_method_call_sync(conn,
+		"org.tizen.DevicePolicyManager",
+		"/org/tizen/DevicePolicyManager/Syspopup",
+		"org.tizen.DevicePolicyManager.Syspopup",
+		"show", params, &result, TRUE);
+	if (ret != MM_ERROR_NONE) {
+		_mmcam_dbg_err("Dbus Call on Client Error 0x%x", ret);
+		return;
+	}
+
+	if (result) {
+		g_variant_get(result, "(b)", &get_value);
+		_mmcam_dbg_log("request result : %d", get_value);
+	} else {
+		_mmcam_dbg_err("replied result is null");
+	}
+
+	return;
 }
 
 

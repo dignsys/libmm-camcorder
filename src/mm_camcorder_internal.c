@@ -1061,6 +1061,9 @@ int _mmcamcorder_realize(MMHandleType handle)
 				if (dpm_camera_state == DPM_DISALLOWED) {
 					_mmcam_dbg_err("CAMERA DISALLOWED by DPM");
 					ret = MM_ERROR_POLICY_RESTRICTED;
+
+					_mmcamcorder_request_dpm_popup(hcamcorder->gdbus_conn, "camera");
+
 					goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 				}
 			} else {
@@ -1749,6 +1752,9 @@ int _mmcamcorder_record(MMHandleType handle)
 			if (dpm_mic_state == DPM_DISALLOWED) {
 				_mmcam_dbg_err("MIC DISALLOWED by DPM");
 				ret = MM_ERROR_COMMON_INVALID_PERMISSION;
+
+				_mmcamcorder_request_dpm_popup(hcamcorder->gdbus_conn, "microphone");
+
 				goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 			}
 		} else {
@@ -3196,9 +3202,9 @@ GstBusSyncReply _mmcamcorder_encode_pipeline_bus_sync_callback(GstBus *bus, GstM
 
 				_mmcamcorder_send_message((MMHandleType)hcamcorder, &msg);
 			}
-		}
 
-		goto DROP_MESSAGE;
+			goto DROP_MESSAGE;
+		}
 	}
 
 	if (err) {
@@ -3423,6 +3429,8 @@ void _mmcamcorder_dpm_camera_policy_changed_cb(const char *name, const char *val
 		hcamcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_NORMAL;
 
 		_MMCAMCORDER_UNLOCK_ASM(hcamcorder);
+
+		_mmcamcorder_request_dpm_popup(hcamcorder->gdbus_conn, "camera");
 	}
 
 	_mmcam_dbg_warn("done");
@@ -4018,6 +4026,8 @@ static gint __mmcamcorder_gst_handle_resource_error(MMHandleType handle, int cod
 			hcamcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_NORMAL;
 
 			_MMCAMCORDER_UNLOCK_ASM(hcamcorder);
+
+			_mmcamcorder_request_dpm_popup(hcamcorder->gdbus_conn, "microphone");
 
 			return MM_ERROR_POLICY_RESTRICTED;
 		}

@@ -310,6 +310,9 @@ int _mmcamcorder_get_device_flash_brightness(GDBusConnection *conn, int *brightn
 int _mmcamcorder_send_sound_play_message(GDBusConnection *conn, _MMCamcorderGDbusCbInfo *gdbus_info,
 	const char *sample_name, const char *stream_role, const char *volume_gain, int sync_play);
 
+/* request to show pop-up related DPM policy */
+void _mmcamcorder_request_dpm_popup(GDBusConnection *conn, const char *restricted_policy);
+
 /* dbus signal emit */
 void _mmcamcorder_emit_dbus_signal(GDBusConnection *conn, const char *object_name,
 	const char *interface_name, const char *signal_name, int value);
