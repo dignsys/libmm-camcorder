@@ -1102,7 +1102,8 @@ int _mmcamcorder_realize(MMHandleType handle)
 		/* acquire resources */
 		_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
 
-		if (hcamcorder->resource_manager.rset && _mmcamcorder_resource_manager_acquire(&hcamcorder->resource_manager)) {
+		ret = _mmcamcorder_resource_manager_acquire(&hcamcorder->resource_manager);
+		if (ret != MM_ERROR_NONE) {
 			_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 
 			_mmcam_dbg_err("could not acquire resources");
