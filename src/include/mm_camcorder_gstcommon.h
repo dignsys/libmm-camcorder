@@ -181,6 +181,8 @@ bool _mmcamcorder_set_encoded_preview_bitrate(MMHandleType handle, int bitrate);
 bool _mmcamcorder_set_encoded_preview_gop_interval(MMHandleType handle, int gop);
 bool _mmcamcorder_set_sound_stream_info(GstElement *element, char *stream_type, int stream_index);
 void _mmcamcorder_set_encoder_bitrate(MMCamcorderEncoderType type, int codec, int bitrate, GstElement *element);
+GstPadProbeReturn __mmcamcorder_muxed_dataprobe(GstPad *pad, GstPadProbeInfo *info, gpointer u_data);
+GstPadProbeReturn __mmcamcorder_eventprobe_monitor(GstPad *pad, GstPadProbeInfo *info, gpointer u_data);
 #ifdef __cplusplus
 }
 #endif

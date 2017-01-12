@@ -3389,9 +3389,13 @@ bool _mmcamcorder_commit_image_encoder_quality(MMHandleType handle, int attr_idx
 
 bool _mmcamcorder_commit_target_filename(MMHandleType handle, int attr_idx, const mmf_value_t *value)
 {
-	_MMCamcorderSubContext *sc = NULL;
-	const char *filename = NULL;
+	int ret = MM_ERROR_NONE;
 	int size = 0;
+	const char *filename = NULL;
+	_MMCamcorderSubContext *sc = NULL;
+	GstElement *encode_link = NULL;
+	GstElement *encode_sink = NULL;
+	GstElement *encode_pipeline = NULL;
 
 	mmf_return_val_if_fail(handle && value, FALSE);
 
@@ -3416,9 +3420,71 @@ bool _mmcamcorder_commit_target_filename(MMHandleType handle, int attr_idx, cons
 	}
 
 	if (sc->encode_element && sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst) {
-		_mmcam_dbg_log("new file location set.[%s] filesink %p", filename, sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst);
-		MMCAMCORDER_G_OBJECT_SET_POINTER(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, "location", filename);
-		_mmcam_dbg_log("new file location set.(%s)", filename);
+		encode_sink = sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst;
+		encode_pipeline = sc->encode_element[_MMCAMCORDER_ENCODE_MAIN_PIPE].gst;
+
+		_mmcam_dbg_log("file location set.[%s], current encode sink [%s]",
+			filename, GST_OBJECT_NAME(gst_element_get_factory(encode_sink)));
+
+		/* check whether it's filesink or not */
+		if (strncmp(GST_OBJECT_NAME(gst_element_get_factory(encode_sink)), "filesink", strlen("filesink"))) {
+			_mmcam_dbg_log("remove current sink and create filesink");
+
+			/* remove fakesink and create/add filesink to encode pipeline */
+			/* set NULL state */
+			ret = _mmcamcorder_gst_set_state(handle, encode_sink, GST_STATE_NULL);
+			if (ret != MM_ERROR_NONE) {
+				_mmcam_dbg_err("failed to set NULL encoder sink");
+				return FALSE;
+			}
+
+			/* remove encode sink - pads will be unlinked automatically in remove function */
+			if (!gst_bin_remove(GST_BIN(encode_pipeline), encode_sink)) {
+				_mmcam_dbg_err("failed to remove encode sink from pipeline");
+				return FALSE;
+			}
+
+			_mmcam_dbg_log("remove done");
+
+			/* create filesink */
+			encode_sink = gst_element_factory_make("filesink", NULL);
+			if (!encode_sink) {
+				_mmcam_dbg_err("filesink creation failed");
+				return FALSE;
+			}
+
+			sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst = encode_sink;
+
+			/* set release notification callback */
+			g_object_weak_ref(G_OBJECT(encode_sink), (GWeakNotify)_mmcamcorder_element_release_noti, sc);
+
+			/* add to pipeline */
+			if (!gst_bin_add(GST_BIN(encode_pipeline), encode_sink)) {
+				_mmcam_dbg_err("failed to add filesink to encode pipeline");
+				gst_object_unref(encode_sink);
+				return FALSE;
+			}
+
+			/* link filesink */
+			if (sc->encode_element[_MMCAMCORDER_ENCSINK_MUX].gst) {
+				/* mux element is used */
+				_mmcam_dbg_log("Link mux to encode_sink");
+				encode_link = sc->encode_element[_MMCAMCORDER_ENCSINK_MUX].gst;
+			} else {
+				/* no mux element */
+				_mmcam_dbg_log("Link audio encoder to encode_sink");
+				encode_link = sc->encode_element[_MMCAMCORDER_ENCSINK_AENC].gst;
+			}
+
+			if (!_MM_GST_ELEMENT_LINK(encode_link, encode_sink)) {
+				_mmcam_dbg_err("Link FAILED");
+				return FALSE;
+			}
+
+			_mmcam_dbg_log("Link OK");
+		}
+
+		MMCAMCORDER_G_OBJECT_SET_POINTER(encode_sink, "location", filename);
 	} else {
 		_mmcam_dbg_log("element is not created yet. [%s] will be set later...", filename);
 	}

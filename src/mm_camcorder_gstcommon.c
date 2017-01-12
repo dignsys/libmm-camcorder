@@ -730,6 +730,7 @@ void _mmcamcorder_set_encoder_bitrate(MMCamcorderEncoderType type, int codec, in
 int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebinProfile profile)
 {
 	int err = MM_ERROR_NONE;
+	int file_name_len = 0;
 	int channel = 0;
 	int audio_enc = 0;
 	int v_bitrate = 0;
@@ -748,6 +749,7 @@ int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebin
 	const char *str_aar = NULL;
 	const char *str_acs = NULL;
 	char *err_name = NULL;
+	char *file_name = NULL;
 	const char *videoconvert_name = NULL;
 	GstCaps *audio_caps = NULL;
 	GstCaps *video_caps = NULL;
@@ -867,6 +869,7 @@ int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebin
 		MMCAM_AUDIO_CHANNEL, &channel,
 		MMCAM_VIDEO_ENCODER_BITRATE, &v_bitrate,
 		MMCAM_AUDIO_ENCODER_BITRATE, &a_bitrate,
+		MMCAM_TARGET_FILENAME, &file_name, &file_name_len,
 		NULL);
 
 	if (err != MM_ERROR_NONE) {
@@ -1063,15 +1066,20 @@ int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebin
 	/* Sink */
 	if (profile != MM_CAMCORDER_ENCBIN_PROFILE_IMAGE) {
 		/* for recording */
-		_mmcamcorder_conf_get_element(handle, hcamcorder->conf_main,
-			CONFIGURE_CATEGORY_MAIN_RECORD,
-			"RecordsinkElement",
-			&RecordsinkElement);
-		_mmcamcorder_conf_get_value_element_name(RecordsinkElement, &gst_element_rsink_name);
+		if (file_name) {
+			_mmcamcorder_conf_get_element(handle, hcamcorder->conf_main,
+				CONFIGURE_CATEGORY_MAIN_RECORD,
+				"RecordsinkElement",
+				&RecordsinkElement);
+			_mmcamcorder_conf_get_value_element_name(RecordsinkElement, &gst_element_rsink_name);
 
-		_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_SINK, gst_element_rsink_name, NULL, element_list, err);
+			_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_SINK, gst_element_rsink_name, NULL, element_list, err);
 
-		_mmcamcorder_conf_set_value_element_property(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, RecordsinkElement);
+			_mmcamcorder_conf_set_value_element_property(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, RecordsinkElement);
+		} else {
+			/* if file_name is not set, add fakesink for muxed stream callback */
+			_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_SINK, "fakesink", NULL, element_list, err);
+		}
 	} else {
 		/* for stillshot */
 		_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_SINK, "fakesink", NULL, element_list, err);
@@ -1545,7 +1553,7 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 	GstMapInfo mapinfo;
 
 	mmf_return_val_if_fail(buffer, GST_PAD_PROBE_DROP);
-	mmf_return_val_if_fail(gst_buffer_n_memory(buffer)  , GST_PAD_PROBE_DROP);
+	mmf_return_val_if_fail(gst_buffer_n_memory(buffer), GST_PAD_PROBE_DROP);
 	mmf_return_val_if_fail(hcamcorder, GST_PAD_PROBE_DROP);
 
 	sc = MMF_CAMCORDER_SUBCONTEXT(u_data);
@@ -1939,27 +1947,143 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_push_buffer_to_record(Gst
 }
 
 
+GstPadProbeReturn __mmcamcorder_muxed_dataprobe(GstPad *pad, GstPadProbeInfo *info, gpointer u_data)
+{
+	MMCamcorderMuxedStreamDataType stream;
+	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(u_data);
+	_MMCamcorderSubContext *sc = NULL;
+	GstBuffer *buffer = GST_PAD_PROBE_INFO_BUFFER(info);
+	GstMapInfo mapinfo;
+
+	mmf_return_val_if_fail(buffer, GST_PAD_PROBE_OK);
+	mmf_return_val_if_fail(gst_buffer_n_memory(buffer), GST_PAD_PROBE_OK);
+	mmf_return_val_if_fail(hcamcorder, GST_PAD_PROBE_OK);
+
+	sc = MMF_CAMCORDER_SUBCONTEXT(hcamcorder);
+	mmf_return_val_if_fail(sc, GST_PAD_PROBE_OK);
+
+	if (!gst_buffer_map(buffer, &mapinfo, GST_MAP_READ)) {
+		_mmcam_dbg_warn("map failed : buffer %p", buffer);
+		return GST_PAD_PROBE_OK;
+	}
+
+	/* call application callback */
+	_MMCAMCORDER_LOCK_MSTREAM_CALLBACK(hcamcorder);
+
+	if (hcamcorder->mstream_cb) {
+		stream.data = (void *)mapinfo.data;
+		stream.length = mapinfo.size;
+		stream.offset = sc->muxed_stream_offset;
+		hcamcorder->mstream_cb(&stream, hcamcorder->mstream_cb_param);
+	}
+
+	_MMCAMCORDER_UNLOCK_MSTREAM_CALLBACK(hcamcorder);
+
+	/* calculate current offset */
+	sc->muxed_stream_offset += mapinfo.size;
+
+	gst_buffer_unmap(buffer, &mapinfo);
+
+	return GST_PAD_PROBE_OK;
+}
+
+
+GstPadProbeReturn __mmcamcorder_eventprobe_monitor(GstPad *pad, GstPadProbeInfo *info, gpointer u_data)
+{
+	GstEvent *event = GST_PAD_PROBE_INFO_EVENT(info);
+	mmf_camcorder_t *hcamcorder = NULL;
+	_MMCamcorderSubContext *sc = NULL;
+	GstObject *parent = NULL;
+
+	switch (GST_EVENT_TYPE(event)) {
+	case GST_EVENT_UNKNOWN:
+	/* upstream events */
+	case GST_EVENT_QOS:
+	case GST_EVENT_SEEK:
+	case GST_EVENT_NAVIGATION:
+	case GST_EVENT_LATENCY:
+	/* downstream serialized events */
+	case GST_EVENT_TAG:
+	case GST_EVENT_BUFFERSIZE:
+		_mmcam_dbg_log("[%s:%s] gots %s", GST_DEBUG_PAD_NAME(pad), GST_EVENT_TYPE_NAME(event));
+		break;
+	case GST_EVENT_SEGMENT:
+		_mmcam_dbg_log("[%s:%s] gots %s", GST_DEBUG_PAD_NAME(pad), GST_EVENT_TYPE_NAME(event));
+
+		hcamcorder = MMF_CAMCORDER(u_data);
+		if (!hcamcorder) {
+			_mmcam_dbg_warn("NULL handle");
+			break;
+		}
+
+		sc = MMF_CAMCORDER_SUBCONTEXT(hcamcorder);
+		if (!sc) {
+			_mmcam_dbg_warn("NULL sub context");
+			break;
+		}
+
+		if (!sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst) {
+			_mmcam_dbg_warn("no encoder sink");
+			break;
+		}
+
+		parent = gst_pad_get_parent(pad);
+		if (!parent) {
+			_mmcam_dbg_warn("get parent failed");
+			break;
+		}
+
+		if (parent == (GstObject *)sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst) {
+			const GstSegment *segment;
+			gst_event_parse_segment(event, &segment);
+			if (segment->format == GST_FORMAT_BYTES) {
+				_mmcam_dbg_log("change current offset %llu -> %llu",
+					sc->muxed_stream_offset, segment->start);
+
+				sc->muxed_stream_offset = (unsigned long long)segment->start;
+			}
+		}
+
+		gst_object_unref(parent);
+		parent = NULL;
+		break;
+	case GST_EVENT_EOS:
+		_mmcam_dbg_warn("[%s:%s] gots %s", GST_DEBUG_PAD_NAME(pad), GST_EVENT_TYPE_NAME(event));
+		break;
+	/* bidirectional events */
+	case GST_EVENT_FLUSH_START:
+	case GST_EVENT_FLUSH_STOP:
+		_mmcam_dbg_err("[%s:%s] gots %s", GST_DEBUG_PAD_NAME(pad), GST_EVENT_TYPE_NAME(event));
+		break;
+	default:
+		_mmcam_dbg_log("[%s:%s] gots %s", GST_DEBUG_PAD_NAME(pad), GST_EVENT_TYPE_NAME(event));
+		break;
+	}
+
+	return GST_PAD_PROBE_OK;
+}
+
+
 int __mmcamcorder_get_amrnb_bitrate_mode(int bitrate)
 {
 	int result = MM_CAMCORDER_MR475;
 
-	if (bitrate < 5150) {
+	if (bitrate < 5150)
 		result = MM_CAMCORDER_MR475; /*AMR475*/
-	} else if (bitrate < 5900) {
+	else if (bitrate < 5900)
 		result = MM_CAMCORDER_MR515; /*AMR515*/
-	} else if (bitrate < 6700) {
+	else if (bitrate < 6700)
 		result = MM_CAMCORDER_MR59; /*AMR59*/
-	} else if (bitrate < 7400) {
+	else if (bitrate < 7400)
 		result = MM_CAMCORDER_MR67; /*AMR67*/
-	} else if (bitrate < 7950) {
+	else if (bitrate < 7950)
 		result = MM_CAMCORDER_MR74; /*AMR74*/
-	} else if (bitrate < 10200) {
+	else if (bitrate < 10200)
 		result = MM_CAMCORDER_MR795; /*AMR795*/
-	} else if (bitrate < 12200) {
+	else if (bitrate < 12200)
 		result = MM_CAMCORDER_MR102; /*AMR102*/
-	} else {
+	else
 		result = MM_CAMCORDER_MR122; /*AMR122*/
-	}
 
 	return result;
 }
@@ -2055,7 +2179,7 @@ int _mmcamcorder_check_codec_fileformat_compatibility(const char *codec_type, in
 	} else if (!strcmp(codec_type, MMCAM_VIDEO_ENCODER)) {
 		if (codec > MM_VIDEO_CODEC_INVALID && codec < MM_VIDEO_CODEC_NUM &&
 			file_format > MM_FILE_FORMAT_INVALID && file_format < MM_FILE_FORMAT_NUM) {
-			if (videocodec_fileformat_compatibility_table[ codec][file_format] == 0) {
+			if (videocodec_fileformat_compatibility_table[codec][file_format] == 0) {
 				_mmcam_dbg_err("Video codec[%d] and file format[%d] compatibility FAILED.", codec, file_format);
 				return MM_ERROR_CAMCORDER_ENCODER_WRONG_TYPE;
 			}
@@ -2287,11 +2411,8 @@ bool _mmcamcorder_set_videosrc_caps(MMHandleType handle, unsigned int fourcc, in
 			motion_rate, capture_width, capture_height, fps_auto,
 			sc->info_video->video_width, sc->info_video->video_height);
 
-		if (motion_rate != _MMCAMCORDER_DEFAULT_RECORDING_MOTION_RATE) {
-			MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, "high-speed-fps", fps);
-		} else {
-			MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, "high-speed-fps", 0);
-		}
+		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst,
+			"high-speed-fps", (motion_rate != _MMCAMCORDER_DEFAULT_RECORDING_MOTION_RATE ? fps : 0));
 
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, "capture-width", capture_width);
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, "capture-height", capture_height);

@@ -1798,6 +1798,16 @@ typedef struct {
 
 
 /**
+ * Structure for muxed stream data.
+ */
+typedef struct {
+	void *data;             /**< pointer of muxed stream */
+	unsigned int length;    /**< length of stream buffer (in byte) */
+	unsigned long long offset;  /**< current offset for data */
+} MMCamcorderMuxedStreamDataType;
+
+
+/**
   * Prerequisite information for mm_camcorder_create()
   * The information to set prior to create.
   */
@@ -1878,6 +1888,21 @@ typedef gboolean (*mm_camcorder_video_stream_callback)(MMCamcorderVideoStreamDat
  *	@remarks
  */
 typedef gboolean (*mm_camcorder_audio_stream_callback)(MMCamcorderAudioStreamDataType *stream, void *user_param);
+
+
+/**
+ *	Function definition for muxed stream callback.
+ *  Be careful! In this function, you can't call functions that change the state of camcorder such as mm_camcorder_stop(),
+ *  mm_camcorder_unrealize(), mm_camcorder_record(), mm_camcorder_commit(), and mm_camcorder_cancel(), etc.
+ *  Please don't hang this function long. It may cause low performance of camcorder or occur timeout error from encoding pipeline.
+ *  I recommend to you releasing this function ASAP.
+ *
+ *	@param[in]	stream			Reference pointer to muxed stream data
+ *	@param[in]	user_param		User parameter which is received from user when callback function was set
+ *	@return		This function returns true on success, or false on failure.
+ *	@remarks
+ */
+typedef gboolean (*mm_camcorder_muxed_stream_callback)(MMCamcorderMuxedStreamDataType *stream, void *user_param);
 
 
 /**
@@ -2907,6 +2932,38 @@ gboolean setting_audio_stream_callback()
  *  @endcode
  */
 int mm_camcorder_set_audio_stream_callback(MMHandleType camcorder, mm_camcorder_audio_stream_callback callback, void *user_data);
+
+
+/**
+ *    mm_camcorder_set_muxed_stream_callback:\n
+ *  Set callback for user defined muxed stream callback function.
+ *  Users can retrieve muxed data using registered callback.
+ *  The callback function holds the same buffer that will be recorded.
+ *
+ *	@param[in]	camcorder	A handle of camcorder.
+ *	@param[in]	callback	Function pointer of callback function.
+ *	@param[in]	user_data	User parameter for passing to callback function.
+ *	@return		This function returns zero(MM_ERROR_NONE) on success, or negative value with error code.\n
+ *			Please refer 'mm_error.h' to know the exact meaning of the error.
+ *	@see		mm_camcorder_muxed_stream_callback
+ *	@pre		None
+ *	@post		None
+ *	@remarks	registered 'callback' is called on internal thread of camcorder. Regardless of the status of main loop, this function will be called.
+ *	@par example
+ *	@code
+
+#include <mm_camcorder.h>
+
+gboolean setting_muxed_stream_callback()
+{
+	//set callback
+	mm_camcorder_set_muxed_stream_callback(hcam, (mm_camcorder_muxed_stream_callback)camcordertest_muxed_stream_cb, (void*)hcam);
+
+	return TRUE;
+}
+ *  @endcode
+ */
+int mm_camcorder_set_muxed_stream_callback(MMHandleType camcorder, mm_camcorder_muxed_stream_callback callback, void *user_data);
 
 
 /**

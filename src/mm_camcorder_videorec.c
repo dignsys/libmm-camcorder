@@ -54,7 +54,6 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_audio_disable(GstPad *pad
 static GstPadProbeReturn __mmcamcorder_audio_dataprobe_audio_mute(GstPad *pad, GstPadProbeInfo *info, gpointer u_data);
 static gboolean __mmcamcorder_add_metadata(MMHandleType handle, int fileformat);
 static gboolean __mmcamcorder_add_metadata_mp4(MMHandleType handle);
-static GstPadProbeReturn __mmcamcorder_eventprobe_monitor(GstPad *pad, GstPadProbeInfo *info, gpointer u_data);
 
 /*=======================================================================================
 |  FUNCTION DEFINITIONS									|
@@ -225,8 +224,7 @@ int _mmcamcorder_create_recorder_pipeline(MMHandleType handle)
 
 	/* register message cb */
 
-	/* set data probe function for audio */
-
+	/* set data probe functions */
 	if (sc->audio_disable == FALSE) {
 		sinkpad = gst_element_get_static_pad(sc->encode_element[_MMCAMCORDER_ENCSINK_AENC].gst, "sink");
 		MMCAMCORDER_ADD_BUFFER_PROBE(sinkpad, _MMCAMCORDER_HANDLER_VIDEOREC,
@@ -279,6 +277,14 @@ int _mmcamcorder_create_recorder_pipeline(MMHandleType handle)
 		gst_object_unref(srcpad);
 		srcpad = NULL;
 	}
+
+	sinkpad = gst_element_get_static_pad(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, "sink");
+	MMCAMCORDER_ADD_BUFFER_PROBE(sinkpad, _MMCAMCORDER_HANDLER_VIDEOREC,
+		__mmcamcorder_muxed_dataprobe, hcamcorder);
+	MMCAMCORDER_ADD_EVENT_PROBE(sinkpad, _MMCAMCORDER_HANDLER_VIDEOREC,
+		__mmcamcorder_eventprobe_monitor, hcamcorder);
+	gst_object_unref(sinkpad);
+	sinkpad = NULL;
 
 	bus = gst_pipeline_get_bus(GST_PIPELINE(sc->encode_element[_MMCAMCORDER_ENCODE_MAIN_PIPE].gst));
 
@@ -763,6 +769,7 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 			sc->ferror_count = 0;
 			hcamcorder->error_occurs = FALSE;
 			sc->bget_eos = FALSE;
+			sc->muxed_stream_offset = 0;
 
 			ret = _mmcamcorder_gst_set_state(handle, sc->encode_element[_MMCAMCORDER_ENCODE_MAIN_PIPE].gst, GST_STATE_PLAYING);
 			if (ret != MM_ERROR_NONE) {
@@ -1277,51 +1284,6 @@ int _mmcamcorder_video_handle_eos(MMHandleType handle)
 	_mmcam_dbg_err("_MMCamcorder_CMD_COMMIT : end");
 
 	return TRUE;
-}
-
-
-/**
- * This function is record video data probing function.
- * If this function is linked with certain pad by gst_pad_add_buffer_probe(),
- * this function will be called when data stream pass through the pad.
- *
- * @param[in]	pad		probing pad which calls this function.
- * @param[in]	buffer		buffer which contains stream data.
- * @param[in]	u_data		user data.
- * @return	This function returns true on success, or false value with error
- * @remarks
- * @see
- */
-static GstPadProbeReturn __mmcamcorder_eventprobe_monitor(GstPad *pad, GstPadProbeInfo *info, gpointer u_data)
-{
-	GstEvent *event = GST_PAD_PROBE_INFO_EVENT(info);
-	switch (GST_EVENT_TYPE(event)) {
-	case GST_EVENT_UNKNOWN:
-	/* upstream events */
-	case GST_EVENT_QOS:
-	case GST_EVENT_SEEK:
-	case GST_EVENT_NAVIGATION:
-	case GST_EVENT_LATENCY:
-	/* downstream serialized events */
-	case GST_EVENT_SEGMENT:
-	case GST_EVENT_TAG:
-	case GST_EVENT_BUFFERSIZE:
-		_mmcam_dbg_log("[%s:%s] gots %s", GST_DEBUG_PAD_NAME(pad), GST_EVENT_TYPE_NAME(event));
-		break;
-	case GST_EVENT_EOS:
-		_mmcam_dbg_warn("[%s:%s] gots %s", GST_DEBUG_PAD_NAME(pad), GST_EVENT_TYPE_NAME(event));
-		break;
-	/* bidirectional events */
-	case GST_EVENT_FLUSH_START:
-	case GST_EVENT_FLUSH_STOP:
-		_mmcam_dbg_err("[%s:%s] gots %s", GST_DEBUG_PAD_NAME(pad), GST_EVENT_TYPE_NAME(event));
-		break;
-	default:
-		_mmcam_dbg_log("[%s:%s] gots %s", GST_DEBUG_PAD_NAME(pad), GST_EVENT_TYPE_NAME(event));
-		break;
-	}
-
-	return GST_PAD_PROBE_OK;
 }
 
 

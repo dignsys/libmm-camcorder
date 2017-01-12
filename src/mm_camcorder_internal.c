@@ -143,6 +143,7 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 	g_mutex_init(&(hcamcorder->mtsafe).vcapture_cb_lock);
 	g_mutex_init(&(hcamcorder->mtsafe).vstream_cb_lock);
 	g_mutex_init(&(hcamcorder->mtsafe).astream_cb_lock);
+	g_mutex_init(&(hcamcorder->mtsafe).mstream_cb_lock);
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
 	g_cond_init(&(hcamcorder->mtsafe).resource_cond);
 	g_mutex_init(&(hcamcorder->mtsafe).resource_lock);
@@ -565,6 +566,7 @@ _ERR_DEFAULT_VALUE_INIT:
 	g_mutex_clear(&(hcamcorder->mtsafe).vcapture_cb_lock);
 	g_mutex_clear(&(hcamcorder->mtsafe).vstream_cb_lock);
 	g_mutex_clear(&(hcamcorder->mtsafe).astream_cb_lock);
+	g_mutex_clear(&(hcamcorder->mtsafe).mstream_cb_lock);
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
 	g_cond_clear(&(hcamcorder->mtsafe).resource_cond);
 	g_mutex_clear(&(hcamcorder->mtsafe).resource_lock);
@@ -802,6 +804,7 @@ int _mmcamcorder_destroy(MMHandleType handle)
 	g_mutex_clear(&(hcamcorder->mtsafe).vcapture_cb_lock);
 	g_mutex_clear(&(hcamcorder->mtsafe).vstream_cb_lock);
 	g_mutex_clear(&(hcamcorder->mtsafe).astream_cb_lock);
+	g_mutex_clear(&(hcamcorder->mtsafe).mstream_cb_lock);
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
 	g_cond_clear(&(hcamcorder->mtsafe).resource_cond);
 	g_mutex_clear(&(hcamcorder->mtsafe).resource_lock);
@@ -2034,6 +2037,31 @@ int _mmcamcorder_set_audio_stream_callback(MMHandleType handle, mm_camcorder_aud
 	hcamcorder->astream_cb_param = user_data;
 
 	_MMCAMCORDER_UNLOCK_ASTREAM_CALLBACK(hcamcorder);
+
+	return MM_ERROR_NONE;
+}
+
+
+int _mmcamcorder_set_muxed_stream_callback(MMHandleType handle, mm_camcorder_muxed_stream_callback callback, void *user_data)
+{
+	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
+
+	_mmcam_dbg_log("");
+
+	mmf_return_val_if_fail(hcamcorder, MM_ERROR_CAMCORDER_NOT_INITIALIZED);
+
+	if (callback == NULL)
+		_mmcam_dbg_warn("Muxed Stream Callback is disabled, because application sets it to NULL");
+
+	if (!_MMCAMCORDER_TRYLOCK_MSTREAM_CALLBACK(hcamcorder)) {
+		_mmcam_dbg_warn("Application's muxed stream callback is running now");
+		return MM_ERROR_CAMCORDER_INVALID_CONDITION;
+	}
+
+	hcamcorder->mstream_cb = callback;
+	hcamcorder->mstream_cb_param = user_data;
+
+	_MMCAMCORDER_UNLOCK_MSTREAM_CALLBACK(hcamcorder);
 
 	return MM_ERROR_NONE;
 }

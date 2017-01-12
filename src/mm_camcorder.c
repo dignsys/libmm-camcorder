@@ -319,6 +319,14 @@ int mm_camcorder_set_audio_stream_callback(MMHandleType camcorder, mm_camcorder_
 }
 
 
+int mm_camcorder_set_muxed_stream_callback(MMHandleType camcorder, mm_camcorder_muxed_stream_callback callback, void *user_data)
+{
+	mmf_return_val_if_fail((void *)camcorder, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);
+
+	return _mmcamcorder_set_muxed_stream_callback(camcorder, callback, user_data);
+}
+
+
 int mm_camcorder_set_video_capture_callback(MMHandleType camcorder, mm_camcorder_video_capture_callback callback, void* user_data)
 {
 	mmf_return_val_if_fail((void *)camcorder, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);
@@ -426,7 +434,7 @@ void mm_camcorder_emit_signal(MMHandleType camcorder, const char *object_name,
 {
 	mmf_return_if_fail((void *)camcorder);
 
-	_mmcamcorder_emit_signal(camcorder,object_name, interface_name, signal_name, value);
+	_mmcamcorder_emit_signal(camcorder, object_name, interface_name, signal_name, value);
 
 	return;
 }

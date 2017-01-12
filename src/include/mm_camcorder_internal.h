@@ -413,6 +413,11 @@ extern "C" {
 #define _MMCAMCORDER_TRYLOCK_ASTREAM_CALLBACK(handle)       _MMCAMCORDER_TRYLOCK_FUNC(_MMCAMCORDER_GET_ASTREAM_CALLBACK_LOCK(handle))
 #define _MMCAMCORDER_UNLOCK_ASTREAM_CALLBACK(handle)        _MMCAMCORDER_UNLOCK_FUNC(_MMCAMCORDER_GET_ASTREAM_CALLBACK_LOCK(handle))
 
+#define _MMCAMCORDER_GET_MSTREAM_CALLBACK_LOCK(handle)      (_MMCAMCORDER_CAST_MTSAFE(handle).mstream_cb_lock)
+#define _MMCAMCORDER_LOCK_MSTREAM_CALLBACK(handle)          _MMCAMCORDER_LOCK_FUNC(_MMCAMCORDER_GET_MSTREAM_CALLBACK_LOCK(handle))
+#define _MMCAMCORDER_TRYLOCK_MSTREAM_CALLBACK(handle)       _MMCAMCORDER_TRYLOCK_FUNC(_MMCAMCORDER_GET_MSTREAM_CALLBACK_LOCK(handle))
+#define _MMCAMCORDER_UNLOCK_MSTREAM_CALLBACK(handle)        _MMCAMCORDER_UNLOCK_FUNC(_MMCAMCORDER_GET_MSTREAM_CALLBACK_LOCK(handle))
+
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
 /* for resource conflict */
 #define _MMCAMCORDER_GET_RESOURCE_LOCK(handle)              (_MMCAMCORDER_CAST_MTSAFE(handle).resource_lock)
@@ -629,6 +634,7 @@ typedef struct {
 	GMutex vcapture_cb_lock;        /**< Mutex (for video capture callback) */
 	GMutex vstream_cb_lock;         /**< Mutex (for video stream callback) */
 	GMutex astream_cb_lock;         /**< Mutex (for audio stream callback) */
+	GMutex mstream_cb_lock;         /**< Mutex (for muxed stream callback) */
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
 	GCond resource_cond;            /**< Condition (for resource check) */
 	GMutex resource_lock;           /**< Mutex (for resource check) */
@@ -656,6 +662,7 @@ typedef struct {
 	gboolean bencbin_capture;               /**< Use Encodebin for capturing */
 	gboolean audio_disable;                 /**< whether audio is disabled or not when record */
 	int videosrc_rotate;                    /**< rotate of videosrc */
+	unsigned long long muxed_stream_offset; /**< current offset for muxed stream data */
 
 	/* For dropping video frame when start recording */
 	int drop_vframe;                        /**< When this value is bigger than zero and pass_first_vframe is zero, MSL will drop video frame though cam_stability count is bigger then zero. */
@@ -717,6 +724,8 @@ typedef struct mmf_camcorder {
 	void *vstream_cb_param;                                 /**< Video stream callback parameter */
 	mm_camcorder_audio_stream_callback astream_cb;          /**< Audio stream callback */
 	void *astream_cb_param;                                 /**< Audio stream callback parameter */
+	mm_camcorder_muxed_stream_callback mstream_cb;          /**< Muxed stream callback */
+	void *mstream_cb_param;                                 /**< Muxed stream callback parameter */
 	mm_camcorder_video_capture_callback vcapture_cb;        /**< Video capture callback */
 	void *vcapture_cb_param;                                /**< Video capture callback parameter */
 	int (*command)(MMHandleType, int);                      /**< camcorder's command */
@@ -1025,6 +1034,20 @@ int _mmcamcorder_set_video_stream_callback(MMHandleType hcamcorder,
  */
 int _mmcamcorder_set_audio_stream_callback(MMHandleType handle,
 					   mm_camcorder_audio_stream_callback callback,
+					   void *user_data);
+
+/**
+ *	This function is to set callback for muxed stream.
+ *
+ *	@param[in]	hcamcorder	Specifies the camcorder handle
+ *	@param[in]	callback	Specifies the function pointer of callback function
+ *	@param[in]	user_data	Specifies the user poiner for passing to callback function
+ *
+ *	@return		This function returns zero on success, or negative value with error code.
+ *	@see		mmcamcorder_error_type
+ */
+int _mmcamcorder_set_muxed_stream_callback(MMHandleType handle,
+					   mm_camcorder_muxed_stream_callback callback,
 					   void *user_data);
 
 /**

@@ -62,10 +62,12 @@ static gboolean __mmcamcorder_audio_add_metadata_info_m4a(MMHandleType handle);
 static int __mmcamcorder_create_audiop_with_encodebin(MMHandleType handle)
 {
 	int err = MM_ERROR_NONE;
-	int ret = MM_ERROR_NONE;
+	int file_name_len = 0;
 
+	char *file_name = NULL;
 	const char *aenc_name = NULL;
 	const char *mux_name = NULL;
+	const char *sink_name = NULL;
 
 	GstBus *bus = NULL;
 	GstPad *srcpad = NULL;
@@ -113,7 +115,26 @@ static int __mmcamcorder_create_audiop_with_encodebin(MMHandleType handle)
 		err = _mmcamcorder_create_encodesink_bin((MMHandleType)hcamcorder, MM_CAMCORDER_ENCBIN_PROFILE_AUDIO);
 		if (err != MM_ERROR_NONE)
 			return err;
+
+		/* Add and link elements */
+		gst_bin_add_many(GST_BIN(sc->encode_element[_MMCAMCORDER_ENCODE_MAIN_PIPE].gst),
+			sc->encode_element[_MMCAMCORDER_AUDIOSRC_BIN].gst,
+			sc->encode_element[_MMCAMCORDER_ENCSINK_BIN].gst,
+			NULL);
+
+		srcpad = gst_element_get_static_pad(sc->encode_element[_MMCAMCORDER_AUDIOSRC_BIN].gst, "src");
+		sinkpad = gst_element_get_static_pad(sc->encode_element[_MMCAMCORDER_ENCSINK_BIN].gst, "audio_sink0");
+		_MM_GST_PAD_LINK_UNREF(srcpad, sinkpad, err, pipeline_creation_error);
 	} else {
+		err = mm_camcorder_get_attributes(handle, NULL,
+			MMCAM_TARGET_FILENAME, &file_name, &file_name_len,
+			NULL);
+		if (err != MM_ERROR_NONE) {
+			_mmcam_dbg_err("failed to get filename [0x%x]", err);
+			err = MM_ERROR_CAMCORDER_RESOURCE_CREATION;
+			goto pipeline_creation_error;
+		}
+
 		/* without muxing. can't use encodebin. */
 		aenc_elem = _mmcamcorder_get_type_element(handle, MM_CAM_AUDIO_ENCODER);
 		if (!aenc_elem) {
@@ -129,6 +150,8 @@ static int __mmcamcorder_create_audiop_with_encodebin(MMHandleType handle)
 			goto pipeline_creation_error;
 		}
 
+		element_list = g_list_append(element_list, &sc->encode_element[_MMCAMCORDER_AUDIOSRC_BIN]);
+
 		_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_AQUE, "queue",  NULL, element_list, err);
 
 		if (strcmp(aenc_name, "wavenc") != 0)
@@ -136,58 +159,27 @@ static int __mmcamcorder_create_audiop_with_encodebin(MMHandleType handle)
 
 		_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_AENC, aenc_name, NULL, element_list, err);
 
-		_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_SINK, "filesink", NULL, element_list, err);
-	}
+		if (file_name)
+			sink_name = "filesink";
+		else
+			sink_name = "fakesink";
 
-	/* Add and link elements */
-	if (info->bMuxing) {
-		/* IF MUX is indicated create MUX */
-		gst_bin_add_many(GST_BIN(sc->encode_element[_MMCAMCORDER_ENCODE_MAIN_PIPE].gst),
-			sc->encode_element[_MMCAMCORDER_AUDIOSRC_BIN].gst,
-			sc->encode_element[_MMCAMCORDER_ENCSINK_BIN].gst,
-			NULL);
+		_mmcam_dbg_log("encode sink : %s", sink_name);
 
-		srcpad = gst_element_get_static_pad(sc->encode_element[_MMCAMCORDER_AUDIOSRC_BIN].gst, "src");
-		sinkpad = gst_element_get_static_pad(sc->encode_element[_MMCAMCORDER_ENCSINK_BIN].gst, "audio_sink0");
-		_MM_GST_PAD_LINK_UNREF(srcpad, sinkpad, err, pipeline_creation_error);
-	} else {
-		/* IF MUX in not chosen then record in raw amr file */
-		if (!strcmp(aenc_name, "wavenc")) {
-			gst_bin_add_many(GST_BIN(sc->encode_element[_MMCAMCORDER_ENCODE_MAIN_PIPE].gst),
-				sc->encode_element[_MMCAMCORDER_AUDIOSRC_BIN].gst,
-				sc->encode_element[_MMCAMCORDER_ENCSINK_AQUE].gst,
-				sc->encode_element[_MMCAMCORDER_ENCSINK_AENC].gst,
-				sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst,
-				NULL);
+		_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_SINK, sink_name, NULL, element_list, err);
 
-			ret = _MM_GST_ELEMENT_LINK_MANY(sc->encode_element[_MMCAMCORDER_AUDIOSRC_BIN].gst,
-				sc->encode_element[_MMCAMCORDER_ENCSINK_AQUE].gst,
-				sc->encode_element[_MMCAMCORDER_ENCSINK_AENC].gst,
-				sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst,
-				NULL);
-			if (!ret) {
-				err = MM_ERROR_CAMCORDER_GST_LINK;
-				goto pipeline_creation_error;
-			}
-		} else {
-			gst_bin_add_many(GST_BIN(sc->encode_element[_MMCAMCORDER_ENCODE_MAIN_PIPE].gst),
-				sc->encode_element[_MMCAMCORDER_AUDIOSRC_BIN].gst,
-				sc->encode_element[_MMCAMCORDER_ENCSINK_AQUE].gst,
-				sc->encode_element[_MMCAMCORDER_ENCSINK_CONV].gst,
-				sc->encode_element[_MMCAMCORDER_ENCSINK_AENC].gst,
-				sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst,
-				NULL);
+		/* add elements to encode pipeline */
+		if (!_mmcamcorder_add_elements_to_bin(GST_BIN(sc->encode_element[_MMCAMCORDER_ENCODE_MAIN_PIPE].gst), element_list)) {
+			_mmcam_dbg_err("add encode elements error.");
+			err = MM_ERROR_CAMCORDER_RESOURCE_CREATION;
+			goto pipeline_creation_error;
+		}
 
-			ret = _MM_GST_ELEMENT_LINK_MANY(sc->encode_element[_MMCAMCORDER_AUDIOSRC_BIN].gst,
-				sc->encode_element[_MMCAMCORDER_ENCSINK_AQUE].gst,
-				sc->encode_element[_MMCAMCORDER_ENCSINK_CONV].gst,
-				sc->encode_element[_MMCAMCORDER_ENCSINK_AENC].gst,
-				sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst,
-				NULL);
-			if (!ret) {
-				err = MM_ERROR_CAMCORDER_GST_LINK;
-				goto pipeline_creation_error;
-			}
+		/* link elements */
+		if (!_mmcamcorder_link_elements(element_list)) {
+			_mmcam_dbg_err("encode element link error.");
+			err = MM_ERROR_CAMCORDER_GST_LINK;
+			goto pipeline_creation_error;
 		}
 	}
 
@@ -203,6 +195,14 @@ static int __mmcamcorder_create_audiop_with_encodebin(MMHandleType handle)
 		__mmcamcorder_audio_dataprobe_record, hcamcorder);
 	gst_object_unref(srcpad);
 	srcpad = NULL;
+
+	sinkpad = gst_element_get_static_pad(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, "sink");
+	MMCAMCORDER_ADD_BUFFER_PROBE(sinkpad, _MMCAMCORDER_HANDLER_AUDIOREC,
+		__mmcamcorder_muxed_dataprobe, hcamcorder);
+	MMCAMCORDER_ADD_EVENT_PROBE(sinkpad, _MMCAMCORDER_HANDLER_AUDIOREC,
+		__mmcamcorder_eventprobe_monitor, hcamcorder);
+	gst_object_unref(sinkpad);
+	sinkpad = NULL;
 
 	bus = gst_pipeline_get_bus(GST_PIPELINE(sc->encode_element[_MMCAMCORDER_ENCODE_MAIN_PIPE].gst));
 
@@ -403,25 +403,28 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 				goto _ERR_CAMCORDER_AUDIO_COMMAND;
 			}
 
-			if (temp_filename == NULL) {
-				_mmcam_dbg_err("filename is not set");
+			if (!temp_filename && !hcamcorder->mstream_cb) {
+				_mmcam_dbg_err("filename is not set and muxed stream cb is NULL");
 				ret = MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
 				goto _ERR_CAMCORDER_AUDIO_COMMAND;
 			}
 
-			info->filename = g_strdup(temp_filename);
-			if (!info->filename) {
-				_mmcam_dbg_err("STRDUP was failed");
-				goto _ERR_CAMCORDER_AUDIO_COMMAND;
+			if (temp_filename) {
+				info->filename = g_strdup(temp_filename);
+				if (!info->filename) {
+					_mmcam_dbg_err("STRDUP was failed");
+					goto _ERR_CAMCORDER_AUDIO_COMMAND;
+				}
+
+				_mmcam_dbg_log("Record start : set file name using attribute - %s\n ", info->filename);
+
+				MMCAMCORDER_G_OBJECT_SET_POINTER(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, "location", info->filename);
 			}
-
-			_mmcam_dbg_log("Record start : set file name using attribute - %s\n ", info->filename);
-
-			MMCAMCORDER_G_OBJECT_SET_POINTER(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, "location", info->filename);
 
 			sc->ferror_send = FALSE;
 			sc->ferror_count = 0;
 			sc->bget_eos = FALSE;
+			sc->muxed_stream_offset = 0;
 			info->filesize = 0;
 
 			/* set max size */
@@ -755,6 +758,7 @@ static GstPadProbeReturn __mmcamcorder_audio_dataprobe_voicerecorder(GstPad *pad
 {
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(u_data);
 	double volume = 0.0;
+	int current_state = MM_CAMCORDER_STATE_NONE;
 	int format = 0;
 	int channel = 0;
 	float curdcb = 0.0;
@@ -765,6 +769,12 @@ static GstPadProbeReturn __mmcamcorder_audio_dataprobe_voicerecorder(GstPad *pad
 	GstMapInfo mapinfo;
 
 	mmf_return_val_if_fail(hcamcorder, GST_PAD_PROBE_OK);
+
+	current_state = _mmcamcorder_get_state((MMHandleType)hcamcorder);
+	if (current_state < MM_CAMCORDER_STATE_PREPARE) {
+		_mmcam_dbg_warn("Not ready for stream callback");
+		return GST_PAD_PROBE_OK;
+	}
 
 	memset(&mapinfo, 0x0, sizeof(GstMapInfo));
 
@@ -793,15 +803,11 @@ static GstPadProbeReturn __mmcamcorder_audio_dataprobe_voicerecorder(GstPad *pad
 	msg.param.rec_volume_dB = curdcb;
 	_mmcamcorder_send_message((MMHandleType)hcamcorder, &msg);
 
-	/* CALL audio stream callback */
-	if ((hcamcorder->astream_cb) && buffer && mapinfo.data && mapinfo.size > 0) {
-		MMCamcorderAudioStreamDataType stream;
+	_MMCAMCORDER_LOCK_ASTREAM_CALLBACK(hcamcorder);
 
-		if (_mmcamcorder_get_state((MMHandleType)hcamcorder) < MM_CAMCORDER_STATE_PREPARE) {
-			_mmcam_dbg_warn("Not ready for stream callback");
-			gst_buffer_unmap(buffer, &mapinfo);
-			return GST_PAD_PROBE_OK;
-		}
+	/* CALL audio stream callback */
+	if (hcamcorder->astream_cb && buffer && mapinfo.data && mapinfo.size > 0) {
+		MMCamcorderAudioStreamDataType stream;
 
 		/*
 		_mmcam_dbg_log("Call audio steramCb, data[%p], format[%d], channel[%d], length[%d], volume_dB[%f]",
@@ -815,15 +821,13 @@ static GstPadProbeReturn __mmcamcorder_audio_dataprobe_voicerecorder(GstPad *pad
 		stream.timestamp = (unsigned int)(GST_BUFFER_PTS(buffer)/1000000);	/* nano -> msecond */
 		stream.volume_dB = curdcb;
 
-		_MMCAMCORDER_LOCK_ASTREAM_CALLBACK(hcamcorder);
-
-		if (hcamcorder->astream_cb)
-			hcamcorder->astream_cb(&stream, hcamcorder->astream_cb_param);
-
-		_MMCAMCORDER_UNLOCK_ASTREAM_CALLBACK(hcamcorder);
+		hcamcorder->astream_cb(&stream, hcamcorder->astream_cb_param);
 	}
 
+	_MMCAMCORDER_UNLOCK_ASTREAM_CALLBACK(hcamcorder);
+
 	gst_buffer_unmap(buffer, &mapinfo);
+
 	return GST_PAD_PROBE_OK;
 }
 
