@@ -397,6 +397,7 @@ bool _mmcamcorder_commit_tag(MMHandleType handle, int attr_idx, const mmf_value_
  * @return	bool		Success on TRUE or return FALSE
  */
 bool _mmcamcorder_set_attribute_to_camsensor(MMHandleType handle);
+bool _mmcamcorder_set_attribute_to_camsensor2(MMHandleType handle);
 
 /**
  * This function removes writable flag from pre-defined attributes.

@@ -4766,7 +4766,6 @@ bool _mmcamcorder_set_attribute_to_camsensor(MMHandleType handle)
 		MM_CAM_CAMERA_WDR,
 		MM_CAM_FILTER_CONTRAST,
 		MM_CAM_FILTER_HUE,
-		MM_CAM_STROBE_MODE,
 		MM_CAM_DETECT_MODE
 	};
 
@@ -4782,7 +4781,7 @@ bool _mmcamcorder_set_attribute_to_camsensor(MMHandleType handle)
 
 	mmf_return_val_if_fail(hcamcorder, FALSE);
 
-	_mmcam_dbg_log("Set all attribute again.");
+	_mmcam_dbg_log("commit some attributes again");
 
 	attr = (mmf_attrs_t *)MMF_CAMCORDER_ATTRS(handle);
 	if (attr == NULL) {
@@ -4809,6 +4808,45 @@ bool _mmcamcorder_set_attribute_to_camsensor(MMHandleType handle)
 			/* Set scene mode if scene mode is NOT NORMAL */
 			if (__mmcamcorder_attrs_is_supported((MMHandleType)attr, MM_CAM_FILTER_SCENE_MODE))
 				mmf_attribute_set_modified(&(attr->items[MM_CAM_FILTER_SCENE_MODE]));
+		}
+
+		if (mmf_attrs_commit((MMHandleType)attr) == -1)
+			ret = FALSE;
+		else
+			ret = TRUE;
+	}
+
+	_mmcam_dbg_log("Done.");
+
+	return ret;
+}
+
+
+bool _mmcamcorder_set_attribute_to_camsensor2(MMHandleType handle)
+{
+	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
+	mmf_attrs_t *attr = NULL;
+
+	unsigned int i = 0;
+	int ret = TRUE;
+	int attr_idxs[] = {
+		MM_CAM_STROBE_MODE
+	};
+
+	mmf_return_val_if_fail(hcamcorder, FALSE);
+
+	_mmcam_dbg_log("commit some attribute again[2]");
+
+	attr = (mmf_attrs_t *)MMF_CAMCORDER_ATTRS(handle);
+	if (attr == NULL) {
+		_mmcam_dbg_err("Get attribute handle failed.");
+		return FALSE;
+	} else {
+		_mmcam_dbg_log("attribute count(%d)", attr->count);
+
+		for (i = 0 ; i < ARRAY_SIZE(attr_idxs) ; i++) {
+			if (__mmcamcorder_attrs_is_supported((MMHandleType)attr, attr_idxs[i]))
+				mmf_attribute_set_modified(&(attr->items[attr_idxs[i]]));
 		}
 
 		if (mmf_attrs_commit((MMHandleType)attr) == -1)

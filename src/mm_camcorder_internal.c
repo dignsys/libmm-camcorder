@@ -1496,6 +1496,10 @@ int _mmcamcorder_start(MMHandleType handle)
 
 	_mmcamcorder_set_state(handle, MM_CAMCORDER_STATE_PREPARE);
 
+	/* set attributes related sensor - after start preview */
+	if (hcamcorder->type != MM_CAMCORDER_MODE_AUDIO)
+		_mmcamcorder_set_attribute_to_camsensor2(handle);
+
 	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);
 
 	return MM_ERROR_NONE;
