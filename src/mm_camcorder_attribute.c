@@ -4126,12 +4126,11 @@ bool _mmcamcorder_commit_display_rect(MMHandleType handle, int attr_idx, const m
 					NULL);
 			}
 		}
-
-		return TRUE;
 	} else {
-		_mmcam_dbg_warn("videosink[%s] does not support display rect.", videosink_name);
-		return FALSE;
+		_mmcam_dbg_warn("[%s] does not support display rect, but no error", videosink_name);
 	}
+
+	return TRUE;
 }
 
 
