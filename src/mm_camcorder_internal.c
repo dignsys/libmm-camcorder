@@ -399,6 +399,16 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 
 			_mmcam_dbg_log("DPM camera changed cb id %d", hcamcorder->dpm_camera_cb_id);
 		}
+
+#ifdef _MMCAMCORDER_MURPHY_SUPPORT
+		/* initialize resource manager */
+		ret = _mmcamcorder_resource_manager_init(&hcamcorder->resource_manager, (void *)hcamcorder);
+		if (ret != MM_ERROR_NONE) {
+			_mmcam_dbg_err("failed to initialize resource manager");
+			ret = MM_ERROR_CAMCORDER_INTERNAL;
+			goto _ERR_DEFAULT_VALUE_INIT;
+		}
+#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 	} else {
 		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
 			CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
@@ -422,16 +432,6 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 			goto _ERR_DEFAULT_VALUE_INIT;
 		}
 	}
-
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
-	/* initialize resource manager */
-	ret = _mmcamcorder_resource_manager_init(&hcamcorder->resource_manager, (void *)hcamcorder);
-	if (ret != MM_ERROR_NONE) {
-		_mmcam_dbg_err("failed to initialize resource manager");
-		ret = MM_ERROR_CAMCORDER_INTERNAL;
-		goto _ERR_DEFAULT_VALUE_INIT;
-	}
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 
 	traceBegin(TTRACE_TAG_CAMERA, "MMCAMCORDER:CREATE:INIT_GSTREAMER");
 
@@ -492,27 +492,29 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 	}
 
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
-	_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
+	if (info->videodev_type != MM_VIDEO_DEVICE_NONE) {
+		_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
 
-	if (hcamcorder->resource_manager.is_connected == FALSE) {
-		gint64 end_time = 0;
+		if (hcamcorder->resource_manager.is_connected == FALSE) {
+			gint64 end_time = 0;
 
-		/* wait for resource manager connected */
-		_mmcam_dbg_log("resource manager is not connected. wait for signal...");
+			/* wait for resource manager connected */
+			_mmcam_dbg_log("resource manager is not connected. wait for signal...");
 
-		end_time = g_get_monotonic_time() + (__MMCAMCORDER_RESOURCE_WAIT_TIME * G_TIME_SPAN_SECOND);
+			end_time = g_get_monotonic_time() + (__MMCAMCORDER_RESOURCE_WAIT_TIME * G_TIME_SPAN_SECOND);
 
-		if (_MMCAMCORDER_RESOURCE_WAIT_UNTIL(hcamcorder, end_time)) {
-			_mmcam_dbg_warn("signal received");
-		} else {
-			_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
-			_mmcam_dbg_err("timeout");
-			ret = MM_ERROR_RESOURCE_INTERNAL;
-			goto _ERR_DEFAULT_VALUE_INIT;
+			if (_MMCAMCORDER_RESOURCE_WAIT_UNTIL(hcamcorder, end_time)) {
+				_mmcam_dbg_warn("signal received");
+			} else {
+				_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+				_mmcam_dbg_err("timeout");
+				ret = MM_ERROR_RESOURCE_INTERNAL;
+				goto _ERR_DEFAULT_VALUE_INIT;
+			}
 		}
-	}
 
-	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+		_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+	}
 #endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 
 	/* Set initial state */

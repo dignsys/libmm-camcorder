@@ -325,6 +325,8 @@ int _mmcamcorder_resource_manager_init(MMCamcorderResourceManager *resource_mana
 
 	MMCAMCORDER_CHECK_RESOURCE_MANAGER_INSTANCE(resource_manager);
 
+	_mmcam_dbg_warn("start");
+
 	mrp_ctx = g_main_context_new();
 	if (!mrp_ctx) {
 		_mmcam_dbg_err("failed to get create glib context for mrp");
@@ -350,6 +352,8 @@ int _mmcamcorder_resource_manager_init(MMCamcorderResourceManager *resource_mana
 		_mmcam_dbg_err("failed to get mainloop for mrp");
 		return MM_ERROR_RESOURCE_INTERNAL;
 	}
+
+	_mmcam_dbg_warn("mloop %p", resource_manager->mloop);
 
 	resource_manager->context = mrp_res_create(resource_manager->mloop, __mmcamcorder_resource_state_callback, user_data);
 	if (!resource_manager->context) {
@@ -435,29 +439,38 @@ int _mmcamcorder_resource_manager_deinit(MMCamcorderResourceManager *resource_ma
 {
 	MMCAMCORDER_CHECK_RESOURCE_MANAGER_INSTANCE(resource_manager);
 
+	_mmcam_dbg_warn("rset %p, context %p, mloop %p",
+		resource_manager->rset, resource_manager->context, resource_manager->mloop);
+
 	if (resource_manager->rset) {
 		if (resource_manager->rset->state == MRP_RES_RESOURCE_ACQUIRED) {
 			_mmcam_dbg_warn("resource is still acquired. release...");
 			if (mrp_res_release_resource_set(resource_manager->rset))
 				_mmcam_dbg_err("- could not release resource");
 		}
-		_mmcam_dbg_log("delete resource set");
+
+		_mmcam_dbg_warn("delete resource set");
+
 		mrp_res_delete_resource_set(resource_manager->rset);
 		resource_manager->rset = NULL;
 	}
 
 	if (resource_manager->context) {
-		_mmcam_dbg_log("destroy resource context");
+		_mmcam_dbg_warn("destroy resource context");
+
 		mrp_res_destroy(resource_manager->context);
 		resource_manager->context = NULL;
 	}
 
 	if (resource_manager->mloop) {
-		_mmcam_dbg_log("destroy resource mainloop");
+		_mmcam_dbg_warn("destroy resource mainloop");
+
 		mrp_mainloop_quit(resource_manager->mloop, 0);
 		mrp_mainloop_destroy(resource_manager->mloop);
 		resource_manager->mloop = NULL;
 	}
+
+	_mmcam_dbg_warn("done");
 
 	return MM_ERROR_NONE;
 }
