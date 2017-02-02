@@ -81,16 +81,12 @@ static void __mmcamcorder_resource_state_callback(mrp_res_context_t *context, mr
 	mrp_res_resource_t *resource;
 	mmf_camcorder_t* camcorder = NULL;
 
-	if (err != MRP_RES_ERROR_NONE) {
-		_mmcam_dbg_err(" - error message received from Murphy, err(0x%x)", err);
-		return;
-	}
-
 	camcorder = (mmf_camcorder_t*)user_data;
 
 	mmf_return_if_fail((MMHandleType)camcorder);
+	mmf_return_if_fail(context);
 
-	_mmcam_dbg_log("enter");
+	_mmcam_dbg_log("enter - state %d", context->state);
 
 	_MMCAMCORDER_LOCK_RESOURCE(camcorder);
 
@@ -116,16 +112,31 @@ static void __mmcamcorder_resource_state_callback(mrp_res_context_t *context, mr
 		_MMCAMCORDER_RESOURCE_SIGNAL(camcorder);
 		break;
 	case MRP_RES_DISCONNECTED:
-		_mmcam_dbg_log(" - disconnected from Murphy");
+		_mmcam_dbg_err(" - disconnected from Murphy : stop camera");
+
 		if (camcorder->resource_manager.rset) {
 			mrp_res_delete_resource_set(camcorder->resource_manager.rset);
 			camcorder->resource_manager.rset = NULL;
 		}
+
 		if (camcorder->resource_manager.context) {
 			mrp_res_destroy(camcorder->resource_manager.context);
 			camcorder->resource_manager.context = NULL;
 			camcorder->resource_manager.is_connected = FALSE;
 		}
+
+		_MMCAMCORDER_LOCK_ASM(camcorder);
+
+		/* set value to inform a status is changed by resource manaer */
+		camcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_BY_RM;
+
+		/* Stop the camera */
+		__mmcamcorder_force_stop(camcorder);
+
+		/* restore value */
+		camcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_NORMAL;
+
+		_MMCAMCORDER_UNLOCK_ASM(camcorder);
 		break;
 	}
 
@@ -220,10 +231,10 @@ static void __mmcamcorder_resource_release_cb(mrp_res_context_t *cx, const mrp_r
 		return;
 	}
 
+	_MMCAMCORDER_LOCK_ASM(camcorder);
+
 	/* set value to inform a status is changed by resource manaer */
 	camcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_BY_RM;
-
-	_MMCAMCORDER_LOCK_ASM(camcorder);
 
 	if (!mrp_res_equal_resource_set(rs, camcorder->resource_manager.rset)) {
 		_MMCAMCORDER_UNLOCK_ASM(camcorder);
