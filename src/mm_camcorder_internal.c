@@ -3281,7 +3281,7 @@ void _mmcamcorder_sound_focus_cb(int id, mm_sound_focus_type_e focus_type,
 		return;
 	}
 
-	_mmcam_dbg_log("sound focus callback : focus state %d, reason %s",
+	_mmcam_dbg_warn("sound focus callback : focus state %d, reason %s",
 				   focus_state, reason_for_change ? reason_for_change : "N/A");
 
 	if (hcamcorder->session_flags & MM_SESSION_OPTION_UNINTERRUPTIBLE) {
@@ -3309,32 +3309,34 @@ void _mmcamcorder_sound_focus_cb(int id, mm_sound_focus_type_e focus_type,
 	if (focus_state == FOCUS_IS_RELEASED) {
 		hcamcorder->acquired_focus &= ~focus_type;
 
-		_mmcam_dbg_log("FOCUS is released [type %d, remained focus %d] : Stop pipeline[state:%d]",
+		_mmcam_dbg_warn("FOCUS is released [type %d, remained focus %d] : Stop pipeline[state:%d]",
 			focus_type, hcamcorder->acquired_focus, current_state);
 
 		__mmcamcorder_force_stop(hcamcorder);
 
-		_mmcam_dbg_log("Finish opeartion. Pipeline is released");
+		_mmcam_dbg_warn("Finish opeartion. Pipeline is released");
 	} else if (focus_state == FOCUS_IS_ACQUIRED) {
 		_MMCamcorderMsgItem msg;
 
 		hcamcorder->acquired_focus |= focus_type;
 
-		_mmcam_dbg_log("FOCUS is acquired [type %d, new focus %d]",
+		_mmcam_dbg_warn("FOCUS is acquired [type %d, new focus %d]",
 			focus_type, hcamcorder->acquired_focus);
 
 		msg.id = MM_MESSAGE_READY_TO_RESUME;
 		_mmcamcorder_send_message((MMHandleType)hcamcorder, &msg);
 
-		_mmcam_dbg_log("Finish opeartion");
+		_mmcam_dbg_warn("Finish opeartion");
 	} else {
-		_mmcam_dbg_log("unknown focus state %d", focus_state);
+		_mmcam_dbg_warn("unknown focus state %d", focus_state);
 	}
 
 	/* restore value */
 	hcamcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_NORMAL;
 
 	_MMCAMCORDER_UNLOCK_ASM(hcamcorder);
+
+	_mmcam_dbg_warn("done");
 
 	return;
 }
@@ -3346,17 +3348,17 @@ void _mmcamcorder_sound_signal_callback(mm_sound_signal_name_t signal, int value
 
 	mmf_return_if_fail(hcamcorder);
 
-	_mmcam_dbg_log("sound signal %d - value %d", signal, value);
+	_mmcam_dbg_warn("sound signal %d - value %d", signal, value);
 
 	_MMCAMCORDER_LOCK_ASM(hcamcorder);
 
 	if (signal == MM_SOUND_SIGNAL_RELEASE_INTERNAL_FOCUS && value == 1) {
-		_mmcam_dbg_log("watch cb id %d", hcamcorder->sound_focus_watch_id);
+		_mmcam_dbg_warn("watch cb id %d", hcamcorder->sound_focus_watch_id);
 
 		/* unregister watch callback */
 		if (hcamcorder->sound_focus_watch_id > 0) {
 			mm_sound_unset_focus_watch_callback(hcamcorder->sound_focus_watch_id);
-			_mmcam_dbg_log("unset watch cb done");
+			_mmcam_dbg_warn("unset watch cb done");
 			hcamcorder->sound_focus_watch_id = 0;
 		}
 	}
@@ -3387,7 +3389,7 @@ void _mmcamcorder_sound_focus_watch_cb(int id, mm_sound_focus_type_e focus_type,
 		return;
 	}
 
-	_mmcam_dbg_log("sound focus watch callback : id %d, focus state %d, reason %s",
+	_mmcam_dbg_warn("sound focus watch callback : id %d, focus state %d, reason %s",
 		id, focus_state, reason_for_change ? reason_for_change : "N/A");
 
 	if (hcamcorder->session_flags & MM_SESSION_OPTION_UNINTERRUPTIBLE) {
@@ -3415,26 +3417,28 @@ void _mmcamcorder_sound_focus_watch_cb(int id, mm_sound_focus_type_e focus_type,
 	if (focus_state == FOCUS_IS_RELEASED) {
 		_MMCamcorderMsgItem msg;
 
-		_mmcam_dbg_log("other process's FOCUS is released");
+		_mmcam_dbg_warn("other process's FOCUS is released");
 
 		msg.id = MM_MESSAGE_READY_TO_RESUME;
 		_mmcamcorder_send_message((MMHandleType)hcamcorder, &msg);
 
-		_mmcam_dbg_log("Finish opeartion");
+		_mmcam_dbg_warn("Finish opeartion");
 	} else if (focus_state == FOCUS_IS_ACQUIRED) {
-		_mmcam_dbg_log("other process's FOCUS is acquired : Stop pipeline[state:%d]", current_state);
+		_mmcam_dbg_warn("other process's FOCUS is acquired : Stop pipeline[state:%d]", current_state);
 
 		__mmcamcorder_force_stop(hcamcorder);
 
-		_mmcam_dbg_log("Finish opeartion. Pipeline is released");
+		_mmcam_dbg_warn("Finish opeartion. Pipeline is released");
 	} else {
-		_mmcam_dbg_log("unknown focus state %d", focus_state);
+		_mmcam_dbg_warn("unknown focus state %d", focus_state);
 	}
 
 	/* restore value */
 	hcamcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_NORMAL;
 
 	_MMCAMCORDER_UNLOCK_ASM(hcamcorder);
+
+	_mmcam_dbg_warn("done");
 
 	return;
 }

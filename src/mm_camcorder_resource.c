@@ -86,13 +86,13 @@ static void __mmcamcorder_resource_state_callback(mrp_res_context_t *context, mr
 	mmf_return_if_fail((MMHandleType)camcorder);
 	mmf_return_if_fail(context);
 
-	_mmcam_dbg_log("enter - state %d", context->state);
+	_mmcam_dbg_warn("enter - state %d", context->state);
 
 	_MMCAMCORDER_LOCK_RESOURCE(camcorder);
 
 	switch (context->state) {
 	case MRP_RES_CONNECTED:
-		_mmcam_dbg_log(" - connected to Murphy");
+		_mmcam_dbg_warn(" - connected to Murphy");
 		if ((rset = mrp_res_list_resources(context)) != NULL) {
 			mrp_res_string_array_t *resource_names;
 			resource_names = mrp_res_list_resource_names(rset);
@@ -104,7 +104,7 @@ static void __mmcamcorder_resource_state_callback(mrp_res_context_t *context, mr
 			for (i = 0; i < resource_names->num_strings; i++) {
 				resource = mrp_res_get_resource_by_name(rset, resource_names->strings[i]);
 				if (resource)
-					_mmcam_dbg_log(" - available resource: %s", resource->name);
+					_mmcam_dbg_warn(" - available resource: %s", resource->name);
 			}
 			mrp_res_free_string_array(resource_names);
 		}
@@ -142,7 +142,7 @@ static void __mmcamcorder_resource_state_callback(mrp_res_context_t *context, mr
 
 	_MMCAMCORDER_UNLOCK_RESOURCE(camcorder);
 
-	_mmcam_dbg_log("leave");
+	_mmcam_dbg_warn("leave");
 
 	return;
 }
@@ -172,14 +172,14 @@ static void __mmcamcorder_resource_set_state_callback(mrp_res_context_t *cx, con
 		if (res == NULL) {
 			_mmcam_dbg_warn(" -- %s not present in resource set", mm_camcorder_resource_str[i]);
 		} else {
-			_mmcam_dbg_log(" -- resource name [%s] -> [%s]",
+			_mmcam_dbg_warn(" -- resource name [%s] -> [%s]",
 				res->name, __mmcamcorder_resource_state_to_str(res->state));
 
 			if (res->state == MRP_RES_RESOURCE_ACQUIRED) {
 				camcorder->resource_manager.acquire_remain--;
 
 				if (camcorder->resource_manager.acquire_remain <= 0) {
-					_mmcam_dbg_log("send signal - resource acquire done");
+					_mmcam_dbg_warn("send signal - resource acquire done");
 					_MMCAMCORDER_RESOURCE_SIGNAL(camcorder);
 				} else {
 					_mmcam_dbg_warn("remained acquire count %d",
@@ -189,13 +189,13 @@ static void __mmcamcorder_resource_set_state_callback(mrp_res_context_t *cx, con
 				camcorder->resource_manager.acquire_remain++;
 
 				if (camcorder->resource_manager.acquire_remain >= camcorder->resource_manager.acquire_count) {
-					_mmcam_dbg_log("resource release done");
+					_mmcam_dbg_warn("resource release done");
 
 					if (camcorder->state > MM_CAMCORDER_STATE_NULL) {
-						_mmcam_dbg_log("send resource signal");
+						_mmcam_dbg_warn("send resource signal");
 						_MMCAMCORDER_RESOURCE_SIGNAL(camcorder);
 					} else {
-						_mmcam_dbg_log("skip resource signal - state %d", camcorder->state);
+						_mmcam_dbg_warn("skip resource signal - state %d", camcorder->state);
 					}
 				} else {
 					_mmcam_dbg_warn("acquired %d, lost %d",
@@ -250,7 +250,7 @@ static void __mmcamcorder_resource_release_cb(mrp_res_context_t *cx, const mrp_r
 		if (res == NULL) {
 			_mmcam_dbg_warn(" -- %s not present in resource set", mm_camcorder_resource_str[i]);
 		} else {
-			_mmcam_dbg_log(" -- resource name [%s] -> [%s]", res->name, __mmcamcorder_resource_state_to_str(res->state));
+			_mmcam_dbg_warn(" -- resource name [%s] -> [%s]", res->name, __mmcamcorder_resource_state_to_str(res->state));
 		}
 	}
 

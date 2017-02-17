@@ -105,14 +105,14 @@ static int __gdbus_method_call_sync(GDBusConnection *conn, const char *bus_name,
 		return MM_ERROR_INVALID_ARGUMENT;
 	}
 
-	_mmcam_dbg_log("Dbus call - obj [%s], iface [%s], method [%s]", object, iface, method);
+	_mmcam_dbg_warn("Dbus call - obj [%s], iface [%s], method [%s]", object, iface, method);
 
 	if (is_sync) {
 		dbus_reply = g_dbus_connection_call_sync(conn,
 			bus_name, object, iface, method, args, NULL,
 			G_DBUS_CALL_FLAGS_NONE, G_DBUS_TIMEOUT, NULL, NULL);
 		if (dbus_reply) {
-			_mmcam_dbg_log("Method Call '%s.%s' Success", iface, method);
+			_mmcam_dbg_warn("Method Call '%s.%s' Success", iface, method);
 			*result = dbus_reply;
 		} else {
 			_mmcam_dbg_err("dbus method call sync reply failed");
@@ -122,6 +122,8 @@ static int __gdbus_method_call_sync(GDBusConnection *conn, const char *bus_name,
 		g_dbus_connection_call(conn, bus_name, object, iface, method, args, NULL,
 			G_DBUS_CALL_FLAGS_NONE, G_DBUS_TIMEOUT, NULL, NULL, NULL);
 	}
+
+	_mmcam_dbg_warn("done");
 
 	return ret;
 }
@@ -164,7 +166,7 @@ static void __gdbus_stream_eos_cb(GDBusConnection *connection,
 	_MMCamcorderGDbusCbInfo *gdbus_info = NULL;
 	mmf_camcorder_t *hcamcorder = NULL;
 
-	_mmcam_dbg_log("entered");
+	_mmcam_dbg_warn("entered");
 
 	if (!param || !user_data) {
 		_mmcam_dbg_err("invalid parameter %p %p", param, user_data);
@@ -178,7 +180,7 @@ static void __gdbus_stream_eos_cb(GDBusConnection *connection,
 
 	g_mutex_lock(&gdbus_info->sync_mutex);
 
-	_mmcam_dbg_log("gdbus_info->param %d, played_idx : %d, handle : %p",
+	_mmcam_dbg_warn("gdbus_info->param %d, played_idx : %d, handle : %p",
 		gdbus_info->param, played_idx, hcamcorder);
 
 	if (gdbus_info->param == played_idx) {
@@ -192,6 +194,8 @@ static void __gdbus_stream_eos_cb(GDBusConnection *connection,
 	}
 
 	g_mutex_unlock(&gdbus_info->sync_mutex);
+
+	_mmcam_dbg_warn("done");
 
 	return;
 }
@@ -208,7 +212,7 @@ static int __gdbus_wait_for_cb_return(_MMCamcorderGDbusCbInfo *gdbus_info, int t
 
 	g_mutex_lock(&gdbus_info->sync_mutex);
 
-	_mmcam_dbg_log("entered");
+	_mmcam_dbg_warn("entered");
 
 	if (gdbus_info->is_playing == FALSE) {
 		_mmcam_dbg_log("callback is already returned");
@@ -219,13 +223,15 @@ static int __gdbus_wait_for_cb_return(_MMCamcorderGDbusCbInfo *gdbus_info, int t
 	end_time = g_get_monotonic_time() + (time_out * G_TIME_SPAN_MILLISECOND);
 
 	if (g_cond_wait_until(&gdbus_info->sync_cond, &gdbus_info->sync_mutex, end_time)) {
-		_mmcam_dbg_log("wait signal received");
+		_mmcam_dbg_warn("wait signal received");
 	} else {
 		_mmcam_dbg_err("wait time is expired");
 		ret = MM_ERROR_CAMCORDER_RESPONSE_TIMEOUT;
 	}
 
 	g_mutex_unlock(&gdbus_info->sync_mutex);
+
+	_mmcam_dbg_warn("done");
 
 	return ret;
 }
