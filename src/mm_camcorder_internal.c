@@ -2819,8 +2819,12 @@ gboolean _mmcamcorder_pipeline_cb_message(GstBus *bus, GstMessage *message, gpoi
 				pipeline = sc->element[_MMCAMCORDER_MAIN_PIPE].gst;
 				if (message->src == (GstObject*)pipeline) {
 					vnewstate = gst_structure_get_value(gst_message_get_structure(message), "new-state");
-					newstate = (GstState)vnewstate->data[0].v_int;
-					_mmcam_dbg_log("GST_MESSAGE_STATE_CHANGED[%s]", gst_element_state_get_name(newstate));
+					if (vnewstate) {
+						newstate = (GstState)vnewstate->data[0].v_int;
+						_mmcam_dbg_log("GST_MESSAGE_STATE_CHANGED[%s]", gst_element_state_get_name(newstate));
+					} else {
+						_mmcam_dbg_warn("get new state failed from msg");
+					}
 				}
 			}
 		}

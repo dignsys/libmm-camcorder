@@ -384,7 +384,7 @@ type_element *_mmcamcorder_get_type_element(MMHandleType handle, int type);
 int _mmcamcorder_get_available_format(MMHandleType handle, int conf_category, int **format);
 
 /* Internal function */
-void _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf **configure_info);
+int _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf *configure_info);
 int _mmcamcorder_conf_parse_info(MMHandleType handle, int type, FILE *fd, camera_conf **configure_info);
 int _mmcamcorder_conf_get_value_type(MMHandleType handle, int type, int category, const char *name, int *value_type);
 int _mmcamcorder_conf_add_info(MMHandleType handle, int type, conf_detail **info, char **buffer_details, int category, int count_details);

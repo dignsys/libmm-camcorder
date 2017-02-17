@@ -49,12 +49,14 @@ char *get_new_string(char* src_string)
 	return g_strdup(src_string);
 }
 
-void _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf** configure_info)
+int _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf *configure_info)
 {
-	int i = 0;
+	int category_num = 0;
 	int info_table_size = sizeof(conf_info_table);
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
+
+	mmf_return_val_if_fail(hcamcorder && configure_info, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);
 
 	/* Videosrc element default value */
 	static type_element _videosrc_element_default = {
@@ -848,11 +850,6 @@ void _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf** configu
 		{ "DetectSelectNumber",   CONFIGURE_VALUE_INT_RANGE, {NULL} },
 	};
 
-	if (hcamcorder == NULL) {
-		_mmcam_dbg_err("handle is NULL");
-		return;
-	}
-
 	_mmcam_dbg_log("Entered...");
 
 	if (type == CONFIGURE_TYPE_MAIN) {
@@ -878,10 +875,7 @@ void _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf** configu
 		hcamcorder->conf_main_category_size[CONFIGURE_CATEGORY_MAIN_IMAGE_ENCODER] = sizeof(conf_main_image_encoder_table) / info_table_size;
 		hcamcorder->conf_main_category_size[CONFIGURE_CATEGORY_MAIN_MUX]           = sizeof(conf_main_mux_table) / info_table_size;
 
-		(*configure_info)->info = (conf_detail**)g_malloc0(sizeof(conf_detail*) * CONFIGURE_CATEGORY_MAIN_NUM);
-
-		for (i = 0 ; i < CONFIGURE_CATEGORY_MAIN_NUM ; i++)
-			(*configure_info)->info[i] = NULL;
+		category_num = CONFIGURE_CATEGORY_MAIN_NUM;
 	} else {
 		hcamcorder->conf_ctrl_info_table[CONFIGURE_CATEGORY_CTRL_CAMERA]     = conf_ctrl_camera_table;
 		hcamcorder->conf_ctrl_info_table[CONFIGURE_CATEGORY_CTRL_STROBE]     = conf_ctrl_strobe_table;
@@ -897,22 +891,25 @@ void _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf** configu
 		hcamcorder->conf_ctrl_category_size[CONFIGURE_CATEGORY_CTRL_CAPTURE]    = sizeof(conf_ctrl_capture_table) / info_table_size;
 		hcamcorder->conf_ctrl_category_size[CONFIGURE_CATEGORY_CTRL_DETECT]     = sizeof(conf_ctrl_detect_table) / info_table_size;
 
-		(*configure_info)->info = (conf_detail**)g_malloc0(sizeof(conf_detail*) * CONFIGURE_CATEGORY_CTRL_NUM);
+		category_num = CONFIGURE_CATEGORY_CTRL_NUM;
+	}
 
-		for (i = 0 ; i < CONFIGURE_CATEGORY_CTRL_NUM ; i++)
-			(*configure_info)->info[i] = NULL;
+	configure_info->info = (conf_detail **)g_malloc0(sizeof(conf_detail *) * category_num);
+	if (configure_info->info == NULL) {
+		_mmcam_dbg_err("category info alloc failed : type %d", type);
+		return MM_ERROR_CAMCORDER_LOW_MEMORY;
 	}
 
 	_mmcam_dbg_log("Done.");
 
-	return;
+	return MM_ERROR_NONE;
 }
 
 
 int _mmcamcorder_conf_get_info(MMHandleType handle, int type, const char *ConfFile, camera_conf **configure_info)
 {
 	int ret = MM_ERROR_NONE;
-	FILE *fd = NULL;
+	FILE *fp = NULL;
 	char conf_path[60] = {'\0',};
 
 	_mmcam_dbg_log("Opening...[%s]", ConfFile);
@@ -922,20 +919,20 @@ int _mmcamcorder_conf_get_info(MMHandleType handle, int type, const char *ConfFi
 	snprintf(conf_path, sizeof(conf_path), "%s/multimedia/%s", SYSCONFDIR, ConfFile);
 	_mmcam_dbg_log("Try open Configure File[%s]", conf_path);
 
-	fd = fopen(conf_path, "r");
-	if (fd == NULL) {
+	fp = fopen(conf_path, "r");
+	if (fp == NULL) {
 		_mmcam_dbg_warn("File open failed.[%s] retry...", conf_path);
 
 		snprintf(conf_path, sizeof(conf_path), "%s/multimedia/%s", TZ_SYS_ETC, ConfFile);
 		_mmcam_dbg_log("Try open Configure File[%s]", conf_path);
-		fd = fopen(conf_path, "r");
-		if (fd == NULL)
+		fp = fopen(conf_path, "r");
+		if (fp == NULL)
 			_mmcam_dbg_warn("open failed.[%s] errno [%d]", conf_path, errno);
 	}
 
-	if (fd != NULL) {
-		ret = _mmcamcorder_conf_parse_info(handle, type, fd, configure_info);
-		fclose(fd);
+	if (fp != NULL) {
+		ret = _mmcamcorder_conf_parse_info(handle, type, fp, configure_info);
+		fclose(fp);
 	} else {
 		if (errno == ENOENT)
 			ret = MM_ERROR_CAMCORDER_NOT_SUPPORTED;
@@ -949,13 +946,14 @@ int _mmcamcorder_conf_get_info(MMHandleType handle, int type, const char *ConfFi
 }
 
 
-int _mmcamcorder_conf_parse_info(MMHandleType handle, int type, FILE* fd, camera_conf** configure_info)
+int _mmcamcorder_conf_parse_info(MMHandleType handle, int type, FILE *fp, camera_conf **configure_info)
 {
 	const unsigned int BUFFER_NUM_DETAILS = 256;
 	const unsigned int BUFFER_NUM_TOKEN = 20;
 	size_t BUFFER_LENGTH_STRING = 256;
 	const char* delimiters = " |=,\t\n";
 
+	int ret = MM_ERROR_NONE;
 	int category = 0;
 	int count_main_category = 0;
 	int count_details = 0;
@@ -971,42 +969,45 @@ int _mmcamcorder_conf_parse_info(MMHandleType handle, int type, FILE* fd, camera
 	char *detail_string = NULL;
 	char *user_ptr = NULL;
 
+	camera_conf *new_conf = NULL;
+
 	_mmcam_dbg_log("");
 
-	camera_conf* new_conf = (camera_conf *)g_malloc0(sizeof(camera_conf));
+	mmf_return_val_if_fail(handle && fp && configure_info, MM_ERROR_INVALID_ARGUMENT);
+
+	*configure_info = NULL;
+
+	new_conf = (camera_conf *)g_malloc0(sizeof(camera_conf));
 	if (new_conf == NULL) {
 		_mmcam_dbg_err("new_conf alloc failed : %d", sizeof(camera_conf));
-		*configure_info = NULL;
 		return MM_ERROR_CAMCORDER_LOW_MEMORY;
 	}
 
 	buffer_string = (char*)g_malloc0(sizeof(char) * BUFFER_LENGTH_STRING);
 	if (buffer_string == NULL) {
 		_mmcam_dbg_err("buffer_string alloc failed : %d", sizeof(char) * BUFFER_LENGTH_STRING);
-		*configure_info = NULL;
-		SAFE_G_FREE(new_conf);
+		g_free(new_conf);
 		return MM_ERROR_CAMCORDER_LOW_MEMORY;
 	}
 
 	new_conf->type  = type;
-	*configure_info = new_conf;
 
-	_mmcamcorder_conf_init(handle, type, &new_conf);
-
-	if (fd == NULL) {
-		_mmcam_dbg_err("failed file descriptor fail");
-		*configure_info = NULL;
-		SAFE_G_FREE(buffer_string);
-		SAFE_G_FREE(new_conf);
-		return MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
+	ret = _mmcamcorder_conf_init(handle, type, new_conf);
+	if (ret != MM_ERROR_NONE) {
+		_mmcam_dbg_err("conf init failed 0x%x", ret);
+		g_free(new_conf);
+		g_free(buffer_string);
+		return ret;
 	}
+
+	*configure_info = new_conf;
 
 	read_main = 0;
 	count_main_category = 0;
 
-	while (!feof(fd)) {
+	while (!feof(fp)) {
 		if (read_main == 0) {
-			length_read = getline(&buffer_string, &BUFFER_LENGTH_STRING, fd);
+			length_read = getline(&buffer_string, &BUFFER_LENGTH_STRING, fp);
 			/*_mmcam_dbg_log( "Read Line : [%s]", buffer_string );*/
 
 			count_token = 0;
@@ -1045,8 +1046,8 @@ int _mmcamcorder_conf_parse_info(MMHandleType handle, int type, FILE* fd, camera
 			count_main_category++;
 			count_details = 0;
 
-			while (!feof(fd)) {
-				length_read = getline(&buffer_string, &BUFFER_LENGTH_STRING, fd);
+			while (!feof(fp)) {
+				length_read = getline(&buffer_string, &BUFFER_LENGTH_STRING, fp);
 				/*_mmcam_dbg_log("Read Detail Line : [%s], read length : [%d]", buffer_string, length_read);*/
 
 				detail_string = get_new_string(buffer_string);
@@ -1310,7 +1311,7 @@ int _mmcamcorder_conf_get_value_type(MMHandleType handle, int type, int category
 }
 
 
-int _mmcamcorder_conf_add_info(MMHandleType handle, int type, conf_detail** info, char** buffer_details, int category, int count_details)
+int _mmcamcorder_conf_add_info(MMHandleType handle, int type, conf_detail **info, char **buffer_details, int category, int count_details)
 {
 	const int BUFFER_NUM_TOKEN = 256;
 
@@ -1326,15 +1327,22 @@ int _mmcamcorder_conf_add_info(MMHandleType handle, int type, conf_detail** info
 	const char *delimiters_sub = " |\t\n";
 	const char *delimiters_3rd = "|\n";
 
-	mmf_return_val_if_fail(buffer_details, FALSE);
+	mmf_return_val_if_fail(info && buffer_details, FALSE);
 
 	(*info) = (conf_detail*)g_malloc0(sizeof(conf_detail));
 	if (*info == NULL) {
-		_mmcam_dbg_err("allocation failed");
+		_mmcam_dbg_err("info allo failed");
 		return FALSE;
 	}
 	(*info)->detail_info = (void**)g_malloc0(sizeof(void*) * count_details);
 	(*info)->count = count_details;
+
+	if ((*info)->detail_info == NULL) {
+		_mmcam_dbg_err("detail_info alloc failed");
+		g_free(*info);
+		*info = NULL;
+		return FALSE;
+	}
 
 	for (i = 0 ; i < count_details ; i++) {
 		/*_mmcam_dbg_log("Read line\"%s\"", buffer_details[i]);*/
