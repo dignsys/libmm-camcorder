@@ -4604,7 +4604,7 @@ bool _mmcamcorder_commit_pid_for_sound_focus(MMHandleType handle, int attr_idx, 
 
 	new_pid = value->value.i_val;
 
-	_mmcam_dbg_log("Commit : pid %d, current focus id %d, subscribe id %u",
+	_mmcam_dbg_warn("Commit : pid %d, current focus id %d, subscribe id %u",
 		new_pid, hcamcorder->sound_focus_id, hcamcorder->sound_focus_subscribe_id);
 
 	/* unregister sound focus and unsubscribe sound signal before set new one */
@@ -4682,13 +4682,6 @@ bool _mmcamcorder_commit_sound_stream_info(MMHandleType handle, int attr_idx, co
 		return FALSE;
 	}
 
-	sc = MMF_CAMCORDER_SUBCONTEXT(handle);
-	if (!sc || !sc->encode_element ||
-	    !sc->encode_element[_MMCAMCORDER_AUDIOSRC_SRC].gst) {
-		_mmcam_dbg_log("audiosrc element is not initialized, it will be set later");
-		return TRUE;
-	}
-
 	mm_camcorder_get_attributes(handle, NULL,
 		MMCAM_SOUND_STREAM_INDEX, &stream_index,
 		NULL);
@@ -4697,7 +4690,17 @@ bool _mmcamcorder_commit_sound_stream_info(MMHandleType handle, int attr_idx, co
 		return FALSE;
 	}
 
-	_mmcam_dbg_log("Commit : sound stream info - type %s, index %d", stream_type, stream_index);
+	/* unset watch callback if existed */
+	_mmcamcorder_sound_signal_callback(MM_SOUND_SIGNAL_RELEASE_INTERNAL_FOCUS, 1, (void *)handle);
+
+	sc = MMF_CAMCORDER_SUBCONTEXT(handle);
+	if (!sc || !sc->encode_element ||
+	    !sc->encode_element[_MMCAMCORDER_AUDIOSRC_SRC].gst) {
+		_mmcam_dbg_warn("audiosrc element is not initialized, it will be set later");
+		return TRUE;
+	}
+
+	_mmcam_dbg_warn("Commit : sound stream info - type %s, index %d", stream_type, stream_index);
 
 	return _mmcamcorder_set_sound_stream_info(sc->encode_element[_MMCAMCORDER_AUDIOSRC_SRC].gst, stream_type, stream_index);
 }

@@ -2865,7 +2865,7 @@ bool _mmcamcorder_set_sound_stream_info(GstElement *element, char *stream_type, 
 		"props,media.role=%s, media.parent_id=%d",
 		stream_type, stream_index);
 
-	_mmcam_dbg_log("stream type %s, index %d -> [%s]", stream_type, stream_index, stream_props);
+	_mmcam_dbg_warn("stream type %s, index %d -> [%s]", stream_type, stream_index, stream_props);
 
 	props = gst_structure_from_string(stream_props, NULL);
 	if (!props) {

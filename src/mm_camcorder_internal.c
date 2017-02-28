@@ -3353,9 +3353,22 @@ void _mmcamcorder_sound_signal_callback(mm_sound_signal_name_t signal, int value
 	_MMCAMCORDER_LOCK_ASM(hcamcorder);
 
 	if (signal == MM_SOUND_SIGNAL_RELEASE_INTERNAL_FOCUS && value == 1) {
-		_mmcam_dbg_warn("watch cb id %d", hcamcorder->sound_focus_watch_id);
+		_mmcam_dbg_warn("focus id %d, focus watch id %d",
+			hcamcorder->sound_focus_id, hcamcorder->sound_focus_watch_id);
 
-		/* unregister watch callback */
+		/* unregister focus related callback */
+		if (hcamcorder->sound_focus_id > 0) {
+			if (hcamcorder->acquired_focus > 0) {
+				mm_sound_release_focus(hcamcorder->sound_focus_id, hcamcorder->acquired_focus, NULL);
+				_mmcam_dbg_warn("release acquired focus [focus %d] done", hcamcorder->acquired_focus);
+				hcamcorder->acquired_focus = 0;
+			}
+
+			mm_sound_unregister_focus(hcamcorder->sound_focus_id);
+			_mmcam_dbg_warn("unregister sound focus done");
+			hcamcorder->sound_focus_id = 0;
+		}
+
 		if (hcamcorder->sound_focus_watch_id > 0) {
 			mm_sound_unset_focus_watch_callback(hcamcorder->sound_focus_watch_id);
 			_mmcam_dbg_warn("unset watch cb done");
