@@ -231,16 +231,18 @@ static void __mmcamcorder_resource_release_cb(mrp_res_context_t *cx, const mrp_r
 		return;
 	}
 
-	_MMCAMCORDER_LOCK_ASM(camcorder);
+	_mmcam_dbg_warn("enter");
 
-	/* set value to inform a status is changed by resource manaer */
-	camcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_BY_RM;
+	_MMCAMCORDER_LOCK_RESOURCE(camcorder);
 
 	if (!mrp_res_equal_resource_set(rs, camcorder->resource_manager.rset)) {
-		_MMCAMCORDER_UNLOCK_ASM(camcorder);
+		_MMCAMCORDER_UNLOCK_RESOURCE(camcorder);
 		_mmcam_dbg_warn("- resource set(%p) is not same as this camcorder handle's(%p)", rs, camcorder->resource_manager.rset);
 		return;
 	}
+
+	/* set flag for resource release callback */
+	camcorder->resource_release_cb_calling = TRUE;
 
 	_mmcam_dbg_log(" - resource set state of camcorder(%p) is changed to [%s]",
 		camcorder, __mmcamcorder_resource_state_to_str(rs->state));
@@ -254,6 +256,13 @@ static void __mmcamcorder_resource_release_cb(mrp_res_context_t *cx, const mrp_r
 		}
 	}
 
+	_MMCAMCORDER_UNLOCK_RESOURCE(camcorder);
+
+	_MMCAMCORDER_LOCK_ASM(camcorder);
+
+	/* set value to inform a status is changed by resource manager */
+	camcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_BY_RM;
+
 	/* Stop the camera */
 	__mmcamcorder_force_stop(camcorder);
 
@@ -261,6 +270,15 @@ static void __mmcamcorder_resource_release_cb(mrp_res_context_t *cx, const mrp_r
 	camcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_NORMAL;
 
 	_MMCAMCORDER_UNLOCK_ASM(camcorder);
+
+	_MMCAMCORDER_LOCK_RESOURCE(camcorder);
+
+	/* restore flag for resource release callback */
+	camcorder->resource_release_cb_calling = FALSE;
+
+	_MMCAMCORDER_UNLOCK_RESOURCE(camcorder);
+
+	_mmcam_dbg_warn("leave");
 
 	return;
 }

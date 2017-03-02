@@ -1350,12 +1350,14 @@ int _mmcamcorder_unrealize(MMHandleType handle)
 	}
 
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
-	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE &&
-		hcamcorder->state_change_by_system != _MMCAMCORDER_STATE_CHANGE_BY_RM) {
-		gint64 end_time = 0;
+	_mmcam_dbg_warn("lock resource - cb calling %d", hcamcorder->resource_release_cb_calling);
 
-		_mmcam_dbg_log("lock resource");
-		_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
+	_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
+
+	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE &&
+		hcamcorder->state_change_by_system != _MMCAMCORDER_STATE_CHANGE_BY_RM &&
+		hcamcorder->resource_release_cb_calling == FALSE) {
+		gint64 end_time = 0;
 
 		/* release resource */
 		ret = _mmcamcorder_resource_manager_release(&hcamcorder->resource_manager);
@@ -1380,10 +1382,11 @@ int _mmcamcorder_unrealize(MMHandleType handle)
 
 			_MMCAMCORDER_RESOURCE_WAIT_UNTIL(hcamcorder, end_time);
 		}
-
-		_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
-		_mmcam_dbg_log("unlock resource");
 	}
+
+	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+
+	_mmcam_dbg_warn("unlock resource");
 #endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 
 #ifdef _MMCAMCORDER_RM_SUPPORT

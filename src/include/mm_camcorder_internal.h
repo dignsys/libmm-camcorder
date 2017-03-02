@@ -778,6 +778,7 @@ typedef struct mmf_camcorder {
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
 	/* resource manager for H/W resources */
 	MMCamcorderResourceManager resource_manager;
+	gboolean resource_release_cb_calling;
 #endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 
 	/* gdbus */
