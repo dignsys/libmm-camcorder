@@ -28,6 +28,8 @@
 extern "C" {
 #endif
 
+#define __MMCAMCORDER_RESOURCE_WAIT_TIME        3
+
 typedef enum {
 	MM_CAMCORDER_RESOURCE_TYPE_CAMERA,
 	MM_CAMCORDER_RESOURCE_TYPE_VIDEO_OVERLAY,
@@ -45,6 +47,7 @@ typedef struct {
 } MMCamcorderResourceManager;
 
 int _mmcamcorder_resource_manager_init(MMCamcorderResourceManager *resource_manager, void *user_data);
+int _mmcamcorder_resource_wait_for_connection(MMCamcorderResourceManager *resource_manager, void *hcamcorder);
 int _mmcamcorder_resource_create_resource_set(MMCamcorderResourceManager *resource_manager);
 int _mmcamcorder_resource_manager_prepare(MMCamcorderResourceManager *resource_manager, MMCamcorderResourceType resource_type);
 int _mmcamcorder_resource_manager_acquire(MMCamcorderResourceManager *resource_manager);

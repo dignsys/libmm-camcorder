@@ -125,6 +125,8 @@ static void __mmcamcorder_resource_state_callback(mrp_res_context_t *context, mr
 			camcorder->resource_manager.is_connected = FALSE;
 		}
 
+		_MMCAMCORDER_UNLOCK_RESOURCE(camcorder);
+
 		_MMCAMCORDER_LOCK_ASM(camcorder);
 
 		/* set value to inform a status is changed by resource manaer */
@@ -137,6 +139,8 @@ static void __mmcamcorder_resource_state_callback(mrp_res_context_t *context, mr
 		camcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_NORMAL;
 
 		_MMCAMCORDER_UNLOCK_ASM(camcorder);
+
+		_MMCAMCORDER_LOCK_RESOURCE(camcorder);
 		break;
 	}
 
@@ -400,6 +404,40 @@ int _mmcamcorder_resource_manager_init(MMCamcorderResourceManager *resource_mana
 
 	return MM_ERROR_NONE;
 }
+
+
+int _mmcamcorder_resource_wait_for_connection(MMCamcorderResourceManager *resource_manager, void *hcamcorder)
+{
+	int ret = MM_ERROR_NONE;
+
+	mmf_return_val_if_fail(resource_manager && hcamcorder, MM_ERROR_CAMCORDER_NOT_INITIALIZED);
+
+	_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
+
+	if (resource_manager->is_connected == FALSE) {
+		gint64 end_time = 0;
+
+		/* wait for resource manager connected */
+		_mmcam_dbg_warn("not connected. wait for signal...");
+
+		end_time = g_get_monotonic_time() + (__MMCAMCORDER_RESOURCE_WAIT_TIME * G_TIME_SPAN_SECOND);
+
+		if (_MMCAMCORDER_RESOURCE_WAIT_UNTIL(hcamcorder, end_time)) {
+			_mmcam_dbg_warn("signal received");
+			ret = MM_ERROR_NONE;
+		} else {
+			_mmcam_dbg_err("connection timeout");
+			ret = MM_ERROR_RESOURCE_INTERNAL;
+		}
+	} else {
+		_mmcam_dbg_warn("already connected");
+	}
+
+	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+
+	return ret;
+}
+
 
 int _mmcamcorder_resource_manager_prepare(MMCamcorderResourceManager *resource_manager, MMCamcorderResourceType resource_type)
 {

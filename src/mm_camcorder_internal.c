@@ -61,11 +61,6 @@
 #define DPM_ALLOWED                             1
 #define DPM_DISALLOWED                          0
 
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
-#define __MMCAMCORDER_RESOURCE_WAIT_TIME        3
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
-
-
 /*---------------------------------------------------------------------------------------
 |    LOCAL FUNCTION PROTOTYPES:								|
 ---------------------------------------------------------------------------------------*/
@@ -493,27 +488,11 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
 	if (info->videodev_type != MM_VIDEO_DEVICE_NONE) {
-		_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
-
-		if (hcamcorder->resource_manager.is_connected == FALSE) {
-			gint64 end_time = 0;
-
-			/* wait for resource manager connected */
-			_mmcam_dbg_log("resource manager is not connected. wait for signal...");
-
-			end_time = g_get_monotonic_time() + (__MMCAMCORDER_RESOURCE_WAIT_TIME * G_TIME_SPAN_SECOND);
-
-			if (_MMCAMCORDER_RESOURCE_WAIT_UNTIL(hcamcorder, end_time)) {
-				_mmcam_dbg_warn("signal received");
-			} else {
-				_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
-				_mmcam_dbg_err("timeout");
-				ret = MM_ERROR_RESOURCE_INTERNAL;
-				goto _ERR_DEFAULT_VALUE_INIT;
-			}
+		ret = _mmcamcorder_resource_wait_for_connection(&hcamcorder->resource_manager, (void *)hcamcorder);
+		if (ret != MM_ERROR_NONE) {
+			_mmcam_dbg_err("failed to connect resource manager");
+			goto _ERR_DEFAULT_VALUE_INIT;
 		}
-
-		_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 	}
 #endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 
@@ -1079,6 +1058,28 @@ int _mmcamcorder_realize(MMHandleType handle)
 		}
 
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
+		/* check connection */
+		if (hcamcorder->resource_manager.is_connected == FALSE) {
+			_mmcam_dbg_warn("resource manager disconnected before, try to reconnect");
+
+			/* release remained resource */
+			_mmcamcorder_resource_manager_deinit(&hcamcorder->resource_manager);
+
+			/* init resource manager and wait for connection */
+			ret = _mmcamcorder_resource_manager_init(&hcamcorder->resource_manager, (void *)hcamcorder);
+			if (ret != MM_ERROR_NONE) {
+				_mmcam_dbg_err("failed to initialize resource manager");
+				ret = MM_ERROR_CAMCORDER_INTERNAL;
+				goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
+			}
+
+			ret = _mmcamcorder_resource_wait_for_connection(&hcamcorder->resource_manager, (void *)hcamcorder);
+			if (ret != MM_ERROR_NONE) {
+				_mmcam_dbg_err("failed to connect resource manager");
+				goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
+			}
+		}
+
 		ret = _mmcamcorder_resource_create_resource_set(&hcamcorder->resource_manager);
 		if (ret != MM_ERROR_NONE) {
 			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
