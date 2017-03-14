@@ -557,7 +557,7 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 			if (imax_time <= 0)
 				info->max_time = 0; /* do not check */
 			else
-				info->max_time = ((guint64)imax_time) * 1000; /* to millisecond */
+				info->max_time = (guint64)((double)imax_time * (double)1000 * motion_rate); /* to millisecond */
 
 			dir_name = g_path_get_dirname(temp_filename);
 			if (dir_name) {
@@ -1579,8 +1579,8 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_audio_disable(GstPad *pad
 
 	/* check max time */
 	if (videoinfo->max_time > 0 && rec_pipe_time > videoinfo->max_time) {
-		_mmcam_dbg_warn("Current time : [%" G_GUINT64_FORMAT "], Maximum time : [%" G_GUINT64_FORMAT "]", \
-			rec_pipe_time, videoinfo->max_time);
+		_mmcam_dbg_warn("Time current [%" G_GUINT64_FORMAT "], Max [%" G_GUINT64_FORMAT "], motion rate [%lf]", \
+			rec_pipe_time, videoinfo->max_time, videoinfo->record_motion_rate);
 
 		if (!sc->isMaxtimePausing) {
 			MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_ENCBIN].gst, "block", TRUE);
@@ -1697,8 +1697,8 @@ static GstPadProbeReturn __mmcamcorder_audioque_dataprobe(GstPad *pad, GstPadPro
 	}
 
 	if (videoinfo->max_time > 0 && rec_pipe_time > videoinfo->max_time) {
-		_mmcam_dbg_warn("Current time : [%" G_GUINT64_FORMAT "], Maximum time : [%" G_GUINT64_FORMAT "]", \
-			rec_pipe_time, videoinfo->max_time);
+		_mmcam_dbg_warn("Time current [%" G_GUINT64_FORMAT "], Max [%" G_GUINT64_FORMAT "], motion rate [%lf]", \
+			rec_pipe_time, videoinfo->max_time, videoinfo->record_motion_rate);
 
 		if (!sc->isMaxtimePausing) {
 			MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_ENCBIN].gst, "block", TRUE);
