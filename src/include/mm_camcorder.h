@@ -2999,6 +2999,7 @@ gboolean get_state_of_camcorder()
  *	@endcode
  */
 int mm_camcorder_get_state(MMHandleType camcorder, MMCamcorderStateType *state);
+int mm_camcorder_get_state2(MMHandleType camcorder, MMCamcorderStateType *state, MMCamcorderStateType *old_state);
 
 
 /**

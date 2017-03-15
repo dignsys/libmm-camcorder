@@ -30,8 +30,7 @@
 /*---------------------------------------------------------------------------------------
 |    GLOBAL VARIABLE DEFINITIONS for internal						|
 ---------------------------------------------------------------------------------------*/
-#define MM_CAMCORDER_START_CHANGE_STATE _MMCamcorderStartHelperFunc((void *)hcamcorder)
-#define MM_CAMCORDER_STOP_CHANGE_STATE _MMCamcorderStopHelperFunc((void *)hcamcorder)
+
 /*---------------------------------------------------------------------------------------
 |    LOCAL VARIABLE DEFINITIONS for internal						|
 ---------------------------------------------------------------------------------------*/
@@ -309,38 +308,6 @@ _mmcamcorder_destroy_audio_pipeline(MMHandleType handle)
 	_mmcam_dbg_log("done");
 
 	return;
-}
-
-
-/**
- * This function operates each command on audio mode.
- *
- * @param	c		[in]	Handle of camcorder context.
- * @param	command	[in]	command type received from Multimedia Framework.
- *
- * @return	This function returns MM_ERROR_NONE on success, or the other values
- *			on error.
- * @remark
- * @see		_mmcamcorder_set_functions()
- *
- */
- /* ADDED BY SISO */
-
-
-void* _MMCamcorderStartHelperFunc(void *handle)
-{
-	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
-	_mmcamcorder_set_state((MMHandleType)hcamcorder, hcamcorder->target_state);
-
-	return NULL;
-}
-
-void* _MMCamcorderStopHelperFunc(void *handle)
-{
-	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
-	_mmcamcorder_set_state((MMHandleType)hcamcorder, hcamcorder->target_state);
-
-	return NULL;
 }
 
 

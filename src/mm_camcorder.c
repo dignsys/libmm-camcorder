@@ -335,7 +335,7 @@ int mm_camcorder_set_video_capture_callback(MMHandleType camcorder, mm_camcorder
 }
 
 
-int mm_camcorder_get_state(MMHandleType camcorder, MMCamcorderStateType *status)
+int mm_camcorder_get_state(MMHandleType camcorder, MMCamcorderStateType *state)
 {
 	int ret = MM_ERROR_NONE;
 
@@ -344,10 +344,20 @@ int mm_camcorder_get_state(MMHandleType camcorder, MMCamcorderStateType *status)
 		return MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
 	}
 
-	*status = _mmcamcorder_get_state(camcorder);
+	*state = _mmcamcorder_get_state(camcorder);
 
 	return ret;
+}
 
+
+int mm_camcorder_get_state2(MMHandleType camcorder, MMCamcorderStateType *state, MMCamcorderStateType *old_state)
+{
+	if (!camcorder) {
+		_mmcam_dbg_warn("Empty handle.");
+		return MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
+	}
+
+	return _mmcamcorder_get_state2(camcorder, (int *)state, (int *)old_state);
 }
 
 

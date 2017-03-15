@@ -122,7 +122,7 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 	hcamcorder->type = 0;
 	hcamcorder->state = MM_CAMCORDER_STATE_NONE;
 	hcamcorder->sub_context = NULL;
-	hcamcorder->target_state = MM_CAMCORDER_STATE_NULL;
+	hcamcorder->old_state = MM_CAMCORDER_STATE_NONE;
 	hcamcorder->capture_in_recording = FALSE;
 	hcamcorder->session_type = MM_SESSION_TYPE_MEDIA;
 
@@ -2513,6 +2513,23 @@ int _mmcamcorder_get_state(MMHandleType handle)
 }
 
 
+int _mmcamcorder_get_state2(MMHandleType handle, int *state, int *old_state)
+{
+	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
+
+	mmf_return_val_if_fail(hcamcorder && state && old_state, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);
+
+	_MMCAMCORDER_LOCK_STATE(handle);
+
+	*state = hcamcorder->state;
+	*old_state = hcamcorder->old_state;
+
+	_MMCAMCORDER_UNLOCK_STATE(handle);
+
+	return MM_ERROR_NONE;
+}
+
+
 void _mmcamcorder_set_state(MMHandleType handle, int state)
 {
 	int old_state;
@@ -2528,9 +2545,9 @@ void _mmcamcorder_set_state(MMHandleType handle, int state)
 	old_state = hcamcorder->state;
 	if (old_state != state) {
 		hcamcorder->state = state;
-		hcamcorder->target_state = state;
+		hcamcorder->old_state = old_state;
 
-		_mmcam_dbg_log("set state[%d] and send state-changed message", state);
+		_mmcam_dbg_log("set state[%d -> %d] and send state-changed message", old_state, state);
 
 		/* To discern who changes the state */
 		switch (hcamcorder->state_change_by_system) {
@@ -2563,20 +2580,6 @@ void _mmcamcorder_set_state(MMHandleType handle, int state)
 	_MMCAMCORDER_UNLOCK_STATE(handle);
 
 	return;
-}
-
-
-int _mmcamcorder_get_async_state(MMHandleType handle)
-{
-	int state;
-	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
-
-	_MMCAMCORDER_LOCK_STATE(handle);
-	state = hcamcorder->target_state;
-
-	_MMCAMCORDER_UNLOCK_STATE(handle);
-
-	return state;
 }
 
 
@@ -3633,18 +3636,6 @@ void _mmcamcorder_destroy_pipeline(MMHandleType handle, int type)
 	}
 
 	return;
-}
-
-
-int _mmcamcorder_gst_set_state_async(MMHandleType handle, GstElement *pipeline, GstState target_state)
-{
-	GstStateChangeReturn setChangeReturn = GST_STATE_CHANGE_FAILURE;
-
-	_MMCAMCORDER_LOCK_GST_STATE(handle);
-	setChangeReturn = gst_element_set_state(pipeline, target_state);
-	_MMCAMCORDER_UNLOCK_GST_STATE(handle);
-
-	return setChangeReturn;
 }
 
 

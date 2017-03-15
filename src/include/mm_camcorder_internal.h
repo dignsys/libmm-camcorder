@@ -693,9 +693,7 @@ typedef struct mmf_camcorder {
 	int type;               /**< mmcamcorder_mode_type */
 	int device_type;        /**< device type */
 	int state;              /**< state of camcorder */
-	int target_state;       /**< Target state that want to set. This is a flag that
-							   * stands for async state changing. If this value differ from state,
-							   * it means state is changing now asychronously. */
+	int old_state;          /**< old state of camcorder */
 
 	/* handles */
 	MMHandleType attributes;               /**< Attribute handle */
@@ -1112,6 +1110,7 @@ int _mmcamcorder_display_init(void);
  *
  */
 int _mmcamcorder_get_state(MMHandleType handle);
+int _mmcamcorder_get_state2(MMHandleType handle, int *state, int *old_state);
 
 /**
  * This function sets new state of camcorder.
@@ -1124,18 +1123,6 @@ int _mmcamcorder_get_state(MMHandleType handle);
  *
  */
 void _mmcamcorder_set_state(MMHandleType handle, int state);
-
-/**
- * This function gets asynchronous status of MSL Camcroder.
- *
- * @param[in]	handle		Handle of camcorder context.
- * @param[in]	target_state	setting target_state value of camcorder.
- * @return	This function returns asynchrnous state.
- * @remarks
- * @see		_mmcamcorder_set_async_state()
- *
- */
-int _mmcamcorder_get_async_state(MMHandleType handle);
 
 /**
  * This function allocates structure of subsidiary attributes.
@@ -1258,18 +1245,6 @@ void _mmcamcorder_destroy_pipeline(MMHandleType handle, int type);
  */
 int _mmcamcorder_gst_set_state(MMHandleType handle, GstElement *pipeline, GstState target_state);
 
-/**
- * This function sets gstreamer element status, asynchronously.
- * Regardless of processing, it returns immediately.
- *
- * @param[in]	pipeline	Pointer of pipeline
- * @param[in]	target_state	newly setting status
- * @return	This function returns zero on success, or negative value with error code.
- * @remarks
- * @see
- *
- */
-int _mmcamcorder_gst_set_state_async(MMHandleType handle, GstElement *pipeline, GstState target_state);
 
 /* For xvimagesink */
 GstBusSyncReply __mmcamcorder_sync_callback(GstBus *bus, GstMessage *message, gulong data);
