@@ -591,7 +591,8 @@ typedef enum {
 	_MMCAMCORDER_STATE_CHANGE_NORMAL = 0,
 	_MMCAMCORDER_STATE_CHANGE_BY_FOCUS,
 	_MMCAMCORDER_STATE_CHANGE_BY_RM,
-	_MMCAMCORDER_STATE_CHANGE_BY_DPM
+	_MMCAMCORDER_STATE_CHANGE_BY_DPM,
+	_MMCAMCORDER_STATE_CHANGE_BY_STORAGE
 } _MMCamcorderStateChange;
 
 
@@ -1272,6 +1273,9 @@ void _mmcamcorder_dpm_camera_policy_changed_cb(const char *name, const char *val
 /* Emit dbus signal */
 void _mmcamcorder_emit_signal(MMHandleType handle, const char *object_name,
 	const char *interface_name, const char *signal_name, int value);
+
+/* external storage state management */
+int _mmcamcorder_manage_external_storage_state(MMHandleType handle, int storage_state);
 
 #ifdef __cplusplus
 }

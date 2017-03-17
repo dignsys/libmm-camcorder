@@ -455,3 +455,10 @@ int mm_camcorder_check_codec_fileformat_compatibility(const char *codec_type, in
 
 	return _mmcamcorder_check_codec_fileformat_compatibility(codec_type, codec, file_format);
 }
+
+int mm_camcorder_manage_external_storage_state(MMHandleType camcorder, int storage_state)
+{
+	mmf_return_val_if_fail((void *)camcorder, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);
+
+	return _mmcamcorder_manage_external_storage_state(camcorder, storage_state);
+}

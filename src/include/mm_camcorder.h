@@ -3348,6 +3348,9 @@ void mm_camcorder_emit_signal(MMHandleType camcorder, const char *object_name,
 /* check compatability between codec and file format */
 int mm_camcorder_check_codec_fileformat_compatibility(const char *codec_type, int codec, int file_format);
 
+/* external storage state management */
+int mm_camcorder_manage_external_storage_state(MMHandleType camcorder, int storage_state);
+
 /**
 	@}
  */

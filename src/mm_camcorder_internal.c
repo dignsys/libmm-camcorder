@@ -4316,3 +4316,57 @@ rm_cb_result _mmcamcorder_rm_callback(int handle, rm_callback_type event_src,
 	return cb_res;
 }
 #endif /* _MMCAMCORDER_RM_SUPPORT */
+
+
+int _mmcamcorder_manage_external_storage_state(MMHandleType handle, int storage_state)
+{
+	int ret = MM_ERROR_NONE;
+	int current_state = MM_CAMCORDER_STATE_NONE;
+	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
+	_MMCamcorderMsgItem msg;
+
+	mmf_return_val_if_fail(hcamcorder, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);
+
+	_mmcam_dbg_warn("storage state %d", storage_state);
+
+	/* check storage state */
+	if (storage_state != STORAGE_STATE_UNMOUNTABLE &&
+		storage_state != STORAGE_STATE_REMOVED) {
+		_mmcam_dbg_warn("nothing to do");
+		return MM_ERROR_NONE;
+	}
+
+	_MMCAMCORDER_LOCK_ASM(hcamcorder);
+
+	/* check recording state */
+	current_state = _mmcamcorder_get_state(handle);
+
+	_mmcam_dbg_warn("current_state %d", current_state);
+
+	if (current_state < MM_CAMCORDER_STATE_RECORDING) {
+		_mmcam_dbg_warn("no recording now");
+		goto _MANAGE_DONE;
+	}
+
+	/* check storage type */
+	if (hcamcorder->storage_info.type != STORAGE_TYPE_EXTERNAL) {
+		_mmcam_dbg_warn("external storage is not used");
+		goto _MANAGE_DONE;
+	}
+
+	/* cancel recording */
+	ret = _mmcamcorder_cancel(handle);
+
+	/* send error message */
+	msg.id = MM_MESSAGE_CAMCORDER_ERROR;
+	msg.param.code = MM_ERROR_OUT_OF_STORAGE;
+
+	_mmcamcorder_send_message(handle, &msg);
+
+_MANAGE_DONE:
+	_MMCAMCORDER_UNLOCK_ASM(hcamcorder);
+
+	_mmcam_dbg_warn("done - ret 0x%x", ret);
+
+	return ret;
+}
