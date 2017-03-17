@@ -129,14 +129,8 @@ static void __mmcamcorder_resource_state_callback(mrp_res_context_t *context, mr
 
 		_MMCAMCORDER_LOCK_ASM(camcorder);
 
-		/* set value to inform a status is changed by resource manaer */
-		camcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_BY_RM;
-
 		/* Stop the camera */
-		__mmcamcorder_force_stop(camcorder);
-
-		/* restore value */
-		camcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_NORMAL;
+		__mmcamcorder_force_stop(camcorder, _MMCAMCORDER_STATE_CHANGE_BY_RM);
 
 		_MMCAMCORDER_UNLOCK_ASM(camcorder);
 
@@ -264,14 +258,8 @@ static void __mmcamcorder_resource_release_cb(mrp_res_context_t *cx, const mrp_r
 
 	_MMCAMCORDER_LOCK_ASM(camcorder);
 
-	/* set value to inform a status is changed by resource manager */
-	camcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_BY_RM;
-
 	/* Stop the camera */
-	__mmcamcorder_force_stop(camcorder);
-
-	/* restore value */
-	camcorder->state_change_by_system = _MMCAMCORDER_STATE_CHANGE_NORMAL;
+	__mmcamcorder_force_stop(camcorder, _MMCAMCORDER_STATE_CHANGE_BY_RM);
 
 	_MMCAMCORDER_UNLOCK_ASM(camcorder);
 
