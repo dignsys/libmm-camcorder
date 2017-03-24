@@ -1209,6 +1209,10 @@ static void __mmcamcorder_image_capture_cb(GstElement *element, GstSample *sampl
 	if (!info->capturing || stop_cont_shot) {
 		_mmcam_dbg_warn("stop command[%d] or not capturing state[%d]. skip this...", stop_cont_shot, info->capturing);
 
+		/* set FALSE here for the case that info->capturing is still FALSE
+			(== capture_send_count is 0 at the time _mmcamcorder_commit_capture_break_cont_shot is called) */
+		info->capturing = FALSE;
+
 		/*free GstBuffer*/
 		if (sample1)
 			gst_sample_unref(sample1);

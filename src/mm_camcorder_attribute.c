@@ -2004,6 +2004,7 @@ bool _mmcamcorder_commit_capture_break_cont_shot(MMHandleType handle, int attr_i
 	const char *videosrc_name = NULL;
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 	_MMCamcorderSubContext *sc = NULL;
+	_MMCamcorderImageInfo *info = NULL;
 	GstCameraControl *control = NULL;
 	type_element *VideosrcElement = NULL;
 
@@ -2022,7 +2023,18 @@ bool _mmcamcorder_commit_capture_break_cont_shot(MMHandleType handle, int attr_i
 	if (!sc)
 		return TRUE;
 
+	info = sc->info_image;
+	if (!info) {
+		_mmcam_dbg_err("info image is NULL");
+		return FALSE;
+	}
+
 	if (ivalue && current_state == MM_CAMCORDER_STATE_CAPTURING) {
+		if (info->capture_send_count > 0) {
+			info->capturing = FALSE;
+			_mmcam_dbg_warn("capturing -> FALSE and skip capture callback since now");
+		}
+
 		if (!GST_IS_CAMERA_CONTROL(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst)) {
 			_mmcam_dbg_warn("Can't cast Video source into camera control.");
 			return TRUE;
