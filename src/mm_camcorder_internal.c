@@ -1301,7 +1301,7 @@ _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK:
 	}
 
 	if (hcamcorder->acquired_focus > 0) {
-		mm_sound_release_focus(hcamcorder->sound_focus_id, hcamcorder->acquired_focus, NULL);
+		mm_sound_release_focus(hcamcorder->sound_focus_id, hcamcorder->acquired_focus, "mm-camcorder release focus");
 		_mmcam_dbg_warn("release sound focus [focus %d] done", hcamcorder->acquired_focus);
 		hcamcorder->acquired_focus = 0;
 	}
@@ -3358,7 +3358,7 @@ void _mmcamcorder_sound_signal_callback(mm_sound_signal_name_t signal, int value
 		/* unregister focus related callback */
 		if (hcamcorder->sound_focus_id > 0) {
 			if (hcamcorder->acquired_focus > 0) {
-				mm_sound_release_focus(hcamcorder->sound_focus_id, hcamcorder->acquired_focus, NULL);
+				mm_sound_release_focus(hcamcorder->sound_focus_id, hcamcorder->acquired_focus, "mm-camcorder release focus");
 				_mmcam_dbg_warn("release acquired focus [focus %d] done", hcamcorder->acquired_focus);
 				hcamcorder->acquired_focus = 0;
 			}
