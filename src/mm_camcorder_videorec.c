@@ -354,6 +354,10 @@ int _mmcamcorder_remove_encode_pipeline(MMHandleType handle)
 	GstPad *reqpad = NULL;
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 	_MMCamcorderSubContext *sc = NULL;
+#ifdef _MMCAMCORDER_MURPHY_SUPPORT
+	int ret = MM_ERROR_NONE;
+	MMCamcorderResourceManager *resource_manager = NULL;
+#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 
 	mmf_return_val_if_fail(hcamcorder, MM_ERROR_CAMCORDER_NOT_INITIALIZED);
 
@@ -393,7 +397,36 @@ int _mmcamcorder_remove_encode_pipeline(MMHandleType handle)
 		/* _mmcamcorder_remove_element_handle(handle, (void *)sc->encode_element,
 			_MMCAMCORDER_ENCODE_MAIN_PIPE, _MMCAMCORDER_ENCSINK_SINK); */
 
-		_mmcam_dbg_log("Encoder pipeline removed");
+		_mmcam_dbg_warn("Encoder pipeline removed");
+
+#ifdef _MMCAMCORDER_MURPHY_SUPPORT
+		resource_manager = &hcamcorder->resource_manager_sub;
+
+		_mmcam_dbg_warn("lock resource - cb calling %d", resource_manager->is_release_cb_calling);
+
+		_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
+
+		if (resource_manager->is_release_cb_calling == FALSE) {
+			gint64 end_time = 0;
+
+			/* release resource */
+			ret = _mmcamcorder_resource_manager_release(resource_manager);
+
+			_mmcam_dbg_warn("release resource 0x%x", ret);
+#ifdef _MMCAMCORDER_MURPHY_WAIT_TO_RELEASE_SUB_RESOURCE
+			if (resource_manager->acquire_remain < resource_manager->acquire_count) {
+				/* wait for resource release */
+				_mmcam_dbg_log("resource is not released all. wait for signal...");
+				end_time = g_get_monotonic_time() + (__MMCAMCORDER_RESOURCE_WAIT_TIME * G_TIME_SPAN_SECOND);
+				_MMCAMCORDER_RESOURCE_WAIT_UNTIL(hcamcorder, end_time);
+			}
+#endif /* _MMCAMCORDER_MURPHY_WAIT_TO_RELEASE_SUB_RESOURCE */
+		}
+
+		_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+
+		_mmcam_dbg_warn("unlock resource");
+#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 	}
 
 	return MM_ERROR_NONE;
@@ -517,6 +550,60 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 
 			/* Recording */
 			_mmcam_dbg_log("Record Start - dual stream %d", info->support_dual_stream);
+
+#ifdef _MMCAMCORDER_MURPHY_SUPPORT
+			/* check connection */
+			ret = _mmcamcorder_resource_check_connection(&hcamcorder->resource_manager_sub);
+			if (ret != MM_ERROR_NONE)
+				goto _ERR_CAMCORDER_VIDEO_COMMAND;
+
+			/* create resource set */
+			ret = _mmcamcorder_resource_create_resource_set(&hcamcorder->resource_manager_sub);
+			if (ret != MM_ERROR_NONE)
+				goto _ERR_CAMCORDER_VIDEO_COMMAND;
+
+			hcamcorder->resource_manager_sub.acquire_count = 0;
+
+			/* prepare resource manager for H/W encoder */
+			ret = _mmcamcorder_resource_manager_prepare(&hcamcorder->resource_manager_sub, MM_CAMCORDER_RESOURCE_TYPE_VIDEO_ENCODER);
+			if (ret != MM_ERROR_NONE) {
+				_mmcam_dbg_err("could not prepare for video_encoder resource");
+				ret = MM_ERROR_CAMCORDER_INTERNAL;
+				goto _ERR_CAMCORDER_VIDEO_COMMAND;
+			}
+
+			/* acquire resources */
+			_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
+
+			ret = _mmcamcorder_resource_manager_acquire(&hcamcorder->resource_manager_sub);
+			if (ret != MM_ERROR_NONE) {
+				_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+				_mmcam_dbg_err("could not acquire resource");
+				goto _ERR_CAMCORDER_VIDEO_COMMAND;
+			}
+
+			if (hcamcorder->resource_manager_sub.acquire_remain > 0) {
+				gint64 end_time = 0;
+
+				_mmcam_dbg_warn("wait for resource state change");
+
+				/* wait for resource state change */
+				end_time = g_get_monotonic_time() + (__MMCAMCORDER_RESOURCE_WAIT_TIME * G_TIME_SPAN_SECOND);
+
+				if (_MMCAMCORDER_RESOURCE_WAIT_UNTIL(hcamcorder, end_time)) {
+					_mmcam_dbg_warn("signal received");
+				} else {
+					_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+					_mmcam_dbg_err("timeout");
+					ret = MM_ERROR_RESOURCE_INTERNAL;
+					goto _ERR_CAMCORDER_VIDEO_COMMAND;
+				}
+			} else {
+				_mmcam_dbg_log("already acquired");
+			}
+
+			_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 
 			/* init record_dual_stream */
 			info->record_dual_stream = FALSE;

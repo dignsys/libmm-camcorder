@@ -27,7 +27,8 @@
 
 const char* mm_camcorder_resource_str[MM_CAMCORDER_RESOURCE_MAX] = {
 	"camera",
-	"video_overlay"
+	"video_overlay",
+	"video_encoder"
 };
 
 #define MMCAMCORDER_CHECK_RESOURCE_MANAGER_INSTANCE(x_camcorder_resource_manager) \
@@ -79,16 +80,19 @@ static void __mmcamcorder_resource_state_callback(mrp_res_context_t *context, mr
 	int i = 0;
 	const mrp_res_resource_set_t *rset;
 	mrp_res_resource_t *resource;
-	mmf_camcorder_t* camcorder = NULL;
+	mmf_camcorder_t *hcamcorder = NULL;
+	MMCamcorderResourceManager *resource_manager = (MMCamcorderResourceManager *)user_data;
 
-	camcorder = (mmf_camcorder_t*)user_data;
-
-	mmf_return_if_fail((MMHandleType)camcorder);
 	mmf_return_if_fail(context);
+	mmf_return_if_fail(resource_manager);
+
+	hcamcorder = (mmf_camcorder_t *)resource_manager->hcamcorder;
+
+	mmf_return_if_fail(hcamcorder);
 
 	_mmcam_dbg_warn("enter - state %d", context->state);
 
-	_MMCAMCORDER_LOCK_RESOURCE(camcorder);
+	_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
 
 	switch (context->state) {
 	case MRP_RES_CONNECTED:
@@ -98,7 +102,7 @@ static void __mmcamcorder_resource_state_callback(mrp_res_context_t *context, mr
 			resource_names = mrp_res_list_resource_names(rset);
 			if (!resource_names) {
 				_mmcam_dbg_err(" - no resources available");
-				_MMCAMCORDER_UNLOCK_RESOURCE(camcorder);
+				_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 				return;
 			}
 			for (i = 0; i < resource_names->num_strings; i++) {
@@ -108,37 +112,37 @@ static void __mmcamcorder_resource_state_callback(mrp_res_context_t *context, mr
 			}
 			mrp_res_free_string_array(resource_names);
 		}
-		camcorder->resource_manager.is_connected = TRUE;
-		_MMCAMCORDER_RESOURCE_SIGNAL(camcorder);
+		resource_manager->is_connected = TRUE;
+		_MMCAMCORDER_RESOURCE_SIGNAL(hcamcorder);
 		break;
 	case MRP_RES_DISCONNECTED:
-		_mmcam_dbg_err(" - disconnected from Murphy : stop camera");
+		_mmcam_dbg_err(" - disconnected from Murphy : stop camcorder");
 
-		if (camcorder->resource_manager.rset) {
-			mrp_res_delete_resource_set(camcorder->resource_manager.rset);
-			camcorder->resource_manager.rset = NULL;
+		if (resource_manager->rset) {
+			mrp_res_delete_resource_set(resource_manager->rset);
+			resource_manager->rset = NULL;
 		}
 
-		if (camcorder->resource_manager.context) {
-			mrp_res_destroy(camcorder->resource_manager.context);
-			camcorder->resource_manager.context = NULL;
-			camcorder->resource_manager.is_connected = FALSE;
+		if (resource_manager->context) {
+			mrp_res_destroy(resource_manager->context);
+			resource_manager->context = NULL;
+			resource_manager->is_connected = FALSE;
 		}
 
-		_MMCAMCORDER_UNLOCK_RESOURCE(camcorder);
+		_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 
-		_MMCAMCORDER_LOCK_ASM(camcorder);
+		_MMCAMCORDER_LOCK_ASM(hcamcorder);
 
 		/* Stop the camera */
-		__mmcamcorder_force_stop(camcorder, _MMCAMCORDER_STATE_CHANGE_BY_RM);
+		__mmcamcorder_force_stop(hcamcorder, _MMCAMCORDER_STATE_CHANGE_BY_RM);
 
-		_MMCAMCORDER_UNLOCK_ASM(camcorder);
+		_MMCAMCORDER_UNLOCK_ASM(hcamcorder);
 
-		_MMCAMCORDER_LOCK_RESOURCE(camcorder);
+		_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
 		break;
 	}
 
-	_MMCAMCORDER_UNLOCK_RESOURCE(camcorder);
+	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 
 	_mmcam_dbg_warn("leave");
 
@@ -149,21 +153,25 @@ static void __mmcamcorder_resource_state_callback(mrp_res_context_t *context, mr
 static void __mmcamcorder_resource_set_state_callback(mrp_res_context_t *cx, const mrp_res_resource_set_t *rs, void *user_data)
 {
 	int i = 0;
-	mmf_camcorder_t *camcorder = (mmf_camcorder_t *)user_data;
-	mrp_res_resource_t *res;
+	mmf_camcorder_t *hcamcorder = NULL;
+	MMCamcorderResourceManager *resource_manager = (MMCamcorderResourceManager *)user_data;
+	mrp_res_resource_t *res = NULL;
 
-	mmf_return_if_fail((MMHandleType)camcorder);
+	mmf_return_if_fail(resource_manager && resource_manager->hcamcorder);
 
-	_MMCAMCORDER_LOCK_RESOURCE(camcorder);
+	hcamcorder = (mmf_camcorder_t *)resource_manager->hcamcorder;
 
-	if (!mrp_res_equal_resource_set(rs, camcorder->resource_manager.rset)) {
-		_mmcam_dbg_warn("- resource set(%p) is not same as this camcorder handle's(%p)", rs, camcorder->resource_manager.rset);
-		_MMCAMCORDER_UNLOCK_RESOURCE(camcorder);
+	_mmcam_dbg_warn("start");
+
+	_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
+
+	if (!mrp_res_equal_resource_set(rs, resource_manager->rset)) {
+		_mmcam_dbg_warn("- resource set(%p) is not same as this handle's(%p)", rs, resource_manager->rset);
+		_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 		return;
 	}
 
-	_mmcam_dbg_log(" - resource set state of camcorder(%p) is changed to [%s]",
-		camcorder, __mmcamcorder_resource_state_to_str(rs->state));
+	_mmcam_dbg_log(" - resource set state is changed to [%s]", __mmcamcorder_resource_state_to_str(rs->state));
 
 	for (i = 0; i < MM_CAMCORDER_RESOURCE_MAX; i++) {
 		res = mrp_res_get_resource_by_name(rs, mm_camcorder_resource_str[i]);
@@ -174,40 +182,41 @@ static void __mmcamcorder_resource_set_state_callback(mrp_res_context_t *cx, con
 				res->name, __mmcamcorder_resource_state_to_str(res->state));
 
 			if (res->state == MRP_RES_RESOURCE_ACQUIRED) {
-				camcorder->resource_manager.acquire_remain--;
+				resource_manager->acquire_remain--;
 
-				if (camcorder->resource_manager.acquire_remain <= 0) {
+				if (resource_manager->acquire_remain <= 0) {
 					_mmcam_dbg_warn("send signal - resource acquire done");
-					_MMCAMCORDER_RESOURCE_SIGNAL(camcorder);
+					_MMCAMCORDER_RESOURCE_SIGNAL(hcamcorder);
 				} else {
 					_mmcam_dbg_warn("remained acquire count %d",
-						camcorder->resource_manager.acquire_remain);
+						resource_manager->acquire_remain);
 				}
 			} else if (res->state == MRP_RES_RESOURCE_LOST) {
-				camcorder->resource_manager.acquire_remain++;
+				resource_manager->acquire_remain++;
 
-				if (camcorder->resource_manager.acquire_remain >= camcorder->resource_manager.acquire_count) {
+				if (resource_manager->acquire_remain >= resource_manager->acquire_count) {
 					_mmcam_dbg_warn("resource release done");
 
-					if (camcorder->state > MM_CAMCORDER_STATE_NULL) {
+					if (hcamcorder->state > MM_CAMCORDER_STATE_NULL) {
 						_mmcam_dbg_warn("send resource signal");
-						_MMCAMCORDER_RESOURCE_SIGNAL(camcorder);
+						_MMCAMCORDER_RESOURCE_SIGNAL(hcamcorder);
 					} else {
-						_mmcam_dbg_warn("skip resource signal - state %d", camcorder->state);
+						_mmcam_dbg_warn("skip resource signal - state %d", hcamcorder->state);
 					}
 				} else {
 					_mmcam_dbg_warn("acquired %d, lost %d",
-						camcorder->resource_manager.acquire_count,
-						camcorder->resource_manager.acquire_remain);
+						resource_manager->acquire_count, resource_manager->acquire_remain);
 				}
 			}
 		}
 	}
 
-	mrp_res_delete_resource_set(camcorder->resource_manager.rset);
-	camcorder->resource_manager.rset = mrp_res_copy_resource_set(rs);
+	mrp_res_delete_resource_set(resource_manager->rset);
+	resource_manager->rset = mrp_res_copy_resource_set(rs);
 
-	_MMCAMCORDER_UNLOCK_RESOURCE(camcorder);
+	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+
+	_mmcam_dbg_warn("done");
 
 	return;
 }
@@ -217,33 +226,35 @@ static void __mmcamcorder_resource_release_cb(mrp_res_context_t *cx, const mrp_r
 {
 	int i = 0;
 	int current_state = MM_CAMCORDER_STATE_NONE;
-	mmf_camcorder_t* camcorder = (mmf_camcorder_t*)user_data;
-	mrp_res_resource_t *res;
+	mmf_camcorder_t *hcamcorder = NULL;
+	MMCamcorderResourceManager *resource_manager = (MMCamcorderResourceManager *)user_data;
+	mrp_res_resource_t *res = NULL;
 
-	mmf_return_if_fail((MMHandleType)camcorder);
+	mmf_return_if_fail(resource_manager && resource_manager->hcamcorder);
 
-	current_state = _mmcamcorder_get_state((MMHandleType)camcorder);
+	hcamcorder = (mmf_camcorder_t *)resource_manager->hcamcorder;
+
+	current_state = _mmcamcorder_get_state((MMHandleType)hcamcorder);
 	if (current_state <= MM_CAMCORDER_STATE_NONE ||
 	    current_state >= MM_CAMCORDER_STATE_NUM) {
-		_mmcam_dbg_err("Abnormal state. Or null handle. (%p, %d)", camcorder, current_state);
+		_mmcam_dbg_err("Abnormal state %d", current_state);
 		return;
 	}
 
 	_mmcam_dbg_warn("enter");
 
-	_MMCAMCORDER_LOCK_RESOURCE(camcorder);
+	_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
 
-	if (!mrp_res_equal_resource_set(rs, camcorder->resource_manager.rset)) {
-		_MMCAMCORDER_UNLOCK_RESOURCE(camcorder);
-		_mmcam_dbg_warn("- resource set(%p) is not same as this camcorder handle's(%p)", rs, camcorder->resource_manager.rset);
+	if (!mrp_res_equal_resource_set(rs, resource_manager->rset)) {
+		_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+		_mmcam_dbg_warn("- resource set(%p) is not same as this handle's(%p)", rs, resource_manager->rset);
 		return;
 	}
 
 	/* set flag for resource release callback */
-	camcorder->resource_release_cb_calling = TRUE;
+	resource_manager->is_release_cb_calling = TRUE;
 
-	_mmcam_dbg_log(" - resource set state of camcorder(%p) is changed to [%s]",
-		camcorder, __mmcamcorder_resource_state_to_str(rs->state));
+	_mmcam_dbg_log(" - resource set state is changed to [%s]", __mmcamcorder_resource_state_to_str(rs->state));
 
 	for (i = 0; i < MM_CAMCORDER_RESOURCE_MAX; i++) {
 		res = mrp_res_get_resource_by_name(rs, mm_camcorder_resource_str[i]);
@@ -254,21 +265,29 @@ static void __mmcamcorder_resource_release_cb(mrp_res_context_t *cx, const mrp_r
 		}
 	}
 
-	_MMCAMCORDER_UNLOCK_RESOURCE(camcorder);
+	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 
-	_MMCAMCORDER_LOCK_ASM(camcorder);
+	_MMCAMCORDER_LOCK_ASM(hcamcorder);
 
-	/* Stop the camera */
-	__mmcamcorder_force_stop(camcorder, _MMCAMCORDER_STATE_CHANGE_BY_RM);
+	if (resource_manager->id == MM_CAMCORDER_RESOURCE_ID_MAIN) {
+		/* Stop camera */
+		__mmcamcorder_force_stop(hcamcorder, _MMCAMCORDER_STATE_CHANGE_BY_RM);
+	} else {
+		/* Stop video recording */
+		if (_mmcamcorder_commit((MMHandleType)hcamcorder) != MM_ERROR_NONE) {
+			_mmcam_dbg_err("commit failed, cancel it");
+			_mmcamcorder_cancel((MMHandleType)hcamcorder);
+		}
+	}
 
-	_MMCAMCORDER_UNLOCK_ASM(camcorder);
+	_MMCAMCORDER_UNLOCK_ASM(hcamcorder);
 
-	_MMCAMCORDER_LOCK_RESOURCE(camcorder);
+	_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
 
 	/* restore flag for resource release callback */
-	camcorder->resource_release_cb_calling = FALSE;
+	resource_manager->is_release_cb_calling = FALSE;
 
-	_MMCAMCORDER_UNLOCK_RESOURCE(camcorder);
+	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 
 	_mmcam_dbg_warn("leave");
 
@@ -284,7 +303,7 @@ int _mmcamcorder_resource_create_resource_set(MMCamcorderResourceManager *resour
 	}
 
 	resource_manager->rset = mrp_res_create_resource_set(resource_manager->context,
-		MRP_APP_CLASS_FOR_CAMCORDER, __mmcamcorder_resource_set_state_callback, (void*)resource_manager->user_data);
+		MRP_APP_CLASS_FOR_CAMCORDER, __mmcamcorder_resource_set_state_callback, (void *)resource_manager);
 
 	if (resource_manager->rset == NULL) {
 		_mmcam_dbg_err(" - could not create resource set");
@@ -326,7 +345,7 @@ static int __mmcamcorder_resource_set_release_cb(MMCamcorderResourceManager *res
 	bool mrp_ret = FALSE;
 
 	if (resource_manager->rset) {
-		mrp_ret = mrp_res_set_release_callback(resource_manager->rset, __mmcamcorder_resource_release_cb, resource_manager->user_data);
+		mrp_ret = mrp_res_set_release_callback(resource_manager->rset, __mmcamcorder_resource_release_cb, (void *)resource_manager);
 		if (!mrp_ret) {
 			_mmcam_dbg_err(" - could not set release callback");
 			ret = MM_ERROR_RESOURCE_INTERNAL;
@@ -339,7 +358,7 @@ static int __mmcamcorder_resource_set_release_cb(MMCamcorderResourceManager *res
 	return ret;
 }
 
-int _mmcamcorder_resource_manager_init(MMCamcorderResourceManager *resource_manager, void *user_data)
+int _mmcamcorder_resource_manager_init(MMCamcorderResourceManager *resource_manager)
 {
 	GMainContext *mrp_ctx = NULL;
 	GMainLoop *mrp_loop = NULL;
@@ -376,7 +395,7 @@ int _mmcamcorder_resource_manager_init(MMCamcorderResourceManager *resource_mana
 
 	_mmcam_dbg_warn("mloop %p", resource_manager->mloop);
 
-	resource_manager->context = mrp_res_create(resource_manager->mloop, __mmcamcorder_resource_state_callback, user_data);
+	resource_manager->context = mrp_res_create(resource_manager->mloop, __mmcamcorder_resource_state_callback, (void *)resource_manager);
 	if (!resource_manager->context) {
 		_mmcam_dbg_err("could not get context for mrp");
 
@@ -386,19 +405,20 @@ int _mmcamcorder_resource_manager_init(MMCamcorderResourceManager *resource_mana
 		return MM_ERROR_RESOURCE_INTERNAL;
 	}
 
-	resource_manager->user_data = user_data;
-
 	_mmcam_dbg_log("done");
 
 	return MM_ERROR_NONE;
 }
 
 
-int _mmcamcorder_resource_wait_for_connection(MMCamcorderResourceManager *resource_manager, void *hcamcorder)
+int _mmcamcorder_resource_wait_for_connection(MMCamcorderResourceManager *resource_manager)
 {
 	int ret = MM_ERROR_NONE;
+	void *hcamcorder = NULL;
 
-	mmf_return_val_if_fail(resource_manager && hcamcorder, MM_ERROR_CAMCORDER_NOT_INITIALIZED);
+	mmf_return_val_if_fail(resource_manager && resource_manager->hcamcorder, MM_ERROR_CAMCORDER_NOT_INITIALIZED);
+
+	hcamcorder = resource_manager->hcamcorder;
 
 	_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
 
@@ -418,10 +438,42 @@ int _mmcamcorder_resource_wait_for_connection(MMCamcorderResourceManager *resour
 			ret = MM_ERROR_RESOURCE_INTERNAL;
 		}
 	} else {
-		_mmcam_dbg_warn("already connected");
+		_mmcam_dbg_warn("already connected [%d]", resource_manager->id);
 	}
 
 	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+
+	return ret;
+}
+
+
+int _mmcamcorder_resource_check_connection(MMCamcorderResourceManager *resource_manager)
+{
+	int ret = MM_ERROR_NONE;
+
+	mmf_return_val_if_fail(resource_manager, MM_ERROR_CAMCORDER_NOT_INITIALIZED);
+
+	if (resource_manager->is_connected == FALSE) {
+		_mmcam_dbg_warn("resource manager[%d] disconnected before, try to reconnect", resource_manager->id);
+
+		/* release remained resource */
+		_mmcamcorder_resource_manager_deinit(resource_manager);
+
+		/* init resource manager and wait for connection */
+		ret = _mmcamcorder_resource_manager_init(resource_manager);
+		if (ret != MM_ERROR_NONE) {
+			_mmcam_dbg_err("failed to initialize resource manager[%d]", resource_manager->id);
+			return ret;
+		}
+
+		ret = _mmcamcorder_resource_wait_for_connection(resource_manager);
+		if (ret != MM_ERROR_NONE) {
+			_mmcam_dbg_err("failed to connect resource manager[%d]", resource_manager->id);
+			return ret;
+		}
+	}
+
+	_mmcam_dbg_warn("done[%d]", resource_manager->id);
 
 	return ret;
 }

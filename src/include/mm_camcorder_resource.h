@@ -33,21 +33,30 @@ extern "C" {
 typedef enum {
 	MM_CAMCORDER_RESOURCE_TYPE_CAMERA,
 	MM_CAMCORDER_RESOURCE_TYPE_VIDEO_OVERLAY,
+	MM_CAMCORDER_RESOURCE_TYPE_VIDEO_ENCODER,
 	MM_CAMCORDER_RESOURCE_MAX
 } MMCamcorderResourceType;
 
+typedef enum {
+	MM_CAMCORDER_RESOURCE_ID_MAIN,
+	MM_CAMCORDER_RESOURCE_ID_SUB
+} MMCamcorderResourceID;
+
 typedef struct {
+	MMCamcorderResourceID id;
 	mrp_mainloop_t *mloop;
 	mrp_res_context_t *context;
 	mrp_res_resource_set_t *rset;
-	bool is_connected;
-	void *user_data;
+	gboolean is_connected;
+	gboolean is_release_cb_calling;
 	int acquire_count;
 	int acquire_remain;
+	void *hcamcorder;
 } MMCamcorderResourceManager;
 
-int _mmcamcorder_resource_manager_init(MMCamcorderResourceManager *resource_manager, void *user_data);
-int _mmcamcorder_resource_wait_for_connection(MMCamcorderResourceManager *resource_manager, void *hcamcorder);
+int _mmcamcorder_resource_manager_init(MMCamcorderResourceManager *resource_manager);
+int _mmcamcorder_resource_wait_for_connection(MMCamcorderResourceManager *resource_manager);
+int _mmcamcorder_resource_check_connection(MMCamcorderResourceManager *resource_manager);
 int _mmcamcorder_resource_create_resource_set(MMCamcorderResourceManager *resource_manager);
 int _mmcamcorder_resource_manager_prepare(MMCamcorderResourceManager *resource_manager, MMCamcorderResourceType resource_type);
 int _mmcamcorder_resource_manager_acquire(MMCamcorderResourceManager *resource_manager);
