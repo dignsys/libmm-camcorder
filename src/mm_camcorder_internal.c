@@ -869,6 +869,9 @@ int _mmcamcorder_realize(MMHandleType handle)
 	int app_pid = 0;
 	int resource_count = 0;
 #endif /* _MMCAMCORDER_RM_SUPPORT */
+	char *stream_type = NULL;
+	char *ext_info = NULL;
+	int option = 0;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 
@@ -933,6 +936,37 @@ int _mmcamcorder_realize(MMHandleType handle)
 			/* do nothing */
 			_mmcam_dbg_log("SESSION_UNINTERRUPTIBLE - do nothing for sound focus");
 		} else {
+			/* check previous acquired focus */
+			ret = mm_sound_get_stream_type_of_acquired_focus(FOCUS_FOR_BOTH, &stream_type, &option, &ext_info);
+			if (ret == MM_ERROR_NONE && stream_type) {
+				if (!strcmp(stream_type, "alarm") ||
+					!strcmp(stream_type, "ringtone-voip") ||
+					!strcmp(stream_type, "ringtone-call") ||
+					!strcmp(stream_type, "voip") ||
+					!strcmp(stream_type, "call-voice") ||
+					!strcmp(stream_type, "call-video")) {
+					_mmcam_dbg_err("Blocked by session policy, stream_type [%s]", stream_type);
+					ret = MM_ERROR_POLICY_BLOCKED;
+				}
+			} else {
+				_mmcam_dbg_err("get stream type failed 0x%x, stream type %s",
+					ret, stream_type ? stream_type : "NULL");
+				ret = MM_ERROR_POLICY_BLOCKED;
+			}
+
+			if (stream_type) {
+				free(stream_type);
+				stream_type = NULL;
+			}
+
+			if (ext_info) {
+				free(ext_info);
+				ext_info = NULL;
+			}
+
+			if (ret != MM_ERROR_NONE)
+				goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
+
 			/* unset remained watch cb */
 			if (hcamcorder->sound_focus_watch_id > 0) {
 				mm_sound_unset_focus_watch_callback(hcamcorder->sound_focus_watch_id);
