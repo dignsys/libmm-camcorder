@@ -949,9 +949,9 @@ int _mmcamcorder_realize(MMHandleType handle)
 					ret = MM_ERROR_POLICY_BLOCKED;
 				}
 			} else {
-				_mmcam_dbg_err("get stream type failed 0x%x, stream type %s",
+				_mmcam_dbg_warn("get stream type failed 0x%x, stream type %s, but ignore it",
 					ret, stream_type ? stream_type : "NULL");
-				ret = MM_ERROR_POLICY_BLOCKED;
+				ret = MM_ERROR_NONE;
 			}
 
 			if (stream_type) {
