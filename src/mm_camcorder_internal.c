@@ -1773,17 +1773,21 @@ int _mmcamcorder_record(MMHandleType handle)
 {
 	int ret = MM_ERROR_NONE;
 	int state = MM_CAMCORDER_STATE_NONE;
+	int audio_disable = FALSE;
 	int dpm_mic_state = DPM_ALLOWED;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
+	_MMCamcorderSubContext *sc = NULL;
 
 	_mmcam_dbg_log("");
 
-	if (!hcamcorder) {
+	if (!hcamcorder || !MMF_CAMCORDER_SUBCONTEXT(hcamcorder)) {
 		_mmcam_dbg_err("Not initialized");
 		ret = MM_ERROR_CAMCORDER_NOT_INITIALIZED;
 		return ret;
 	}
+
+	sc = MMF_CAMCORDER_SUBCONTEXT(handle);
 
 	if (!_MMCAMCORDER_TRYLOCK_CMD(hcamcorder)) {
 		_mmcam_dbg_err("Another command is running.");
@@ -1801,8 +1805,15 @@ int _mmcamcorder_record(MMHandleType handle)
 	/* initialize error code */
 	hcamcorder->error_code = MM_ERROR_NONE;
 
+	/* get audio disable */
+	mm_camcorder_get_attributes(handle, NULL,
+		MMCAM_AUDIO_DISABLE, &sc->audio_disable,
+		NULL);
+
+	sc->audio_disable |= sc->is_modified_rate;
+
 	/* check mic policy from DPM */
-	if (hcamcorder->dpm_handle) {
+	if (hcamcorder->dpm_handle && sc->audio_disable == FALSE) {
 		if (dpm_restriction_get_microphone_state(hcamcorder->dpm_handle, &dpm_mic_state) == DPM_ERROR_NONE) {
 			_mmcam_dbg_log("DPM mic state %d", dpm_mic_state);
 			if (dpm_mic_state == DPM_DISALLOWED) {
@@ -1817,7 +1828,8 @@ int _mmcamcorder_record(MMHandleType handle)
 			_mmcam_dbg_err("get DPM mic state failed, keep going...");
 		}
 	} else {
-		_mmcam_dbg_warn("NULL dpm_handle");
+		_mmcam_dbg_warn("skip dpm check - handle %p, audio disable %d",
+			hcamcorder->dpm_handle, sc->audio_disable);
 	}
 
 	ret = hcamcorder->command((MMHandleType)hcamcorder, _MMCamcorder_CMD_RECORD);

@@ -130,7 +130,6 @@ int _mmcamcorder_create_recorder_pipeline(MMHandleType handle)
 {
 	int i = 0;
 	int err = MM_ERROR_NONE;
-	int audio_disable = FALSE;
 	const char* gst_element_rsink_name = NULL;
 
 	GstBus *bus = NULL;
@@ -165,16 +164,13 @@ int _mmcamcorder_create_recorder_pipeline(MMHandleType handle)
 
 	/* get audio disable */
 	mm_camcorder_get_attributes(handle, NULL,
-		MMCAM_AUDIO_DISABLE, &audio_disable,
+		MMCAM_AUDIO_DISABLE, &sc->audio_disable,
 		NULL);
 
-	if (sc->is_modified_rate || audio_disable)
-		sc->audio_disable = TRUE;
-	else
-		sc->audio_disable = FALSE;
+	_mmcam_dbg_log("MMCAM_AUDIO_DISABLE %d, is_modified_rate %d",
+		sc->audio_disable, sc->is_modified_rate);
 
-	_mmcam_dbg_log("AUDIO DISABLE : %d (is_modified_rate %d, audio_disable %d)",
-		sc->audio_disable, sc->is_modified_rate, audio_disable);
+	sc->audio_disable |= sc->is_modified_rate;
 
 	if (sc->audio_disable == FALSE) {
 		/* create audiosrc bin */
