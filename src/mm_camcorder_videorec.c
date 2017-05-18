@@ -407,14 +407,13 @@ int _mmcamcorder_remove_encode_pipeline(MMHandleType handle)
 			ret = _mmcamcorder_resource_manager_release(resource_manager);
 
 			_mmcam_dbg_warn("release resource 0x%x", ret);
-#ifdef _MMCAMCORDER_MURPHY_WAIT_TO_RELEASE_SUB_RESOURCE
+
 			if (resource_manager->acquire_remain < resource_manager->acquire_count) {
 				/* wait for resource release */
 				gint64 end_time = g_get_monotonic_time() + (__MMCAMCORDER_RESOURCE_WAIT_TIME * G_TIME_SPAN_SECOND);
 				_mmcam_dbg_log("resource is not released all. wait for signal...");
 				_MMCAMCORDER_RESOURCE_WAIT_UNTIL(hcamcorder, end_time);
 			}
-#endif /* _MMCAMCORDER_MURPHY_WAIT_TO_RELEASE_SUB_RESOURCE */
 		}
 
 		_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
