@@ -41,6 +41,7 @@
 #define _MMCAMCORDER_FRAME_WAIT_TIME	200000	/* ms */
 #define _OFFSET_COMPOSITION_MATRIX		40L
 #define _GOP_GEN_INTERVAL				1000000000	/*nano seconds*/
+#define _MMCAMCORDER_VIDEO_MINIMUM_SPACE	(_MMCAMCORDER_MINIMUM_SPACE << 1)      /* byte */
 
 /*---------------------------------------------------------------------------------------
 |    LOCAL FUNCTION PROTOTYPES:															|
@@ -621,8 +622,8 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 				goto _ERR_CAMCORDER_VIDEO_COMMAND;
 			}
 
-			if (temp_filename == NULL) {
-				_mmcam_dbg_err("filename is not set");
+			if (!temp_filename && !hcamcorder->mstream_cb) {
+				_mmcam_dbg_err("filename is not set and muxed stream cb is NULL");
 				ret = MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
 				goto _ERR_CAMCORDER_VIDEO_COMMAND;
 			}
@@ -675,9 +676,10 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 				ret_free_space = -1;
 			}
 
-			if ((ret_free_space == -1) || free_space <= (_MMCAMCORDER_MINIMUM_SPACE<<1)) {
+			if (temp_filename &&
+				(ret_free_space == -1 || free_space <= _MMCAMCORDER_VIDEO_MINIMUM_SPACE)) {
 				_mmcam_dbg_err("OUT of STORAGE [ret_free_space:%d or free space [%" G_GUINT64_FORMAT "] is smaller than [%d]",
-					ret_free_space, free_space, (_MMCAMCORDER_MINIMUM_SPACE<<1));
+					ret_free_space, free_space, _MMCAMCORDER_VIDEO_MINIMUM_SPACE);
 				return MM_ERROR_OUT_OF_STORAGE;
 			}
 
@@ -2099,6 +2101,8 @@ int _mmcamcorder_connect_video_stream_cb_signal(MMHandleType handle)
 int _mmcamcorder_video_prepare_record(MMHandleType handle)
 {
 	int ret = MM_ERROR_NONE;
+	int size = 0;
+	char *temp_filename = NULL;
 
 	_MMCamcorderVideoInfo *info = NULL;
 	_MMCamcorderSubContext *sc = NULL;
@@ -2119,25 +2123,25 @@ int _mmcamcorder_video_prepare_record(MMHandleType handle)
 	if (ret != MM_ERROR_NONE)
 		goto _ERR_PREPARE_RECORD;
 
-	if (info->filename == NULL) {
-		char *temp_filename = NULL;
-		int size = 0;
+	SAFE_G_FREE(info->filename);
 
-		mm_camcorder_get_attributes(handle, NULL,
-			MMCAM_TARGET_FILENAME, &temp_filename, &size,
-			NULL);
-		if (temp_filename)
-			info->filename = g_strdup(temp_filename);
-
+	mm_camcorder_get_attributes(handle, NULL,
+		MMCAM_TARGET_FILENAME, &temp_filename, &size,
+		NULL);
+	if (temp_filename) {
+		info->filename = g_strdup(temp_filename);
 		if (!info->filename) {
 			_mmcam_dbg_err("strdup[src:%p] was failed", temp_filename);
 			goto _ERR_PREPARE_RECORD;
 		}
+
+		_mmcam_dbg_log("Record file name [%s]", info->filename);
+		MMCAMCORDER_G_OBJECT_SET_POINTER(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, "location", info->filename);
+	} else {
+		_mmcam_dbg_log("Recorded data will be written in [%s]", _MMCamcorder_FILENAME_NULL);
+		MMCAMCORDER_G_OBJECT_SET_POINTER(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, "location", _MMCamcorder_FILENAME_NULL);
 	}
 
-	_mmcam_dbg_log("Record file name [%s]", info->filename);
-
-	MMCAMCORDER_G_OBJECT_SET_POINTER(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, "location", info->filename);
 	MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_ENCBIN].gst, "block", 0);
 
 	/* Adjust display FPS */

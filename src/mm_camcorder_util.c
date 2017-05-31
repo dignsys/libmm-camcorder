@@ -1246,10 +1246,9 @@ MSG_CALLBACK_DONE:
 	} else if (item->id == MM_MESSAGE_CAMCORDER_VIDEO_CAPTURED || item->id == MM_MESSAGE_CAMCORDER_AUDIO_CAPTURED) {
 		MMCamRecordingReport *report = (MMCamRecordingReport *)item->param.data;
 		if (report) {
-			if (report->recording_filename)
-				SAFE_G_FREE(report->recording_filename);
-
-			SAFE_G_FREE(report);
+			SAFE_G_FREE(report->recording_filename);
+			g_free(report);
+			report = NULL;
 			item->param.data = NULL;
 		}
 	}

@@ -1773,7 +1773,6 @@ int _mmcamcorder_record(MMHandleType handle)
 {
 	int ret = MM_ERROR_NONE;
 	int state = MM_CAMCORDER_STATE_NONE;
-	int audio_disable = FALSE;
 	int dpm_mic_state = DPM_ALLOWED;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);

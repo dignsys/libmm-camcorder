@@ -35,8 +35,7 @@
 |    LOCAL VARIABLE DEFINITIONS for internal						|
 ---------------------------------------------------------------------------------------*/
 #define RESET_PAUSE_TIME                        0
-#define _MMCAMCORDER_AUDIO_MINIMUM_SPACE        (100*1024)
-#define _MMCAMCORDER_AUDIO_MARGIN_SPACE         (1*1024)
+#define _MMCAMCORDER_AUDIO_MINIMUM_SPACE        ((100*1024) + (5*1024))
 #define _MMCAMCORDER_RETRIAL_COUNT              10
 #define _MMCAMCORDER_FRAME_WAIT_TIME            200000 /* micro second */
 #define _MMCAMCORDER_FREE_SPACE_CHECK_INTERVAL  10
@@ -78,6 +77,7 @@ static int __mmcamcorder_create_audiop_with_encodebin(MMHandleType handle)
 	_MMCamcorderSubContext *sc = NULL;
 	type_element *aenc_elem = NULL;
 	type_element *mux_elem = NULL;
+	type_element *sink_elem = NULL;
 
 	mmf_return_val_if_fail(hcamcorder, MM_ERROR_CAMCORDER_NOT_INITIALIZED);
 	sc = MMF_CAMCORDER_SUBCONTEXT(handle);
@@ -158,14 +158,17 @@ static int __mmcamcorder_create_audiop_with_encodebin(MMHandleType handle)
 
 		_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_AENC, aenc_name, NULL, element_list, err);
 
-		if (file_name)
-			sink_name = "filesink";
-		else
-			sink_name = "fakesink";
+		_mmcamcorder_conf_get_element(handle, hcamcorder->conf_main,
+			CONFIGURE_CATEGORY_MAIN_RECORD,
+			"RecordsinkElement",
+			&sink_elem);
+		_mmcamcorder_conf_get_value_element_name(sink_elem, &sink_name);
 
 		_mmcam_dbg_log("encode sink : %s", sink_name);
 
 		_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_SINK, sink_name, NULL, element_list, err);
+
+		_mmcamcorder_conf_set_value_element_property(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, sink_elem);
 
 		/* add elements to encode pipeline */
 		if (!_mmcamcorder_add_elements_to_bin(GST_BIN(sc->encode_element[_MMCAMCORDER_ENCODE_MAIN_PIPE].gst), element_list)) {
@@ -376,16 +379,21 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 				goto _ERR_CAMCORDER_AUDIO_COMMAND;
 			}
 
+			SAFE_G_FREE(info->filename);
+
 			if (temp_filename) {
 				info->filename = g_strdup(temp_filename);
 				if (!info->filename) {
-					_mmcam_dbg_err("STRDUP was failed");
+					_mmcam_dbg_err("STRDUP was failed for [%s]", temp_filename);
 					goto _ERR_CAMCORDER_AUDIO_COMMAND;
 				}
 
-				_mmcam_dbg_log("Record start : set file name using attribute - %s\n ", info->filename);
+				_mmcam_dbg_log("Record start : file name [%s]", info->filename);
 
 				MMCAMCORDER_G_OBJECT_SET_POINTER(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, "location", info->filename);
+			} else {
+				_mmcam_dbg_log("Recorded data will be written in [%s]", _MMCamcorder_FILENAME_NULL);
+				MMCAMCORDER_G_OBJECT_SET_POINTER(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, "location", _MMCamcorder_FILENAME_NULL);
 			}
 
 			sc->ferror_send = FALSE;
@@ -443,9 +451,10 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 				err = -1;
 			}
 
-			if ((err == -1) || free_space <= (_MMCAMCORDER_AUDIO_MINIMUM_SPACE+(5*1024))) {
+			if (temp_filename &&
+				(err == -1 || free_space <= _MMCAMCORDER_AUDIO_MINIMUM_SPACE)) {
 				_mmcam_dbg_err("OUT of STORAGE [err:%d or free space [%" G_GUINT64_FORMAT "] is smaller than [%d]",
-					err, free_space, (_MMCAMCORDER_AUDIO_MINIMUM_SPACE+(5*1024)));
+					err, free_space, _MMCAMCORDER_AUDIO_MINIMUM_SPACE);
 				return MM_ERROR_OUT_OF_STORAGE;
 			}
 		}

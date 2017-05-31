@@ -316,6 +316,11 @@ extern "C" {
 #define _MMCamcorder_FILENAME_LEN	(512)
 
 /**
+ *	File name for NULL path
+ */
+#define _MMCamcorder_FILENAME_NULL	"/dev/null"
+
+/**
  *	Minimum integer value
  */
 #define _MMCAMCORDER_MIN_INT	(INT_MIN)

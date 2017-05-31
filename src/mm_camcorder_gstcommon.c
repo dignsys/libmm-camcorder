@@ -730,7 +730,6 @@ void _mmcamcorder_set_encoder_bitrate(MMCamcorderEncoderType type, int codec, in
 int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebinProfile profile)
 {
 	int err = MM_ERROR_NONE;
-	int file_name_len = 0;
 	int channel = 0;
 	int audio_enc = 0;
 	int v_bitrate = 0;
@@ -749,7 +748,6 @@ int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebin
 	const char *str_aar = NULL;
 	const char *str_acs = NULL;
 	char *err_name = NULL;
-	char *file_name = NULL;
 	const char *videoconvert_name = NULL;
 	GstCaps *audio_caps = NULL;
 	GstCaps *video_caps = NULL;
@@ -869,7 +867,6 @@ int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebin
 		MMCAM_AUDIO_CHANNEL, &channel,
 		MMCAM_VIDEO_ENCODER_BITRATE, &v_bitrate,
 		MMCAM_AUDIO_ENCODER_BITRATE, &a_bitrate,
-		MMCAM_TARGET_FILENAME, &file_name, &file_name_len,
 		NULL);
 
 	if (err != MM_ERROR_NONE) {
@@ -1066,20 +1063,15 @@ int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebin
 	/* Sink */
 	if (profile != MM_CAMCORDER_ENCBIN_PROFILE_IMAGE) {
 		/* for recording */
-		if (file_name) {
-			_mmcamcorder_conf_get_element(handle, hcamcorder->conf_main,
-				CONFIGURE_CATEGORY_MAIN_RECORD,
-				"RecordsinkElement",
-				&RecordsinkElement);
-			_mmcamcorder_conf_get_value_element_name(RecordsinkElement, &gst_element_rsink_name);
+		_mmcamcorder_conf_get_element(handle, hcamcorder->conf_main,
+			CONFIGURE_CATEGORY_MAIN_RECORD,
+			"RecordsinkElement",
+			&RecordsinkElement);
+		_mmcamcorder_conf_get_value_element_name(RecordsinkElement, &gst_element_rsink_name);
 
-			_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_SINK, gst_element_rsink_name, NULL, element_list, err);
+		_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_SINK, gst_element_rsink_name, NULL, element_list, err);
 
-			_mmcamcorder_conf_set_value_element_property(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, RecordsinkElement);
-		} else {
-			/* if file_name is not set, add fakesink for muxed stream callback */
-			_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_SINK, "fakesink", NULL, element_list, err);
-		}
+		_mmcamcorder_conf_set_value_element_property(sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, RecordsinkElement);
 	} else {
 		/* for stillshot */
 		_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_SINK, "fakesink", NULL, element_list, err);
