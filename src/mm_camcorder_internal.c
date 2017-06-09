@@ -3816,6 +3816,7 @@ void __mmcamcorder_force_stop(mmf_camcorder_t *hcamcorder, int state_change_by_s
 	int result = MM_ERROR_NONE;
 	int cmd_try_count = 0;
 	int current_state = MM_CAMCORDER_STATE_NONE;
+	_MMCamcorderMsgItem msg;
 
 	mmf_return_if_fail(hcamcorder);
 
@@ -3841,6 +3842,33 @@ void __mmcamcorder_force_stop(mmf_camcorder_t *hcamcorder, int state_change_by_s
 
 	/* set state_change_by_system for state change message */
 	hcamcorder->state_change_by_system = state_change_by_system;
+
+	if (current_state >= MM_CAMCORDER_STATE_READY) {
+		_mmcam_dbg_warn("send state change started message to notify");
+
+		memset(&msg, 0x0, sizeof(_MMCamcorderMsgItem));
+
+		switch (state_change_by_system) {
+		case _MMCAMCORDER_STATE_CHANGE_BY_FOCUS:
+			msg.id = MM_MESSAGE_CAMCORDER_STATE_CHANGE_STARTED_BY_ASM;
+			break;
+		case _MMCAMCORDER_STATE_CHANGE_BY_RM:
+			msg.id = MM_MESSAGE_CAMCORDER_STATE_CHANGE_STARTED_BY_RM;
+			break;
+		case _MMCAMCORDER_STATE_CHANGE_BY_DPM:
+			msg.id = MM_MESSAGE_CAMCORDER_STATE_CHANGE_STARTED_BY_SECURITY;
+			break;
+		default:
+			break;
+		}
+
+		if (msg.id != 0) {
+			msg.param.state.code = hcamcorder->interrupt_code;
+			_mmcamcorder_send_message((MMHandleType)hcamcorder, &msg);
+		} else {
+			_mmcam_dbg_err("should not be reached here %d", state_change_by_system);
+		}
+	}
 
 	for (loop = 0 ; current_state > MM_CAMCORDER_STATE_NULL && loop < __MMCAMCORDER_CMD_ITERATE_MAX * 3 ; loop++) {
 		itr_cnt = __MMCAMCORDER_CMD_ITERATE_MAX;
