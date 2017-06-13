@@ -477,7 +477,7 @@ int _mmcamcorder_create_audiosrc_bin(MMHandleType handle)
 	const char *audiosrc_name = NULL;
 	char *cat_name = NULL;
 	char *stream_type = NULL;
-	char stream_type_len = 0;
+	int stream_type_len = 0;
 	int stream_index = 0;
 	int buffer_interval = 0;
 	int blocksize = 0;
