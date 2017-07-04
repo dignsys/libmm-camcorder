@@ -2066,10 +2066,7 @@ int _mmcamcorder_set_video_stream_callback(MMHandleType handle, mm_camcorder_vid
 	if (callback == NULL)
 		_mmcam_dbg_warn("Video Stream Callback is disabled, because application sets it to NULL");
 
-	if (!_MMCAMCORDER_TRYLOCK_VSTREAM_CALLBACK(hcamcorder)) {
-		_mmcam_dbg_warn("Application's video stream callback is running now");
-		return MM_ERROR_CAMCORDER_INVALID_CONDITION;
-	}
+	_MMCAMCORDER_LOCK_VSTREAM_CALLBACK(hcamcorder);
 
 	hcamcorder->vstream_cb = callback;
 	hcamcorder->vstream_cb_param = user_data;
