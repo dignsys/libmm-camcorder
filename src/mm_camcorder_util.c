@@ -46,6 +46,8 @@
 -----------------------------------------------------------------------*/
 #define TIME_STRING_MAX_LEN                     64
 #define __MMCAMCORDER_CAPTURE_WAIT_TIMEOUT      5
+#define __MMCAMCORDER_MAX_WIDTH                 8192
+#define __MMCAMCORDER_MAX_HEIGHT                8192
 
 #define FPUTC_CHECK(x_char, x_file) \
 { \
@@ -2236,6 +2238,12 @@ static gboolean _mmcamcorder_convert_NV12_to_I420(unsigned char *src, guint widt
 
 	if (!src || !dst || !dst_len) {
 		_mmcam_dbg_err("NULL pointer %p, %p, %p", src, dst, dst_len);
+		return FALSE;
+	}
+
+	/* buffer overflow prevention check */
+	if (width > __MMCAMCORDER_MAX_WIDTH || height > __MMCAMCORDER_MAX_HEIGHT) {
+		_mmcam_dbg_err("too large size %d x %d", width, height);
 		return FALSE;
 	}
 
