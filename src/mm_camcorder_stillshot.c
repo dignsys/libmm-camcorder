@@ -1359,12 +1359,16 @@ static void __mmcamcorder_image_capture_cb(GstElement *element, GstSample *sampl
 					/* Make sure the image had a thumbnail before trying to write it */
 					if (ed->data && ed->size) {
 						thumb.data = malloc(ed->size);
-						memcpy(thumb.data, ed->data, ed->size);
-						thumb.length = ed->size;
-						thumb.format = MM_PIXEL_FORMAT_ENCODED;
-						thumb.width = atoi(width);
-						thumb.height = atoi(height);
-						internal_thumb_data = thumb.data;
+						if (thumb.data) {
+							memcpy(thumb.data, ed->data, ed->size);
+							thumb.length = ed->size;
+							thumb.format = MM_PIXEL_FORMAT_ENCODED;
+							thumb.width = atoi(width);
+							thumb.height = atoi(height);
+							internal_thumb_data = thumb.data;
+						} else {
+							_mmcam_dbg_err("failed to alloc thumbnail data");
+						}
 					}
 					exif_data_unref(ed);
 					ed = NULL;
