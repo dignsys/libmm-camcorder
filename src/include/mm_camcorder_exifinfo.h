@@ -113,16 +113,6 @@ int mm_exif_add_thumbnail_info(mm_exif_info_t *info, void *thumbnail,
 			       int width, int height, int len);
 
 /**
- * Write exif info into a jpeg image and then save as a jpeg file.
- * @param[in/out] filename jpeg filename.
- * @param[in] info exif info.
- * @param[in] jpeg jpeg image data.
- * @param[in] length length of jpeg image.
- * @return return int.
- */
-int mm_exif_write_exif_jpeg_to_file(char *filename, mm_exif_info_t *info, void *jpeg, int jpeg_len);
-
-/**
  * Write exif info into a jpeg memory buffer.
  * @param[in/out] mem image data buffer.
  * @param[in/out] length image data length.

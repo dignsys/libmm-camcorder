@@ -406,50 +406,6 @@ exit:
 
 
 int
-mm_exif_write_exif_jpeg_to_file(char *filename, mm_exif_info_t *info,  void *jpeg, int jpeg_len)
-{
-	FILE *fp = NULL;
-	unsigned short head[2] = {0,};
-	unsigned short head_len = 0;
-	unsigned char *eb = NULL;
-	unsigned int ebs;
-
-	_mmcam_dbg_log("");
-
-	eb = info->data;
-	ebs = info->size;
-
-	/*create file*/
-	fp = fopen(filename, "wb");
-	if (!fp) {
-		_mmcam_dbg_err("fopen() failed [%s].", filename);
-		return MM_ERROR_IMAGE_FILEOPEN;
-	}
-
-	/*set SOI, APP1*/
-	_exif_set_uint16(0, &head[0], 0xffd8);
-	_exif_set_uint16(0, &head[1], 0xffe1);
-	/*set header length*/
-	_exif_set_uint16(0, &head_len, (unsigned short)(ebs + 2));
-
-	if (head[0] == 0 || head[1] == 0 || head_len == 0) {
-		_mmcam_dbg_err("setting error");
-		fclose(fp);
-		return -1;
-	}
-
-	fwrite(&head[0], 1, EXIF_MARKER_SOI_LENGTH, fp);       /*SOI marker*/
-	fwrite(&head[1], 1, EXIF_MARKER_APP1_LENGTH, fp);      /*APP1 marker*/
-	fwrite(&head_len, 1, EXIF_APP1_LENGTH, fp);            /*length of APP1*/
-	fwrite(eb, 1, ebs, fp);                                /*EXIF*/
-	fwrite(jpeg + JPEG_DATA_OFFSET, 1, jpeg_len - JPEG_DATA_OFFSET, fp);   /*IMAGE*/
-
-	fclose(fp);
-
-	return MM_ERROR_NONE;
-}
-
-int
 mm_exif_write_exif_jpeg_to_memory(void **mem, unsigned int *length, mm_exif_info_t *info,  void *jpeg, unsigned int jpeg_len)
 {
 	unsigned short head[2] = {0,};
