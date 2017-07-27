@@ -2103,6 +2103,9 @@ int _mmcamcorder_get_eos_message(MMHandleType handle)
 			_mmcam_dbg_log("EOS signal received");
 		} else {
 			_mmcam_dbg_err("EOS wait time out");
+
+			if (hcamcorder->error_code == MM_ERROR_NONE)
+				hcamcorder->error_code = MM_ERROR_CAMCORDER_RESPONSE_TIMEOUT;
 		}
 	} else {
 		_mmcam_dbg_log("already got EOS");
