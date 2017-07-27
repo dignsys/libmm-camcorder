@@ -1862,7 +1862,7 @@ gboolean _mmcamcorder_encode_jpeg(void *src_data, unsigned int src_width, unsign
 		return FALSE;
 	}
 
-	ret = mm_util_jpeg_encode_to_memory(result_data, (int *)result_length,
+	ret = mm_util_jpeg_encode_to_memory(result_data, result_length,
 		converted_src, src_width, src_height, jpeg_format, jpeg_quality);
 
 	if (converted_src && (converted_src != src_data)) {
