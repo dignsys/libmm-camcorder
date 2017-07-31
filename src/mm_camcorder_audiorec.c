@@ -532,7 +532,7 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 	case _MMCamcorder_CMD_COMMIT:
 	{
 		int count = 0;
-
+		guint64 free_space = 0;
 		_mmcam_dbg_log("_MMCamcorder_CMD_COMMIT");
 
 		if (info->b_commiting) {
@@ -555,6 +555,13 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 					count, info->filesize);
 			}
 			usleep(_MMCAMCORDER_FRAME_WAIT_TIME);
+		}
+
+		_mmcamcorder_get_freespace(hcamcorder->storage_info.type, &free_space);
+		if (free_space < _MMCAMCORDER_AUDIO_MINIMUM_SPACE) {
+			_mmcam_dbg_warn("_MMCamcorder_CMD_COMMIT out of storage [%" G_GUINT64_FORMAT "]", free_space);
+			ret = MM_ERROR_OUT_OF_STORAGE;
+			goto _ERR_CAMCORDER_AUDIO_COMMAND;
 		}
 
 		if (audioSrc) {

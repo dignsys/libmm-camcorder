@@ -1071,6 +1071,8 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 	}
 	case _MMCamcorder_CMD_COMMIT:
 	{
+		guint64 free_space;
+
 		if (info->b_commiting) {
 			_mmcam_dbg_err("now on commiting previous file!!(command : %d)", command);
 			return MM_ERROR_CAMCORDER_CMD_IS_RUNNING;
@@ -1139,6 +1141,13 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 		/* block push buffer */
 		info->push_encoding_buffer = PUSH_ENCODING_BUFFER_STOP;
 		_mmcam_dbg_log("block push buffer to appsrc");
+
+		_mmcamcorder_get_freespace(hcamcorder->storage_info.type, &free_space);
+		if (free_space < _MMCAMCORDER_MINIMUM_SPACE) {
+			_mmcam_dbg_warn("_MMCamcorder_CMD_COMMIT out of storage [%" G_GUINT64_FORMAT "]", free_space);
+			ret = MM_ERROR_OUT_OF_STORAGE;
+			goto _ERR_CAMCORDER_VIDEO_COMMAND;
+		}
 
 		if (sc->encode_element[_MMCAMCORDER_ENCSINK_SRC].gst != NULL) {
 			if (gst_element_send_event(sc->encode_element[_MMCAMCORDER_ENCSINK_SRC].gst, gst_event_new_eos())) {
