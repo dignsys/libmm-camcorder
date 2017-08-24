@@ -406,7 +406,7 @@ exit:
 
 
 int
-mm_exif_write_exif_jpeg_to_memory(void **mem, unsigned int *length, mm_exif_info_t *info,  void *jpeg, unsigned int jpeg_len)
+mm_exif_write_exif_jpeg_to_memory(void **mem, unsigned int *length, mm_exif_info_t *info,  unsigned char *jpeg, unsigned int jpeg_len)
 {
 	unsigned short head[2] = {0,};
 	unsigned short head_len = 0;

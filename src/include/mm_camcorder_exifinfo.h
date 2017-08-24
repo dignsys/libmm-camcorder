@@ -122,7 +122,7 @@ int mm_exif_add_thumbnail_info(mm_exif_info_t *info, void *thumbnail,
  * @return return int.
  */
 int mm_exif_write_exif_jpeg_to_memory(void **mem, unsigned int *length,
-				      mm_exif_info_t *info, void *jpeg,
+				      mm_exif_info_t *info, unsigned char *jpeg,
 				      unsigned int jpeg_len);
 
 /**
