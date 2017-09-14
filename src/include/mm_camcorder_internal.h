@@ -42,9 +42,9 @@
 #include <ttrace.h>
 #include <errno.h>
 #include <restriction.h> /* device policy manager */
+#include <dlog.h>
 
 #include "mm_camcorder.h"
-#include "mm_debug.h"
 
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
 #include "mm_camcorder_resource.h"
@@ -67,6 +67,11 @@
 #include <rm_api.h>
 #endif /* _MMCAMCORDER_RM_SUPPORT */
 
+#ifdef LOG_TAG
+#undef LOG_TAG
+#endif
+#define LOG_TAG "MM_CAMCORDER"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -74,11 +79,11 @@ extern "C" {
 /*=======================================================================================
 | MACRO DEFINITIONS									|
 ========================================================================================*/
-#define _mmcam_dbg_verb(fmt, args...)  debug_verbose(" "fmt"\n", ##args);
-#define _mmcam_dbg_log(fmt, args...)   debug_log(" "fmt"\n", ##args);
-#define _mmcam_dbg_warn(fmt, args...)  debug_warning(" "fmt"\n", ##args);
-#define _mmcam_dbg_err(fmt, args...)   debug_error(" "fmt"\n", ##args);
-#define _mmcam_dbg_crit(fmt, args...)  debug_critical(" "fmt"\n", ##args);
+#define _mmcam_dbg_verb(fmt, args...)  SLOGI(fmt, ##args);
+#define _mmcam_dbg_log(fmt, args...)   SLOGD(fmt, ##args);
+#define _mmcam_dbg_warn(fmt, args...)  SLOGW(fmt, ##args);
+#define _mmcam_dbg_err(fmt, args...)   SLOGE(fmt, ##args);
+#define _mmcam_dbg_crit(fmt, args...)  SLOGF(fmt, ##args);
 
 /**
  *	Macro for checking validity and debugging

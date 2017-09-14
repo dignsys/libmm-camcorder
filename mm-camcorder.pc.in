@@ -5,7 +5,7 @@ includedir=@includedir@
 
 Name: mm-camcorder
 Description: Multimedia Framework Camcorder Library
-Requires: gstreamer-1.0 gstreamer-base-1.0 mm-common mm-log libexif
+Requires: gstreamer-1.0 gstreamer-base-1.0 mm-common libexif
 Version: $VERSION
 Libs: -L${libdir} -lmmfcamcorder
 Cflags: -I${includedir}/ -I${includedir}/mmf

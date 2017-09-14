@@ -132,6 +132,10 @@ PKG_CHECK_MODULES(DPM, dpm)
 AC_SUBST(DPM_CFLAGS)
 AC_SUBST(DPM_LIBS)
 
+PKG_CHECK_MODULES(DLOG, dlog)
+AC_SUBST(DLOG_CFLAGS)
+AC_SUBST(DLOG_LIBS)
+
 AC_ARG_ENABLE(product-tv, AC_HELP_STRING([--enable-product-tv],[enable tv defined code]),
 [
   case "${enableval}" in

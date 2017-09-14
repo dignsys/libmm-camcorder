@@ -30,7 +30,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#include <mm_debug.h>
 #include <mm_error.h>
 
 #define MM_EXIFINFO_USE_BINARY_EXIFDATA         1

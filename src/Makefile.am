@@ -48,6 +48,7 @@ libmmfcamcorder_la_CFLAGS = -I$(srcdir)/include \
 			     $(STORAGE_CFLAGS) \
 			     $(TTRACE_CFLAGS) \
 			     $(DPM_CFLAGS) \
+			     $(DLOG_CFLAGS) \
 			     $(SYSTEMINFO_CFLAGS)
 
 libmmfcamcorder_la_LIBADD = \
@@ -66,6 +67,7 @@ libmmfcamcorder_la_LIBADD = \
 			    $(TBM_LIBS) \
 			    $(TTRACE_LIBS) \
 			    $(DPM_LIBS) \
+			    $(DLOG_LIBS) \
 			    $(STORAGE_LIBS)
 
 libmmfcamcorder_la_CFLAGS += -DMMF_LOG_OWNER=0x010 -D_FILE_OFFSET_BITS=64
