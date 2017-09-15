@@ -1218,6 +1218,7 @@ gboolean _mmcamcorder_msg_callback(void *data)
 
 	/* remove item from msg data */
 	if (hcamcorder->msg_data) {
+		/*_mmcam_dbg_log("remove item %p", item);*/
 		hcamcorder->msg_data = g_list_remove(hcamcorder->msg_data, item);
 	} else {
 		_mmcam_dbg_warn("msg_data is NULL but item[%p] will be removed", item);

@@ -509,11 +509,10 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 		if (ret != MM_ERROR_NONE)
 			goto _ERR_CAMCORDER_AUDIO_COMMAND;
 
-		if (info->bMuxing) {
+		if (info->bMuxing)
 			MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_ENCBIN].gst, "block", FALSE);
-		} else {
+		else
 			MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_AQUE].gst, "empty-buffers", FALSE);
-		}
 
 		_mmcamcorder_gst_set_state(handle, sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, GST_STATE_NULL);
 
@@ -661,11 +660,10 @@ int _mmcamcorder_audio_handle_eos(MMHandleType handle)
 
 	_mmcamcorder_send_message(handle, &msg);
 
-	if (info->bMuxing) {
+	if (info->bMuxing)
 		MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_ENCBIN].gst, "block", FALSE);
-	} else {
+	else
 		MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_AQUE].gst, "empty-buffers", FALSE);
-	}
 
 	_mmcamcorder_gst_set_state(handle, pipeline, GST_STATE_NULL);
 
@@ -934,11 +932,10 @@ static GstPadProbeReturn __mmcamcorder_audio_dataprobe_record(GstPad *pad, GstPa
 			_mmcam_dbg_warn("Free Space : [%" G_GUINT64_FORMAT "], file size : [%" G_GUINT64_FORMAT "]",
 				free_space, audioinfo->filesize);
 
-			if (audioinfo->bMuxing) {
+			if (audioinfo->bMuxing)
 				MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_ENCBIN].gst, "block", TRUE);
-			} else {
+			else
 				MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_AQUE].gst, "empty-buffers", TRUE);
-			}
 
 			sc->isMaxsizePausing = TRUE;
 			msg.id = MM_MESSAGE_CAMCORDER_NO_FREE_SPACE;
@@ -975,11 +972,10 @@ static GstPadProbeReturn __mmcamcorder_audio_dataprobe_record(GstPad *pad, GstPa
 			audioinfo->max_size, audioinfo->filesize, trailer_size);
 
 		/* just same as pause status. After blocking two queue, this function will not call again. */
-		if (audioinfo->bMuxing) {
+		if (audioinfo->bMuxing)
 			MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_ENCBIN].gst, "block", TRUE);
-		} else {
+		else
 			MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_AQUE].gst, "empty-buffers", TRUE);
-		}
 
 		msg.id = MM_MESSAGE_CAMCORDER_RECORDING_STATUS;
 		msg.param.recording_status.elapsed = (unsigned long long)rec_pipe_time;
@@ -1002,11 +998,10 @@ static GstPadProbeReturn __mmcamcorder_audio_dataprobe_record(GstPad *pad, GstPa
 		_mmcam_dbg_warn("Current time : [%" G_GUINT64_FORMAT "], Maximum time : [%" G_GUINT64_FORMAT "]", \
 			rec_pipe_time, audioinfo->max_time);
 
-		if (audioinfo->bMuxing) {
+		if (audioinfo->bMuxing)
 			MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_ENCBIN].gst, "block", TRUE);
-		} else {
+		else
 			MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_AQUE].gst, "empty-buffers", TRUE);
-		}
 
 		sc->isMaxtimePausing = TRUE;
 		msg.id = MM_MESSAGE_CAMCORDER_TIME_LIMIT;

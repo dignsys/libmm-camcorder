@@ -2575,9 +2575,7 @@ bool _mmcamcorder_commit_camera_ptz_type(MMHandleType handle, int attr_idx, cons
 			}
 		}
 
-		if (item == NULL) {
-			_mmcam_dbg_warn("failed to find tilt control channel");
-		}
+		_mmcam_dbg_warn("failed to find tilt control channel");
 	}
 
 	return FALSE;
@@ -2642,9 +2640,7 @@ bool _mmcamcorder_commit_camera_pan(MMHandleType handle, int attr_idx, const mmf
 			}
 		}
 
-		if (item == NULL) {
-			_mmcam_dbg_warn("failed to find pan control channel");
-		}
+		_mmcam_dbg_warn("failed to find pan control channel");
 	}
 
 	return FALSE;
@@ -2709,9 +2705,7 @@ bool _mmcamcorder_commit_camera_tilt(MMHandleType handle, int attr_idx, const mm
 			}
 		}
 
-		if (item == NULL) {
-			_mmcam_dbg_warn("failed to find tilt control channel");
-		}
+		_mmcam_dbg_warn("failed to find tilt control channel");
 	}
 
 	return FALSE;

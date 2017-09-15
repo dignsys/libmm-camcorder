@@ -30,16 +30,20 @@ extern "C" {
 | MACRO DEFINITIONS									|
 ========================================================================================*/
 #define SAFE_FREE(x) \
+do { \
 	if (x) {\
 		free(x); \
 		x = NULL; \
-	}
+	} \
+} while (0)
 
 #define SAFE_G_FREE(x) \
+do { \
 	if (x) {\
 		g_free(x); \
 		x = NULL; \
-	}
+	} \
+} while (0)
 
 #define CONFIGURE_MAIN_FILE		"mmfw_camcorder.ini"
 

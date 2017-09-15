@@ -1146,39 +1146,36 @@ int _mmcamcorder_init_convert_table(MMHandleType handle)
 		if (hcamcorder->caminfo_convert[i].type == CONFIGURE_TYPE_CTRL) {
 			switch (hcamcorder->caminfo_convert[i].category) {
 			case CONFIGURE_CATEGORY_CTRL_STROBE:
-				if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "StrobeMode")) {
+				if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "StrobeMode"))
 					hcamcorder->caminfo_convert[i].enum_convert = &(hcamcorder->enum_conv[ENUM_CONVERT_STROBE_MODE]);
-				}
 				break;
 			case CONFIGURE_CATEGORY_CTRL_EFFECT:
-				if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "WhiteBalance")) {
+				if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "WhiteBalance"))
 					hcamcorder->caminfo_convert[i].enum_convert = &(hcamcorder->enum_conv[ENUM_CONVERT_WHITE_BALANCE]);
-				} else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "ColorTone")) {
+				else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "ColorTone"))
 					hcamcorder->caminfo_convert[i].enum_convert = &(hcamcorder->enum_conv[ENUM_CONVERT_COLOR_TONE]);
-				} else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "WDR")) {
+				else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "WDR"))
 					hcamcorder->caminfo_convert[i].enum_convert = &(hcamcorder->enum_conv[ENUM_CONVERT_WDR]);
-				} else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "Flip")) {
+				else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "Flip"))
 					hcamcorder->caminfo_convert[i].enum_convert = &(hcamcorder->enum_conv[ENUM_CONVERT_FLIP]);
-				} else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "Rotation")) {
+				else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "Rotation"))
 					hcamcorder->caminfo_convert[i].enum_convert = &(hcamcorder->enum_conv[ENUM_CONVERT_ROTATION]);
-				}
 				break;
 			case CONFIGURE_CATEGORY_CTRL_PHOTOGRAPH:
-				if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "FocusMode")) {
+				if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "FocusMode"))
 					hcamcorder->caminfo_convert[i].enum_convert = &(hcamcorder->enum_conv[ENUM_CONVERT_FOCUS_MODE]);
-				} else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "AFType")) {
+				else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "AFType"))
 					hcamcorder->caminfo_convert[i].enum_convert = &(hcamcorder->enum_conv[ENUM_CONVERT_AF_RANGE]);
-				} else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "AEType")) {
+				else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "AEType"))
 					hcamcorder->caminfo_convert[i].enum_convert = &(hcamcorder->enum_conv[ENUM_CONVERT_EXPOSURE_MODE]);
-				} else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "ISO")) {
+				else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "ISO"))
 					hcamcorder->caminfo_convert[i].enum_convert = &(hcamcorder->enum_conv[ENUM_CONVERT_ISO]);
-				} else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "ProgramMode")) {
+				else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "ProgramMode"))
 					hcamcorder->caminfo_convert[i].enum_convert = &(hcamcorder->enum_conv[ENUM_CONVERT_PROGRAM_MODE]);
-				} else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "AntiHandshake")) {
+				else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "AntiHandshake"))
 					hcamcorder->caminfo_convert[i].enum_convert = &(hcamcorder->enum_conv[ENUM_CONVERT_ANTI_HAND_SHAKE]);
-				} else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "VideoStabilization")) {
+				else if (!strcmp(hcamcorder->caminfo_convert[i].keyword, "VideoStabilization"))
 					hcamcorder->caminfo_convert[i].enum_convert = &(hcamcorder->enum_conv[ENUM_CONVERT_VIDEO_STABILIZATION]);
-				}
 				break;
 			default:
 				break;

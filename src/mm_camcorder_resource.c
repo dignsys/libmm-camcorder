@@ -258,10 +258,11 @@ static void __mmcamcorder_resource_release_cb(mrp_res_context_t *cx, const mrp_r
 
 	for (i = 0; i < MM_CAMCORDER_RESOURCE_MAX; i++) {
 		res = mrp_res_get_resource_by_name(rs, mm_camcorder_resource_str[i]);
-		if (res == NULL) {
-			_mmcam_dbg_warn(" -- %s not present in resource set", mm_camcorder_resource_str[i]);
+		if (res) {
+			_mmcam_dbg_warn(" -- resource name [%s] -> [%s]",
+				res->name, __mmcamcorder_resource_state_to_str(res->state));
 		} else {
-			_mmcam_dbg_warn(" -- resource name [%s] -> [%s]", res->name, __mmcamcorder_resource_state_to_str(res->state));
+			_mmcam_dbg_warn(" -- %s not present in resource set", mm_camcorder_resource_str[i]);
 		}
 	}
 

@@ -953,6 +953,7 @@ int _mmcamcorder_conf_parse_info(MMHandleType handle, int type, FILE *fp, camera
 	size_t BUFFER_LENGTH_STRING = 256;
 	const char* delimiters = " |=,\t\n";
 
+	int i = 0;
 	int ret = MM_ERROR_NONE;
 	int category = 0;
 	int count_main_category = 0;
@@ -1031,12 +1032,11 @@ int _mmcamcorder_conf_parse_info(MMHandleType handle, int type, FILE *fp, camera
 
 		read_main = 0;
 
-		/* Comment */
 		if (*buffer_token[0] == ';') {
+			/* Comment */
 			/*_mmcam_dbg_log( "Comment - Nothing to do" );*/
-		}
-		/* Main Category */
-		else if (*buffer_token[0] == '[') {
+		} else if (*buffer_token[0] == '[') {
+			/* Main Category */
 			category_name = get_new_string(buffer_token[0]);
 			if (category_name == NULL) {
 				_mmcam_dbg_err("strdup failed for [%s]", buffer_token[0]);
@@ -1081,41 +1081,39 @@ int _mmcamcorder_conf_parse_info(MMHandleType handle, int type, FILE *fp, camera
 
 			/* Details */
 			if (type == CONFIGURE_TYPE_MAIN) {
-				if (!strcmp("[General]", category_name)) {
+				if (!strcmp("[General]", category_name))
 					category = CONFIGURE_CATEGORY_MAIN_GENERAL;
-				} else if (!strcmp("[VideoInput]", category_name)) {
+				else if (!strcmp("[VideoInput]", category_name))
 					category = CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT;
-				} else if (!strcmp("[AudioInput]", category_name)) {
+				else if (!strcmp("[AudioInput]", category_name))
 					category = CONFIGURE_CATEGORY_MAIN_AUDIO_INPUT;
-				} else if (!strcmp("[VideoOutput]", category_name)) {
+				else if (!strcmp("[VideoOutput]", category_name))
 					category = CONFIGURE_CATEGORY_MAIN_VIDEO_OUTPUT;
-				} else if (!strcmp("[Capture]", category_name)) {
+				else if (!strcmp("[Capture]", category_name))
 					category = CONFIGURE_CATEGORY_MAIN_CAPTURE;
-				} else if (!strcmp("[Record]", category_name)) {
+				else if (!strcmp("[Record]", category_name))
 					category = CONFIGURE_CATEGORY_MAIN_RECORD;
-				} else if (!strcmp("[VideoEncoder]", category_name)) {
+				else if (!strcmp("[VideoEncoder]", category_name))
 					category = CONFIGURE_CATEGORY_MAIN_VIDEO_ENCODER;
-				} else if (!strcmp("[AudioEncoder]", category_name)) {
+				else if (!strcmp("[AudioEncoder]", category_name))
 					category = CONFIGURE_CATEGORY_MAIN_AUDIO_ENCODER;
-				} else if (!strcmp("[ImageEncoder]", category_name)) {
+				else if (!strcmp("[ImageEncoder]", category_name))
 					category = CONFIGURE_CATEGORY_MAIN_IMAGE_ENCODER;
-				} else if (!strcmp("[Mux]", category_name)) {
+				else if (!strcmp("[Mux]", category_name))
 					category = CONFIGURE_CATEGORY_MAIN_MUX;
-				}
 			} else {
-				if (!strcmp("[Camera]", category_name)) {
+				if (!strcmp("[Camera]", category_name))
 					category = CONFIGURE_CATEGORY_CTRL_CAMERA;
-				} else if (!strcmp("[Strobe]", category_name)) {
+				else if (!strcmp("[Strobe]", category_name))
 					category = CONFIGURE_CATEGORY_CTRL_STROBE;
-				} else if (!strcmp("[Effect]", category_name)) {
+				else if (!strcmp("[Effect]", category_name))
 					category = CONFIGURE_CATEGORY_CTRL_EFFECT;
-				} else if (!strcmp("[Photograph]", category_name))	{
+				else if (!strcmp("[Photograph]", category_name))
 					category = CONFIGURE_CATEGORY_CTRL_PHOTOGRAPH;
-				} else if (!strcmp("[Capture]", category_name)) {
+				else if (!strcmp("[Capture]", category_name))
 					category = CONFIGURE_CATEGORY_CTRL_CAPTURE;
-				} else if (!strcmp("[Detect]", category_name)) {
+				else if (!strcmp("[Detect]", category_name))
 					category = CONFIGURE_CATEGORY_CTRL_DETECT;
-				}
 			}
 
 			if (category != -1) {
@@ -1126,13 +1124,8 @@ int _mmcamcorder_conf_parse_info(MMHandleType handle, int type, FILE *fp, camera
 			}
 
 			/* Free memory */
-			{
-				int i;
-
-				for (i = 0 ; i < count_details ; i++) {
-					SAFE_G_FREE(buffer_details[i]);
-				}
-			}
+			for (i = 0 ; i < count_details ; i++)
+				SAFE_G_FREE(buffer_details[i]);
 		}
 
 		SAFE_G_FREE(category_name);
@@ -1212,9 +1205,9 @@ void _mmcamcorder_conf_release_info(MMHandleType handle, camera_conf **configure
 						SAFE_G_FREE(temp_string_array->name);
 						if (temp_string_array->value) {
 							count = temp_string_array->count;
-							for (k = 0 ; k < count ; k++) {
+
+							for (k = 0 ; k < count ; k++)
 								SAFE_G_FREE(temp_string_array->value[k]);
-							}
 
 							SAFE_G_FREE(temp_string_array->value);
 						}
@@ -2579,27 +2572,26 @@ int _mmcamcorder_get_audio_codec_format(MMHandleType handle, const char *name)
 		return MM_AUDIO_CODEC_INVALID;
 	}
 
-	if (!strcmp(name, "AMR")) {
+	if (!strcmp(name, "AMR"))
 		codec_index = MM_AUDIO_CODEC_AMR;
-	} else if (!strcmp(name, "G723_1")) {
+	else if (!strcmp(name, "G723_1"))
 		codec_index = MM_AUDIO_CODEC_G723_1;
-	} else if (!strcmp(name, "MP3")) {
+	else if (!strcmp(name, "MP3"))
 		codec_index = MM_AUDIO_CODEC_MP3;
-	} else if (!strcmp(name, "AAC")) {
+	else if (!strcmp(name, "AAC"))
 		codec_index = MM_AUDIO_CODEC_AAC;
-	} else if (!strcmp(name, "MMF")) {
+	else if (!strcmp(name, "MMF"))
 		codec_index = MM_AUDIO_CODEC_MMF;
-	} else if (!strcmp(name, "ADPCM")) {
+	else if (!strcmp(name, "ADPCM"))
 		codec_index = MM_AUDIO_CODEC_ADPCM;
-	} else if (!strcmp(name, "WAVE")) {
+	else if (!strcmp(name, "WAVE"))
 		codec_index = MM_AUDIO_CODEC_WAVE;
-	} else if (!strcmp(name, "MIDI")) {
+	else if (!strcmp(name, "MIDI"))
 		codec_index = MM_AUDIO_CODEC_MIDI;
-	} else if (!strcmp(name, "IMELODY")) {
+	else if (!strcmp(name, "IMELODY"))
 		codec_index = MM_AUDIO_CODEC_IMELODY;
-	} else if (!strcmp(name, "VORBIS")) {
+	else if (!strcmp(name, "VORBIS"))
 		codec_index = MM_AUDIO_CODEC_VORBIS;
-	}
 
 	/*_mmcam_dbg_log("audio codec index %d", codec_index);*/
 
@@ -2617,19 +2609,18 @@ int _mmcamcorder_get_video_codec_format(MMHandleType handle, const char *name)
 		return MM_VIDEO_CODEC_INVALID;
 	}
 
-	if (!strcmp(name, "H263")) {
+	if (!strcmp(name, "H263"))
 		codec_index = MM_VIDEO_CODEC_H263;
-	} else if (!strcmp(name, "H264")) {
+	else if (!strcmp(name, "H264"))
 		codec_index = MM_VIDEO_CODEC_H264;
-	} else if (!strcmp(name, "H26L")) {
+	else if (!strcmp(name, "H26L"))
 		codec_index = MM_VIDEO_CODEC_H26L;
-	} else if (!strcmp(name, "MPEG4")) {
+	else if (!strcmp(name, "MPEG4"))
 		codec_index = MM_VIDEO_CODEC_MPEG4;
-	} else if (!strcmp(name, "MPEG1")) {
+	else if (!strcmp(name, "MPEG1"))
 		codec_index = MM_VIDEO_CODEC_MPEG1;
-	} else if (!strcmp(name, "THEORA")) {
+	else if (!strcmp(name, "THEORA"))
 		codec_index = MM_VIDEO_CODEC_THEORA;
-	}
 
 	/*_mmcam_dbg_log("video codec index %d", codec_index);*/
 
@@ -2647,31 +2638,30 @@ int _mmcamcorder_get_image_codec_format(MMHandleType handle, const char *name)
 		return MM_IMAGE_CODEC_INVALID;
 	}
 
-	if (!strcmp(name, "JPEG")) {
+	if (!strcmp(name, "JPEG"))
 		codec_index = MM_IMAGE_CODEC_JPEG;
-	} else if (!strcmp(name, "PNG")) {
+	else if (!strcmp(name, "PNG"))
 		codec_index = MM_IMAGE_CODEC_PNG;
-	} else if (!strcmp(name, "BMP")) {
+	else if (!strcmp(name, "BMP"))
 		codec_index = MM_IMAGE_CODEC_BMP;
-	} else if (!strcmp(name, "WBMP")) {
+	else if (!strcmp(name, "WBMP"))
 		codec_index = MM_IMAGE_CODEC_WBMP;
-	} else if (!strcmp(name, "TIFF")) {
+	else if (!strcmp(name, "TIFF"))
 		codec_index = MM_IMAGE_CODEC_TIFF;
-	} else if (!strcmp(name, "PCX")) {
+	else if (!strcmp(name, "PCX"))
 		codec_index = MM_IMAGE_CODEC_PCX;
-	} else if (!strcmp(name, "GIF")) {
+	else if (!strcmp(name, "GIF"))
 		codec_index = MM_IMAGE_CODEC_GIF;
-	} else if (!strcmp(name, "ICO")) {
+	else if (!strcmp(name, "ICO"))
 		codec_index = MM_IMAGE_CODEC_ICO;
-	} else if (!strcmp(name, "RAS")) {
+	else if (!strcmp(name, "RAS"))
 		codec_index = MM_IMAGE_CODEC_RAS;
-	} else if (!strcmp(name, "TGA")) {
+	else if (!strcmp(name, "TGA"))
 		codec_index = MM_IMAGE_CODEC_TGA;
-	} else if (!strcmp(name, "XBM")) {
+	else if (!strcmp(name, "XBM"))
 		codec_index = MM_IMAGE_CODEC_XBM;
-	} else if (!strcmp(name, "XPM")) {
+	else if (!strcmp(name, "XPM"))
 		codec_index = MM_IMAGE_CODEC_XPM;
-	}
 
 	_mmcam_dbg_log("image codec index %d", codec_index);
 
@@ -2688,35 +2678,34 @@ int _mmcamcorder_get_mux_format(MMHandleType handle, const char *name)
 		return MM_FILE_FORMAT_INVALID;
 	}
 
-	if (!strcmp(name, "3GP")) {
+	if (!strcmp(name, "3GP"))
 		mux_index = MM_FILE_FORMAT_3GP;
-	} else if (!strcmp(name, "AMR")) {
+	else if (!strcmp(name, "AMR"))
 		mux_index = MM_FILE_FORMAT_AMR;
-	} else if (!strcmp(name, "MP4")) {
+	else if (!strcmp(name, "MP4"))
 		mux_index = MM_FILE_FORMAT_MP4;
-	} else if (!strcmp(name, "AAC")) {
+	else if (!strcmp(name, "AAC"))
 		mux_index = MM_FILE_FORMAT_AAC;
-	} else if (!strcmp(name, "MP3")) {
+	else if (!strcmp(name, "MP3"))
 		mux_index = MM_FILE_FORMAT_MP3;
-	} else if (!strcmp(name, "OGG")) {
+	else if (!strcmp(name, "OGG"))
 		mux_index = MM_FILE_FORMAT_OGG;
-	} else if (!strcmp(name, "WAV")) {
+	else if (!strcmp(name, "WAV"))
 		mux_index = MM_FILE_FORMAT_WAV;
-	} else if (!strcmp(name, "AVI")) {
+	else if (!strcmp(name, "AVI"))
 		mux_index = MM_FILE_FORMAT_AVI;
-	} else if (!strcmp(name, "WMA")) {
+	else if (!strcmp(name, "WMA"))
 		mux_index = MM_FILE_FORMAT_WMA;
-	} else if (!strcmp(name, "WMV")) {
+	else if (!strcmp(name, "WMV"))
 		mux_index = MM_FILE_FORMAT_WMV;
-	} else if (!strcmp(name, "MID")) {
+	else if (!strcmp(name, "MID"))
 		mux_index = MM_FILE_FORMAT_MID;
-	} else if (!strcmp(name, "MMF")) {
+	else if (!strcmp(name, "MMF"))
 		mux_index = MM_FILE_FORMAT_MMF;
-	} else if (!strcmp(name, "MATROSKA")) {
+	else if (!strcmp(name, "MATROSKA"))
 		mux_index = MM_FILE_FORMAT_MATROSKA;
-	} else if (!strcmp(name, "M2TS")) {
+	else if (!strcmp(name, "M2TS"))
 		mux_index = MM_FILE_FORMAT_M2TS;
-	}
 
 	/*_mmcam_dbg_log("mux index %d", mux_index);*/
 

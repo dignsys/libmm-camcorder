@@ -1128,11 +1128,8 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 
 			if (hcamcorder->capture_in_recording) {
 				gint64 end_time = g_get_monotonic_time() + (200 * G_TIME_SPAN_MILLISECOND);
-				if (_MMCAMCORDER_CMD_WAIT_UNTIL(handle, end_time)) {
-					_mmcam_dbg_warn("signal received");
-				} else {
+				if (!_MMCAMCORDER_CMD_WAIT_UNTIL(handle, end_time))
 					_mmcam_dbg_warn("timeout");
-				}
 			} else {
 				usleep(_MMCAMCORDER_FRAME_WAIT_TIME);
 			}
@@ -1275,11 +1272,7 @@ int _mmcamcorder_video_handle_eos(MMHandleType handle)
 
 	if (enabletag && !(sc->ferror_send)) {
 		ret = __mmcamcorder_add_metadata((MMHandleType)hcamcorder, info->fileformat);
-		if (ret) {
-			_mmcam_dbg_log("Writing location information SUCCEEDED !!");
-		} else {
-			_mmcam_dbg_err("Writing location information FAILED !!");
-		}
+		_mmcam_dbg_log("Writing location information [%s] !!", ret ? "SUCCEEDED" : "FAILED");
 	}
 
 	/* Check file size */
@@ -1424,11 +1417,10 @@ static GstPadProbeReturn __mmcamcorder_audio_dataprobe_check(GstPad *pad, GstPad
 	}
 
 	/* get trailer size */
-	if (videoinfo->fileformat == MM_FILE_FORMAT_3GP || videoinfo->fileformat == MM_FILE_FORMAT_MP4) {
+	if (videoinfo->fileformat == MM_FILE_FORMAT_3GP || videoinfo->fileformat == MM_FILE_FORMAT_MP4)
 		MMCAMCORDER_G_OBJECT_GET(sc->encode_element[_MMCAMCORDER_ENCSINK_MUX].gst, "expected-trailer-size", &trailer_size);
-	} else {
+	else
 		trailer_size = 0;
-	}
 
 	/* check max size of recorded file */
 	max_size = videoinfo->filesize + buffer_size + trailer_size + _MMCAMCORDER_MMS_MARGIN_SPACE;
@@ -1511,11 +1503,10 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_record(GstPad *pad, GstPa
 	}
 
 	/* get trailer size */
-	if (videoinfo->fileformat == MM_FILE_FORMAT_3GP || videoinfo->fileformat == MM_FILE_FORMAT_MP4) {
+	if (videoinfo->fileformat == MM_FILE_FORMAT_3GP || videoinfo->fileformat == MM_FILE_FORMAT_MP4)
 		MMCAMCORDER_G_OBJECT_GET(sc->encode_element[_MMCAMCORDER_ENCSINK_MUX].gst, "expected-trailer-size", &trailer_size);
-	} else {
+	else
 		trailer_size = 0;
-	}
 
 	/* check free space */
 	ret = _mmcamcorder_get_freespace(hcamcorder->storage_info.type, &free_space);
@@ -1568,13 +1559,11 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_record(GstPad *pad, GstPa
 	}
 
 	/* get queued buffer size */
-	if (sc->encode_element[_MMCAMCORDER_ENCSINK_AENC_QUE].gst) {
+	if (sc->encode_element[_MMCAMCORDER_ENCSINK_AENC_QUE].gst)
 		MMCAMCORDER_G_OBJECT_GET(sc->encode_element[_MMCAMCORDER_ENCSINK_AENC_QUE].gst, "current-level-bytes", &aq_size);
-	}
 
-	if (sc->encode_element[_MMCAMCORDER_ENCSINK_VENC_QUE].gst) {
+	if (sc->encode_element[_MMCAMCORDER_ENCSINK_VENC_QUE].gst)
 		MMCAMCORDER_G_OBJECT_GET(sc->encode_element[_MMCAMCORDER_ENCSINK_VENC_QUE].gst, "current-level-bytes", &vq_size);
-	}
 
 	queued_buffer = aq_size + vq_size;
 
@@ -1662,11 +1651,10 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_audio_disable(GstPad *pad
 
 	rec_pipe_time = GST_TIME_AS_MSECONDS(b_time);
 
-	if (videoinfo->fileformat == MM_FILE_FORMAT_3GP || videoinfo->fileformat == MM_FILE_FORMAT_MP4) {
+	if (videoinfo->fileformat == MM_FILE_FORMAT_3GP || videoinfo->fileformat == MM_FILE_FORMAT_MP4)
 		MMCAMCORDER_G_OBJECT_GET(sc->encode_element[_MMCAMCORDER_ENCSINK_MUX].gst, "expected-trailer-size", &trailer_size);
-	} else {
+	else
 		trailer_size = 0;
-	}
 
 	/* check max time */
 	if (videoinfo->max_time > 0 && rec_pipe_time > videoinfo->max_time) {
@@ -1771,11 +1759,10 @@ static GstPadProbeReturn __mmcamcorder_audioque_dataprobe(GstPad *pad, GstPadPro
 
 	rec_pipe_time = GST_TIME_AS_MSECONDS(GST_BUFFER_PTS(buffer));
 
-	if (videoinfo->fileformat == MM_FILE_FORMAT_3GP || videoinfo->fileformat == MM_FILE_FORMAT_MP4) {
+	if (videoinfo->fileformat == MM_FILE_FORMAT_3GP || videoinfo->fileformat == MM_FILE_FORMAT_MP4)
 		MMCAMCORDER_G_OBJECT_GET(sc->encode_element[_MMCAMCORDER_ENCSINK_MUX].gst, "expected-trailer-size", &trailer_size);
-	} else {
+	else
 		trailer_size = 0;
-	}
 
 	/* calculate remained time can be recorded */
 	if (videoinfo->max_time > 0 && videoinfo->max_time < (remained_time + rec_pipe_time)) {

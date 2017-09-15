@@ -485,19 +485,15 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 
 	/* get model name */
 	sys_info_ret = system_info_get_platform_string("http://tizen.org/system/model_name", &hcamcorder->model_name);
-	if (hcamcorder->model_name) {
-		_mmcam_dbg_log("model name [%s], sys_info_ret 0x%x", hcamcorder->model_name, sys_info_ret);
-	} else {
-		_mmcam_dbg_warn("failed get model name, sys_info_ret 0x%x", sys_info_ret);
-	}
+
+	_mmcam_dbg_warn("model name [%s], ret 0x%x",
+		hcamcorder->model_name ? hcamcorder->model_name : "NULL", sys_info_ret);
 
 	/* get software version */
 	sys_info_ret = system_info_get_platform_string("http://tizen.org/system/build.string", &hcamcorder->software_version);
-	if (hcamcorder->software_version) {
-		_mmcam_dbg_log("software version [%s], sys_info_ret 0x%d", hcamcorder->software_version, sys_info_ret);
-	} else {
-		_mmcam_dbg_warn("failed get software version, sys_info_ret 0x%x", sys_info_ret);
-	}
+
+	_mmcam_dbg_warn("software version [%s], ret 0x%x",
+		hcamcorder->software_version ? hcamcorder->software_version : "NULL", sys_info_ret);
 
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
 	if (info->videodev_type != MM_VIDEO_DEVICE_NONE) {
@@ -1123,9 +1119,8 @@ int _mmcamcorder_realize(MMHandleType handle)
 
 		/* create resource set */
 		ret = _mmcamcorder_resource_create_resource_set(&hcamcorder->resource_manager);
-		if (ret != MM_ERROR_NONE) {
+		if (ret != MM_ERROR_NONE)
 			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
-		}
 
 		hcamcorder->resource_manager.acquire_count = 0;
 
@@ -1301,14 +1296,8 @@ int _mmcamcorder_realize(MMHandleType handle)
 _ERR_CAMCORDER_CMD:
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
 	/* release hw resources */
-	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE) {
-		int ret_resource = _mmcamcorder_resource_manager_release(&hcamcorder->resource_manager);
-		if (ret_resource == MM_ERROR_RESOURCE_INVALID_STATE) {
-			_mmcam_dbg_warn("it could be in the middle of resource callback or there's no acquired resource");
-		} else if (ret_resource != MM_ERROR_NONE) {
-			_mmcam_dbg_err("failed to release resource, ret_resource(0x%x)", ret_resource);
-		}
-	}
+	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE)
+		_mmcamcorder_resource_manager_release(&hcamcorder->resource_manager);
 #endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 #ifdef _MMCAMCORDER_RM_SUPPORT
 	if (hcamcorder->rm_handle) {
@@ -3912,9 +3901,8 @@ void __mmcamcorder_force_stop(mmf_camcorder_t *hcamcorder, int state_change_by_s
 		{
 			_mmcam_dbg_warn("Stop preview.");
 
-			while ((itr_cnt--) && ((result = _mmcamcorder_stop((MMHandleType)hcamcorder)) != MM_ERROR_NONE)) {
+			while ((itr_cnt--) && ((result = _mmcamcorder_stop((MMHandleType)hcamcorder)) != MM_ERROR_NONE))
 				_mmcam_dbg_warn("Can't stop preview.(%x)", result);
-			}
 
 			break;
 		}
@@ -3922,9 +3910,8 @@ void __mmcamcorder_force_stop(mmf_camcorder_t *hcamcorder, int state_change_by_s
 		{
 			_mmcam_dbg_warn("unrealize");
 
-			if ((result = _mmcamcorder_unrealize((MMHandleType)hcamcorder)) != MM_ERROR_NONE) {
+			if ((result = _mmcamcorder_unrealize((MMHandleType)hcamcorder)) != MM_ERROR_NONE)
 				_mmcam_dbg_warn("Can't unrealize.(%x)", result);
-			}
 
 			break;
 		}
@@ -3953,8 +3940,8 @@ static gboolean __mmcamcorder_handle_gst_error(MMHandleType handle, GstMessage *
 	gchar *msg_src_element = NULL;
 	_MMCamcorderSubContext *sc = NULL;
 
-	return_val_if_fail(hcamcorder, FALSE);
-	return_val_if_fail(error, FALSE);
+	mmf_return_val_if_fail(hcamcorder, FALSE);
+	mmf_return_val_if_fail(error, FALSE);
 	sc = MMF_CAMCORDER_SUBCONTEXT(handle);
 	mmf_return_val_if_fail(sc, FALSE);
 
@@ -4066,7 +4053,7 @@ static gint __mmcamcorder_gst_handle_core_error(MMHandleType handle, int code, G
 static gint __mmcamcorder_gst_handle_library_error(MMHandleType handle, int code, GstMessage *message)
 {
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
-	return_val_if_fail(hcamcorder, MM_ERROR_CAMCORDER_NOT_INITIALIZED);
+	mmf_return_val_if_fail(hcamcorder, MM_ERROR_CAMCORDER_NOT_INITIALIZED);
 
 	_mmcam_dbg_log("");
 
@@ -4256,8 +4243,8 @@ static gboolean __mmcamcorder_handle_gst_warning(MMHandleType handle, GstMessage
 	gchar *debug = NULL;
 	GError *err = NULL;
 
-	return_val_if_fail(hcamcorder, FALSE);
-	return_val_if_fail(error, FALSE);
+	mmf_return_val_if_fail(hcamcorder, FALSE);
+	mmf_return_val_if_fail(error, FALSE);
 
 	_mmcam_dbg_log("");
 
@@ -4368,9 +4355,8 @@ rm_cb_result _mmcamcorder_rm_callback(int handle, rm_callback_type event_src,
 	mmf_return_val_if_fail((MMHandleType)hcamcorder, RM_CB_RESULT_OK);
 
 	current_state = _mmcamcorder_get_state((MMHandleType)hcamcorder);
-	if (current_state <= MM_CAMCORDER_STATE_NONE || current_state >= MM_CAMCORDER_STATE_NUM) {
-		_mmcam_dbg_err("Abnormal state. Or null handle. (%p, %d)", hcamcorder, current_state);
-	}
+
+	_mmcam_dbg_warn("current state %d (handle %p)", current_state, hcamcorder);
 
 	_MMCAMCORDER_LOCK_ASM(hcamcorder);
 

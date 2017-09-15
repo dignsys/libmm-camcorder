@@ -366,7 +366,7 @@ int mm_camcorder_get_attributes(MMHandleType camcorder, char **err_attr_name, co
 	va_list var_args;
 	int ret = MM_ERROR_NONE;
 
-	return_val_if_fail(attribute_name, MM_ERROR_COMMON_INVALID_ARGUMENT);
+	mmf_return_val_if_fail(attribute_name, MM_ERROR_COMMON_INVALID_ARGUMENT);
 
 	va_start(var_args, attribute_name);
 	ret = _mmcamcorder_get_attributes(camcorder, err_attr_name, attribute_name, var_args);
@@ -381,7 +381,7 @@ int mm_camcorder_set_attributes(MMHandleType camcorder,  char **err_attr_name, c
 	va_list var_args;
 	int ret = MM_ERROR_NONE;
 
-	return_val_if_fail(attribute_name, MM_ERROR_COMMON_INVALID_ARGUMENT);
+	mmf_return_val_if_fail(attribute_name, MM_ERROR_COMMON_INVALID_ARGUMENT);
 
 	va_start(var_args, attribute_name);
 	ret = _mmcamcorder_set_attributes(camcorder, err_attr_name, attribute_name, var_args);

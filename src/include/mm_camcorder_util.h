@@ -61,7 +61,7 @@ do { \
 		_mmcam_dbg_log("Adding buffer probe on [%s:%s] - [ID : %lu], [Category : %x] ", \
 			GST_DEBUG_PAD_NAME(item->object), item->handler_id, item->category); \
 	} \
-} while (0);
+} while (0)
 
 #define MMCAMCORDER_ADD_EVENT_PROBE(x_pad, x_category, x_callback, x_hcamcorder) \
 do { \
@@ -80,7 +80,7 @@ do { \
 		_mmcam_dbg_log("Adding event probe on [%s:%s] - [ID : %lu], [Category : %x] ", \
 			GST_DEBUG_PAD_NAME(item->object), item->handler_id, item->category); \
 	} \
-} while (0);
+} while (0)
 
 #define MMCAMCORDER_SIGNAL_CONNECT(x_object, x_category, x_signal, x_callback, x_hcamcorder) \
 do { \
@@ -99,7 +99,7 @@ do { \
 		_mmcam_dbg_log("Connecting signal on [%s][%p] - [ID : %lu], [Category : %x] ", \
 			GST_OBJECT_NAME(item->object), item->object, item->handler_id, item->category); \
 	} \
-} while (0);
+} while (0)
 
 #define MMCAMCORDER_G_OBJECT_GET(obj, name, value) \
 do { \
@@ -112,7 +112,7 @@ do { \
 	} else { \
 		_mmcam_dbg_err("Null object"); \
 	} \
-} while (0);
+} while (0)
 
 #define MMCAMCORDER_G_OBJECT_SET(obj, name, value) \
 do { \
@@ -136,7 +136,7 @@ do { \
 	} else { \
 		_mmcam_dbg_err("Null object"); \
 	} \
-} while (0);
+} while (0)
 
 #define MMCAMCORDER_G_OBJECT_SET_POINTER(obj, name, value) \
 do { \
@@ -150,7 +150,7 @@ do { \
 	} else { \
 		_mmcam_dbg_err("Null object"); \
 	} \
-} while (0);
+} while (0)
 
 #define MMCAM_FOURCC(a, b, c, d)  (guint32)((a)|(b)<<8|(c)<<16|(d)<<24)
 #define MMCAM_FOURCC_ARGS(fourcc) \
@@ -160,13 +160,13 @@ do { \
 		((gchar)(((fourcc)>>24)&0xff))
 
 #define MMCAM_SEND_MESSAGE(handle, msg_id, msg_code) \
-{\
+do {\
 	_MMCamcorderMsgItem msg;\
 	msg.id = msg_id;\
 	msg.param.code = msg_code;\
 	_mmcam_dbg_log("msg id : %x, code : %x", msg_id, msg_code);\
 	_mmcamcorder_send_message((MMHandleType)handle, &msg);\
-}
+} while (0)
 
 
 /*=======================================================================================

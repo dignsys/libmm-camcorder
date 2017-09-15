@@ -2809,9 +2809,7 @@ bool _mmcamcorder_set_encoded_preview_bitrate(MMHandleType handle, int bitrate)
 			}
 		}
 
-		if (item == NULL) {
-			_mmcam_dbg_warn("failed to find \"bitrate\" control channel");
-		}
+		_mmcam_dbg_warn("failed to find \"bitrate\" control channel");
 	}
 
 	return FALSE;

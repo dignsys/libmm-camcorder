@@ -70,7 +70,7 @@ libmmfcamcorder_la_LIBADD = \
 			    $(DLOG_LIBS) \
 			    $(STORAGE_LIBS)
 
-libmmfcamcorder_la_CFLAGS += -DMMF_LOG_OWNER=0x010 -D_FILE_OFFSET_BITS=64
+libmmfcamcorder_la_CFLAGS += -D_FILE_OFFSET_BITS=64
 libmmfcamcorder_la_CFLAGS += -fdata-sections -ffunction-sections -Wl,--gc-sections
 libmmfcamcorder_la_LDFLAGS = -Wl,--gc-sections
 libmmfcamcorder_la_LIBADD += $(SYSTEMINFO_LIBS)
