@@ -265,7 +265,7 @@ void _mmcamcorder_destroy_video_capture_pipeline(MMHandleType handle)
 		/* set sink element pointer to attribute */
 		mm_attrs_get_index((MMHandleType)attrs, MMCAM_DISPLAY_REUSE_ELEMENT, &attr_index);
 		attr_item = &attrs->items[attr_index];
-		mmf_attribute_set_data(attr_item, (void *)sink_element, sizeof(sink_element));
+		mmf_attribute_set_data(attr_item, (void *)sink_element, sizeof(*sink_element));
 		mmf_attribute_commit(attr_item);
 
 		/* remove notify callback */
@@ -1769,8 +1769,7 @@ static ExifData *__mmcamcorder_update_exif_make(MMHandleType handle, ExifData *e
 		if (ret != MM_ERROR_NONE)
 			EXIF_SET_ERR(ret, EXIF_TAG_MAKE);
 	} else {
-		ret = MM_ERROR_CAMCORDER_LOW_MEMORY;
-		EXIF_SET_ERR(ret, EXIF_TAG_MAKE);
+		_mmcam_dbg_err("strdup failed [%s]", MM_MAKER_NAME);
 	}
 
 exit:

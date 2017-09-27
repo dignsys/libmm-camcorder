@@ -113,6 +113,7 @@ extern "C" {
 
 /* gstreamer element creation macro */
 #define _MMCAMCORDER_PIPELINE_MAKE(sub_context, element, eid, name /*char* */, err) \
+do { \
 	if (element[eid].gst != NULL) { \
 		_mmcam_dbg_err("The element(Pipeline) is existed. element_id=[%d], name=[%s]", eid, name); \
 		gst_object_unref(element[eid].gst); \
@@ -125,9 +126,11 @@ extern "C" {
 		goto pipeline_creation_error; \
 	} else { \
 		g_object_weak_ref(G_OBJECT(element[eid].gst), (GWeakNotify)_mmcamcorder_element_release_noti, sub_context); \
-	}
+	} \
+} while (0)
 
 #define _MMCAMCORDER_BIN_MAKE(sub_context, element, eid, name /*char* */, err) \
+do { \
 	if (element[eid].gst != NULL) { \
 		_mmcam_dbg_err("The element(Bin) is existed. element_id=[%d], name=[%s]", eid, name); \
 		gst_object_unref(element[eid].gst); \
@@ -140,9 +143,11 @@ extern "C" {
 		goto pipeline_creation_error; \
 	} else { \
 		g_object_weak_ref(G_OBJECT(element[eid].gst), (GWeakNotify)_mmcamcorder_element_release_noti, sub_context); \
-	}
+	} \
+} while (0)
 
 #define _MMCAMCORDER_ELEMENT_MAKE(sub_context, element, eid, name /*char* */, nickname /*char* */, elist, err) \
+do { \
 	if (element[eid].gst != NULL) { \
 		_mmcam_dbg_err("The element is existed. element_id=[%d], name=[%s]", eid, name); \
 		gst_object_unref(element[eid].gst); \
@@ -160,9 +165,11 @@ extern "C" {
 		g_object_weak_ref(G_OBJECT(element[eid].gst), (GWeakNotify)_mmcamcorder_element_release_noti, sub_context); \
 		err = MM_ERROR_NONE; \
 	} \
-	elist = g_list_append(elist, &(element[eid]));
+	elist = g_list_append(elist, &(element[eid])); \
+} while (0)
 
 #define _MMCAMCORDER_ELEMENT_MAKE2(sub_context, element, eid, name /*char* */, nickname /*char* */, err) \
+do { \
 	if (element[eid].gst != NULL) { \
 		_mmcam_dbg_err("The element is existed. element_id=[%d], name=[%s]", eid, name); \
 		gst_object_unref(element[eid].gst); \
@@ -177,8 +184,10 @@ extern "C" {
 		g_object_weak_ref(G_OBJECT(element[eid].gst), (GWeakNotify)_mmcamcorder_element_release_noti, sub_context); \
 		err = MM_ERROR_NONE; \
 	} \
+} while (0)
 
 #define _MMCAMCORDER_ELEMENT_MAKE_IGNORE_ERROR(sub_context, element, eid, name /*char* */, nickname /*char* */, elist) \
+do { \
 	if (element[eid].gst != NULL) { \
 		_mmcam_dbg_err("The element is existed. element_id=[%d], name=[%s]", eid, name); \
 		gst_object_unref(element[eid].gst); \
@@ -191,9 +200,11 @@ extern "C" {
 		element[eid].id = eid; \
 		g_object_weak_ref(G_OBJECT(element[eid].gst), (GWeakNotify)_mmcamcorder_element_release_noti, sub_context); \
 		elist = g_list_append(elist, &(element[eid])); \
-	}
+	} \
+} while (0)
 
 #define _MMCAMCORDER_ELEMENT_ADD(sub_context, element, eid, gst_element, elist, err) \
+do { \
 	if (element[eid].gst != NULL) { \
 		_mmcam_dbg_err("The element is existed. element_id=[%d]", eid); \
 		gst_object_unref(element[eid].gst); \
@@ -209,9 +220,11 @@ extern "C" {
 		g_object_weak_ref(G_OBJECT(element[eid].gst), (GWeakNotify)_mmcamcorder_element_release_noti, sub_context); \
 		err = MM_ERROR_NONE; \
 	} \
-	elist = g_list_append(elist, &(element[eid]));
+	elist = g_list_append(elist, &(element[eid])); \
+} while (0)
 
 #define _MMCAMCORDER_ENCODEBIN_ELMGET(sub_context, eid, name /*char* */, err) \
+do { \
 	if (sub_context->encode_element[eid].gst != NULL) { \
 		_mmcam_dbg_err("The element is existed. element_id=[%d], name=[%s]", eid, name); \
 		gst_object_unref(sub_context->encode_element[eid].gst); \
@@ -225,7 +238,8 @@ extern "C" {
 	} else{ \
 		gst_object_unref(sub_context->encode_element[eid].gst); \
 		g_object_weak_ref(G_OBJECT(sub_context->encode_element[eid].gst), (GWeakNotify)_mmcamcorder_element_release_noti, sub_context); \
-	}
+	} \
+} while (0)
 
 /* GStreamer element remove macro */
 #define _MMCAMCORDER_ELEMENT_REMOVE(element, eid) \
@@ -240,7 +254,7 @@ extern "C" {
 #define _MM_GST_PAD_LINK                gst_pad_link
 
 #define _MM_GST_PAD_LINK_UNREF(srcpad, sinkpad, err, if_fail_goto) \
-{ \
+do { \
 	GstPadLinkReturn ret = GST_PAD_LINK_OK; \
 	if (srcpad == NULL || sinkpad == NULL) { \
 		if (srcpad == NULL) { \
@@ -282,9 +296,10 @@ extern "C" {
 	} \
 	gst_object_unref(srcpad); srcpad = NULL; \
 	gst_object_unref(sinkpad); sinkpad = NULL; \
-}
+} while (0)
 
 #define _MM_GST_PAD_UNLINK_UNREF(srcpad, sinkpad) \
+do { \
 	if (srcpad && sinkpad) { \
 		gst_pad_unlink(srcpad, sinkpad); \
 	} else { \
@@ -295,7 +310,8 @@ extern "C" {
 	} \
 	if (sinkpad) { \
 		gst_object_unref(sinkpad); sinkpad = NULL; \
-	}
+	} \
+} while (0)
 
 #define	_MMCAMCORDER_STATE_SET_COUNT		3		/* checking interval */
 #define	_MMCAMCORDER_STATE_CHECK_TOTALTIME	5000000L	/* total wating time for state change */

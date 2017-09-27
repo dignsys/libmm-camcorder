@@ -2029,7 +2029,7 @@ static gboolean __mmcamcorder_add_metadata_mp4(MMHandleType handle)
 
 		/* add orientation info */
 		if (fseeko(f, internal_pos, SEEK_SET) < 0) {
-			_mmcam_dbg_err("fseek failed : errno %d", errno);
+			_mmcam_dbg_err("fseeko failed : errno %d", errno);
 			goto fail;
 		}
 
@@ -2046,10 +2046,13 @@ static gboolean __mmcamcorder_add_metadata_mp4(MMHandleType handle)
 		_mmcam_dbg_log("found [tkhd] tag");
 
 		/* seek to start position of composition matrix */
-		fseek(f, _OFFSET_COMPOSITION_MATRIX, SEEK_CUR);
-
-		/* update composition matrix for orientation */
-		_mmcamcorder_update_composition_matrix(f, orientation);
+		if (fseek(f, _OFFSET_COMPOSITION_MATRIX, SEEK_CUR) == 0) {
+			/* update composition matrix for orientation */
+			_mmcamcorder_update_composition_matrix(f, orientation);
+		} else {
+			_mmcam_dbg_err("fseek failed : errno %d", errno);
+			goto fail;
+		}
 	} else {
 		_mmcam_dbg_err("No 'moov' container");
 		goto fail;
