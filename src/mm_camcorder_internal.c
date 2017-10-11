@@ -3915,7 +3915,6 @@ void __mmcamcorder_force_stop(mmf_camcorder_t *hcamcorder, int state_change_by_s
 
 			break;
 		}
-		case MM_CAMCORDER_STATE_NULL:
 		default:
 			_mmcam_dbg_warn("Already stopped.");
 			break;

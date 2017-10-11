@@ -350,6 +350,11 @@ int _mmcamcorder_create_preview_elements(MMHandleType handle)
 	/* Get videosink name */
 	_mmcamcorder_conf_get_value_element_name(sc->VideosinkElement, &videosink_name);
 
+	if (!videosink_name) {
+		_mmcam_dbg_err("failed to get videosink name");
+		goto pipeline_creation_error;
+	}
+
 	_MMCAMCORDER_ELEMENT_MAKE(sc, sc->element, _MMCAMCORDER_VIDEOSINK_QUE, "queue", "videosink_queue", element_list, err);
 
 	_mmcam_dbg_log("videosink_name: %s", videosink_name);
@@ -1361,6 +1366,11 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 	}
 
 	_mmcamcorder_conf_get_value_element_name(VideosinkElement, &videosink_name);
+
+	if (!videosink_name) {
+		_mmcam_dbg_err("failed to get videosink name");
+		return MM_ERROR_CAMCORDER_INTERNAL;
+	}
 
 	_mmcam_dbg_log("(overlay=%p, size=%d)", overlay, size);
 

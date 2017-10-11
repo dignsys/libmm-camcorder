@@ -217,6 +217,12 @@ int _mmcamcorder_create_recorder_pipeline(MMHandleType handle)
 		&RecordsinkElement);
 	_mmcamcorder_conf_get_value_element_name(RecordsinkElement, &gst_element_rsink_name);
 
+	if (!gst_element_rsink_name) {
+		_mmcam_dbg_err("failed to get recordsink name");
+		err = MM_ERROR_CAMCORDER_INTERNAL;
+		goto pipeline_creation_error;
+	}
+
 	/* set data probe function */
 
 	/* register message cb */
@@ -1321,7 +1327,13 @@ int _mmcamcorder_video_handle_eos(MMHandleType handle)
 		info->restart_preview = FALSE;
 
 		/* recover preview size */
-		_mmcamcorder_set_camera_resolution(handle, info->preview_width, info->preview_height);
+		if (!_mmcamcorder_set_camera_resolution(handle, info->preview_width, info->preview_height)) {
+			msg.id = MM_MESSAGE_CAMCORDER_ERROR;
+			msg.param.code = MM_ERROR_CAMCORDER_INTERNAL;
+			_mmcamcorder_send_message((MMHandleType)hcamcorder, &msg);
+			_mmcam_dbg_err("Failed to set camera resolution %dx%d",
+				info->preview_width, info->preview_height);
+		}
 
 		ret = _mmcamcorder_gst_set_state(handle, sc->element[_MMCAMCORDER_MAIN_PIPE].gst, GST_STATE_PLAYING);
 		/* Do not return when error is occurred.
