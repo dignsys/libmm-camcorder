@@ -1752,7 +1752,7 @@ gboolean _mmcamcorder_resize_frame(unsigned char *src_data, unsigned int src_wid
 		input_format = MM_UTIL_IMG_FMT_RGB888;
 		break;
 	default:
-		_mmcam_dbg_err("NOT supported format", src_format);
+		_mmcam_dbg_err("NOT supported format [%d]", src_format);
 		return FALSE;
 	}
 

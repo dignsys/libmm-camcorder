@@ -664,7 +664,7 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 					/* MSDOS_SUPER_MAGIC : 0x4d44 */
 					if (file_system_type == MSDOS_SUPER_MAGIC &&
 					    (info->max_size == 0 || info->max_size > FAT32_FILE_SYSTEM_MAX_SIZE)) {
-						_mmcam_dbg_warn("FAT32 and too large max[%"G_GUINT64_FORMAT"], set max as %"G_GUINT64_FORMAT,
+						_mmcam_dbg_warn("FAT32 and too large max[%"G_GUINT64_FORMAT"], set max as %lu",
 							info->max_size, FAT32_FILE_SYSTEM_MAX_SIZE);
 						info->max_size = FAT32_FILE_SYSTEM_MAX_SIZE;
 					} else {

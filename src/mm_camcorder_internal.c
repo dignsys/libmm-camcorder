@@ -3528,7 +3528,7 @@ int _mmcamcorder_create_pipeline(MMHandleType handle, int type)
 	_MMCamcorderSubContext *sc = NULL;
 	GstElement *pipeline = NULL;
 
-	_mmcam_dbg_log("handle : %x, type : %d", handle, type);
+	_mmcam_dbg_log("handle : %p, type : %d", handle, type);
 
 	mmf_return_val_if_fail(hcamcorder, MM_ERROR_CAMCORDER_NOT_INITIALIZED);
 

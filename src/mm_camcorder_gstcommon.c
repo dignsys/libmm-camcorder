@@ -1698,7 +1698,7 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 					stream.data.yuv420sp.uv = mm_buf->data[1];
 					stream.data.yuv420sp.length_uv = stream.data.yuv420sp.length_y >> 1;
 					/*
-					_mmcam_dbg_log("format[%d][num_planes:%d] [Y]p:0x%x,size:%d [UV]p:0x%x,size:%d",
+					_mmcam_dbg_log("format[%d][num_planes:%d] [Y]p:%p,size:%d [UV]p:%p,size:%d",
 						stream.format, stream.num_planes,
 						stream.data.yuv420sp.y, stream.data.yuv420sp.length_y,
 						stream.data.yuv420sp.uv, stream.data.yuv420sp.length_uv);
@@ -1713,7 +1713,7 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 					stream.data.yuv420p.v = mm_buf->data[2];
 					stream.data.yuv420p.length_v = stream.data.yuv420p.length_u;
 					/*
-					_mmcam_dbg_log("S420[num_planes:%d] [Y]p:0x%x,size:%d [U]p:0x%x,size:%d [V]p:0x%x,size:%d",
+					_mmcam_dbg_log("S420[num_planes:%d] [Y]p:%p,size:%d [U]p:%p,size:%d [V]p:%p,size:%d",
 						stream.num_planes,
 						stream.data.yuv420p.y, stream.data.yuv420p.length_y,
 						stream.data.yuv420p.u, stream.data.yuv420p.length_u,
@@ -1735,7 +1735,7 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 					stream.stride[1] = stream.width;
 					stream.elevation[1] = stream.height >> 1;
 					/*
-					_mmcam_dbg_log("format[%d][num_planes:%d] [Y]p:0x%x,size:%d [UV]p:0x%x,size:%d",
+					_mmcam_dbg_log("format[%d][num_planes:%d] [Y]p:%p,size:%d [UV]p:%p,size:%d",
 						stream.format, stream.num_planes,
 						stream.data.yuv420sp.y, stream.data.yuv420sp.length_y,
 						stream.data.yuv420sp.uv, stream.data.yuv420sp.length_uv);
@@ -1756,7 +1756,7 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 					stream.stride[2] = stream.width >> 1;
 					stream.elevation[2] = stream.height >> 1;
 					/*
-					_mmcam_dbg_log("I420[num_planes:%d] [Y]p:0x%x,size:%d [U]p:0x%x,size:%d [V]p:0x%x,size:%d",
+					_mmcam_dbg_log("I420[num_planes:%d] [Y]p:%p,size:%d [U]p:%p,size:%d [V]p:%p,size:%d",
 						stream.num_planes,
 						stream.data.yuv420p.y, stream.data.yuv420p.length_y,
 						stream.data.yuv420p.u, stream.data.yuv420p.length_u,
@@ -1783,9 +1783,10 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 					stream.data_type = MM_CAM_STREAM_DATA_ENCODED;
 					stream.data.encoded.data = mapinfo.data;
 					stream.data.encoded.length_data = stream.length_total;
-					_mmcam_dbg_log("H264[num_planes:%d] [0]p:0x%x,size:%d",
-						fourcc, fourcc>>8, fourcc>>16, fourcc>>24, stream.num_planes,
-						stream.data.encoded.data, stream.data.encoded.length_data);
+					/*
+					_mmcam_dbg_log("H264[num_planes:%d] [0]p:%p,size:%d",
+						stream.num_planes, stream.data.encoded.data, stream.data.encoded.length_data);
+					*/
 			} else {
 				stream.data_type = MM_CAM_STREAM_DATA_YUV420;
 				stream.data.yuv420.yuv = mapinfo.data;
@@ -1796,7 +1797,7 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 
 			stream.num_planes = 1;
 			/*
-			_mmcam_dbg_log("%c%c%c%c[num_planes:%d] [0]p:0x%x,size:%d",
+			_mmcam_dbg_log("%c%c%c%c[num_planes:%d] [0]p:%p,size:%d",
 				fourcc, fourcc>>8, fourcc>>16, fourcc>>24,
 				stream.num_planes, stream.data.yuv420.yuv, stream.data.yuv420.length_yuv);
 			*/
@@ -2726,7 +2727,7 @@ bool _mmcamcorder_set_videosrc_stabilization(MMHandleType handle, int stabilizat
 
 			if (sc->info_image->preview_format == MM_PIXEL_FORMAT_NV12 && video_width >= 1080 && video_height >= 720) {
 				_mmcam_dbg_log("NV12, video size %dx%d, ENABLE video stabilization",
-					video_width, video_height, stabilization);
+					video_width, video_height);
 				/* set vdis mode */
 				g_object_set(G_OBJECT(v_src),
 							 "enable-vdis-mode", TRUE,
@@ -2807,12 +2808,11 @@ bool _mmcamcorder_set_encoded_preview_bitrate(MMHandleType handle, int bitrate)
 
 	CameraControl = GST_CAMERA_CONTROL(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst);
 	controls = gst_camera_control_list_channels(CameraControl);
-	_mmcam_dbg_log("controls : 0x%x", controls);
+	_mmcam_dbg_log("controls : %p", controls);
 	if (controls != NULL) {
-		_mmcam_dbg_log("controls : 0x%x", controls);
 		for (item = controls ; item && item->data ; item = item->next) {
 			CameraControlChannel = item->data;
-			_mmcam_dbg_log("label : %d", CameraControlChannel->label);
+			_mmcam_dbg_log("label : %s", CameraControlChannel->label);
 			if (!strcmp(CameraControlChannel->label, "bitrate")) {
 				_mmcam_dbg_log("set encoded preview bitrate %d", bitrate);
 				return gst_camera_control_set_value(CameraControl, CameraControlChannel, bitrate);

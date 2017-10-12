@@ -1747,7 +1747,7 @@ _mmcamcorder_set_attributes(MMHandleType handle, char **err_attr_name, const cha
 	if (attrs) {
 		ret = __mmcamcorder_check_valid_pair(handle, err_attr_name, attribute_name, var_args);
 	} else {
-		_mmcam_dbg_err("handle 0x%x, attrs is NULL, attr name [%s]", handle, attribute_name);
+		_mmcam_dbg_err("handle %p, attrs is NULL, attr name [%s]", handle, attribute_name);
 		ret = MM_ERROR_CAMCORDER_NOT_INITIALIZED;
 	}
 
