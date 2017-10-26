@@ -827,6 +827,9 @@ int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebin
 			caps_from_pad = NULL;
 			gst_object_unref(pad);
 			pad = NULL;
+
+			/* fixate caps */
+			video_caps = gst_caps_fixate(video_caps);
 		} else {
 			/* Image */
 			MMCAMCORDER_G_OBJECT_GET(sc->element[_MMCAMCORDER_VIDEOSRC_FILT].gst, "caps", &video_caps);
