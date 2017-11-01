@@ -74,6 +74,7 @@ static gint     __mmcamcorder_gst_handle_library_error(MMHandleType handle, int 
 static gint     __mmcamcorder_gst_handle_core_error(MMHandleType handle, int code, GstMessage *message);
 static gint     __mmcamcorder_gst_handle_resource_warning(MMHandleType handle, GstMessage *message , GError *error);
 static gboolean __mmcamcorder_handle_gst_warning(MMHandleType handle, GstMessage *message, GError *error);
+static int      __mmcamcorder_simulate_asm_conflict_table(int session_type, int pid);
 
 #ifdef _MMCAMCORDER_RM_SUPPORT
 rm_cb_result _mmcamcorder_rm_callback(int handle, rm_callback_type event_src,
@@ -865,9 +866,6 @@ int _mmcamcorder_realize(MMHandleType handle)
 	int app_pid = 0;
 	int resource_count = 0;
 #endif /* _MMCAMCORDER_RM_SUPPORT */
-	char *stream_type = NULL;
-	char *ext_info = NULL;
-	int option = 0;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 
@@ -914,6 +912,19 @@ int _mmcamcorder_realize(MMHandleType handle)
 
 	/* sound focus */
 	if (hcamcorder->sound_focus_register) {
+		mm_camcorder_get_attributes(handle, NULL,
+			MMCAM_PID_FOR_SOUND_FOCUS, &pid_for_sound_focus,
+			NULL);
+
+		if (pid_for_sound_focus == 0) {
+			pid_for_sound_focus = getpid();
+			_mmcam_dbg_warn("pid for sound focus is not set, use my pid %d", pid_for_sound_focus);
+		}
+
+		ret = __mmcamcorder_simulate_asm_conflict_table(hcamcorder->session_type, pid_for_sound_focus);
+		if (ret != MM_ERROR_NONE)
+			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
+
 		/* acquire sound focus or set sound focus watch callback */
 		if (hcamcorder->session_flags & MM_SESSION_OPTION_PAUSE_OTHERS) {
 			/* acquire sound focus */
@@ -932,37 +943,6 @@ int _mmcamcorder_realize(MMHandleType handle)
 			/* do nothing */
 			_mmcam_dbg_log("SESSION_UNINTERRUPTIBLE - do nothing for sound focus");
 		} else {
-			/* check previous acquired focus */
-			ret = mm_sound_get_stream_type_of_acquired_focus(FOCUS_FOR_BOTH, &stream_type, &option, &ext_info);
-			if (ret == MM_ERROR_NONE && stream_type) {
-				if (!strcmp(stream_type, "alarm") ||
-					!strcmp(stream_type, "ringtone-voip") ||
-					!strcmp(stream_type, "ringtone-call") ||
-					!strcmp(stream_type, "voip") ||
-					!strcmp(stream_type, "call-voice") ||
-					!strcmp(stream_type, "call-video")) {
-					_mmcam_dbg_err("Blocked by session policy, stream_type [%s]", stream_type);
-					ret = MM_ERROR_POLICY_BLOCKED;
-				}
-			} else {
-				_mmcam_dbg_warn("get stream type failed 0x%x, stream type %s, but ignore it",
-					ret, stream_type ? stream_type : "NULL");
-				ret = MM_ERROR_NONE;
-			}
-
-			if (stream_type) {
-				free(stream_type);
-				stream_type = NULL;
-			}
-
-			if (ext_info) {
-				free(ext_info);
-				ext_info = NULL;
-			}
-
-			if (ret != MM_ERROR_NONE)
-				goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
-
 			/* unset remained watch cb */
 			if (hcamcorder->sound_focus_watch_id > 0) {
 				mm_sound_unset_focus_watch_callback(hcamcorder->sound_focus_watch_id);
@@ -971,15 +951,6 @@ int _mmcamcorder_realize(MMHandleType handle)
 			}
 
 			/* set sound focus watch callback */
-			mm_camcorder_get_attributes(handle, NULL,
-				MMCAM_PID_FOR_SOUND_FOCUS, &pid_for_sound_focus,
-				NULL);
-
-			if (pid_for_sound_focus == 0) {
-				pid_for_sound_focus = getpid();
-				_mmcam_dbg_warn("pid for sound focus is not set, use my pid %d", pid_for_sound_focus);
-			}
-
 			_mmcam_dbg_log("ETC - set sound focus watch callback - pid %d", pid_for_sound_focus);
 
 			ret_sound = mm_sound_set_focus_watch_callback_for_session(pid_for_sound_focus,
@@ -4324,6 +4295,64 @@ static gint __mmcamcorder_gst_handle_resource_warning(MMHandleType handle, GstMe
 	}
 
 	return MM_ERROR_NONE;
+}
+
+/* Conditions below are from ASM conflict table of Tizen 2.4 */
+static int __mmcamcorder_simulate_asm_conflict_table(int session_type, int pid)
+{
+	int ret = MM_ERROR_NONE;
+	char *stream_type = NULL;
+	char *ext_info = NULL;
+	int option = 0;
+
+	/* check previous acquired focus of other PID */
+	ret = mm_sound_get_stream_type_of_acquired_focus(FOCUS_FOR_BOTH, &stream_type, &option, &ext_info);
+	if (ret == MM_ERROR_NONE && stream_type) {
+		if (ext_info && (pid != atoi(ext_info))) { /* 'ext_info' should contain pid */
+			if ((session_type == MM_SESSION_TYPE_CALL) ||
+				(session_type == MM_SESSION_TYPE_VIDEOCALL) ||
+				(session_type == MM_SESSION_TYPE_VOIP)) {
+				/* case 1. if my session type is call/videocall/voip */
+				if (!strcmp(stream_type, "call-voice") ||
+					!strcmp(stream_type, "call-video") ||
+					!strcmp(stream_type, "ringtone-call")) {
+					_mmcam_dbg_err("Blocked by session policy, stream_type[%s] of acquired focus", stream_type);
+					ret = MM_ERROR_POLICY_BLOCKED;
+				}
+			} else if ((session_type == MM_SESSION_TYPE_MEDIA) ||
+				(session_type == MM_SESSION_TYPE_MEDIA_RECORD)) {
+				/* case 2. if my session type is media */
+				if (!strcmp(stream_type, "alarm") ||
+					!strcmp(stream_type, "ringtone-voip") ||
+					!strcmp(stream_type, "ringtone-call") ||
+					!strcmp(stream_type, "voip") ||
+					!strcmp(stream_type, "call-voice") ||
+					!strcmp(stream_type, "call-video")) {
+					_mmcam_dbg_err("Blocked by session policy, stream_type[%s] of acquired focus", stream_type);
+					ret = MM_ERROR_POLICY_BLOCKED;
+				}
+			}
+		} else {
+			_mmcam_dbg_log("acquired focus is same process with it, skip it");
+		}
+	} else {
+		/* No data case */
+		_mmcam_dbg_warn("get stream type failed 0x%x, stream type %s, but ignore it",
+			ret, stream_type ? stream_type : "NULL");
+		ret = MM_ERROR_NONE;
+	}
+
+	if (stream_type) {
+		free(stream_type);
+		stream_type = NULL;
+	}
+
+	if (ext_info) {
+		free(ext_info);
+		ext_info = NULL;
+	}
+
+	return ret;
 }
 
 

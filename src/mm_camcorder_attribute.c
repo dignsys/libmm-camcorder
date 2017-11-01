@@ -4546,6 +4546,17 @@ bool _mmcamcorder_commit_pid_for_sound_focus(MMHandleType handle, int attr_idx, 
 			hcamcorder->sound_focus_register = FALSE;
 			_mmcam_dbg_warn("no need to use sound focus internally");
 		} else {
+			/* check my session type : allow only media & call series here */
+			if ((hcamcorder->session_type != MM_SESSION_TYPE_MEDIA) &&
+				(hcamcorder->session_type != MM_SESSION_TYPE_MEDIA_RECORD) &&
+				(hcamcorder->session_type != MM_SESSION_TYPE_CALL) &&
+				(hcamcorder->session_type != MM_SESSION_TYPE_VIDEOCALL) &&
+				(hcamcorder->session_type != MM_SESSION_TYPE_VOIP)) {
+				_mmcam_dbg_err("Blocked by session policy, my session_type[%s]", hcamcorder->session_type);
+				hcamcorder->error_code = MM_ERROR_POLICY_BLOCKED;
+				return FALSE;
+			}
+
 			ret = mm_sound_focus_get_id(&hcamcorder->sound_focus_id);
 			if (ret != MM_ERROR_NONE) {
 				_mmcam_dbg_err("mm_sound_focus_get_id failed");
