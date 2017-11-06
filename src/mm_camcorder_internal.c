@@ -410,13 +410,14 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 			ret = MM_ERROR_CAMCORDER_INTERNAL;
 			goto _ERR_DEFAULT_VALUE_INIT;
 		}
-
+#ifdef _MMCAMCORDER_INIT_RESOURCE_MANAGER_SUB
 		ret = _mmcamcorder_resource_manager_init(&hcamcorder->resource_manager_sub);
 		if (ret != MM_ERROR_NONE) {
 			_mmcam_dbg_err("failed to initialize resource manager sub");
 			ret = MM_ERROR_CAMCORDER_INTERNAL;
 			goto _ERR_DEFAULT_VALUE_INIT;
 		}
+#endif
 #endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 	} else {
 		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
@@ -503,12 +504,13 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 			_mmcam_dbg_err("failed to connect resource manager");
 			goto _ERR_DEFAULT_VALUE_INIT;
 		}
-
+#ifdef _MMCAMCORDER_INIT_RESOURCE_MANAGER_SUB
 		ret = _mmcamcorder_resource_wait_for_connection(&hcamcorder->resource_manager_sub);
 		if (ret != MM_ERROR_NONE) {
 			_mmcam_dbg_err("failed to connect resource manager");
 			goto _ERR_DEFAULT_VALUE_INIT;
 		}
+#endif
 	}
 #endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 
@@ -524,7 +526,9 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 _ERR_DEFAULT_VALUE_INIT:
 #ifdef _MMCAMCORDER_MURPHY_SUPPORT
 	/* de-initialize resource manager */
+#ifdef _MMCAMCORDER_INIT_RESOURCE_MANAGER_SUB
 	_mmcamcorder_resource_manager_deinit(&hcamcorder->resource_manager_sub);
+#endif
 	_mmcamcorder_resource_manager_deinit(&hcamcorder->resource_manager);
 #endif /* _MMCAMCORDER_MURPHY_SUPPORT */
 
