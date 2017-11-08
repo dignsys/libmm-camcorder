@@ -1852,7 +1852,6 @@ typedef struct _MMCamWaylandInfo {
 	int window_y;
 	int window_width;
 	int window_height;
-	void *evas_obj;
 } MMCamWaylandInfo;
 
 
