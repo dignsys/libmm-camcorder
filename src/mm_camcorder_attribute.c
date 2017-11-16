@@ -3729,7 +3729,7 @@ bool _mmcamcorder_commit_display_handle(MMHandleType handle, int attr_idx, const
 		} else if (!strcmp(videosink_name, "evasimagesink") || !strcmp(videosink_name, "evaspixmapsink")) {
 			_mmcam_dbg_log("Commit : Set evas object [%p]", p_handle);
 			MMCAMCORDER_G_OBJECT_SET_POINTER(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "evas-object", p_handle);
-		} else if (!strcmp(videosink_name, "waylandsink")) {
+		} else if (!strcmp(videosink_name, "tizenwlsink")) {
 			MMCamWaylandInfo *wl_info = (MMCamWaylandInfo *)p_handle;
 
 			_mmcam_dbg_log("wayland global surface id : %d", wl_info->global_surface_id);
@@ -3783,7 +3783,7 @@ bool _mmcamcorder_commit_display_mode(MMHandleType handle, int attr_idx, const m
 
 	_mmcam_dbg_log("Commit : videosinkname[%s]", videosink_name);
 
-	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "waylandsink")) {
+	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "tizenwlsink")) {
 		_mmcam_dbg_log("Commit : display mode [%d]", value->value.i_val);
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "display-mode", value->value.i_val);
 	} else {
@@ -3876,7 +3876,7 @@ bool _mmcamcorder_commit_display_visible(MMHandleType handle, int attr_idx, cons
 		return FALSE;
 	}
 
-	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "waylandsink") ||
+	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "tizenwlsink") ||
 		!strcmp(videosink_name, "evaspixmapsink") || !strcmp(videosink_name, "evasimagesink")) {
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "visible", value->value.i_val);
 		_mmcam_dbg_log("Set visible [%d] done.", value->value.i_val);
@@ -3921,7 +3921,7 @@ bool _mmcamcorder_commit_display_geometry_method(MMHandleType handle, int attr_i
 		return FALSE;
 	}
 
-	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "waylandsink") ||
+	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "tizenwlsink") ||
 	    !strcmp(videosink_name, "evaspixmapsink") || !strcmp(videosink_name, "evasimagesink")) {
 		method = value->value.i_val;
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "display-geometry-method", method);
@@ -3976,7 +3976,7 @@ bool _mmcamcorder_commit_display_rect(MMHandleType handle, int attr_idx, const m
 		return FALSE;
 	}
 
-	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "waylandsink") ||
+	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "tizenwlsink") ||
 	    !strcmp(videosink_name, "evaspixmapsink")) {
 		int rect_x = 0;
 		int rect_y = 0;
@@ -4030,7 +4030,7 @@ bool _mmcamcorder_commit_display_rect(MMHandleType handle, int attr_idx, const m
 		if (!(flags & MM_ATTRS_FLAG_MODIFIED)) {
 			_mmcam_dbg_log("RECT(x,y,w,h) = (%d,%d,%d,%d)", rect_x, rect_y, rect_width, rect_height);
 
-			if (!strcmp(videosink_name, "waylandsink")) {
+			if (!strcmp(videosink_name, "tizenwlsink")) {
 			    ret = gst_video_overlay_set_render_rectangle(GST_VIDEO_OVERLAY(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst),
 					rect_x, rect_y, rect_width, rect_height);
 				if (!ret) {
@@ -4089,7 +4089,7 @@ bool _mmcamcorder_commit_display_scale(MMHandleType handle, int attr_idx, const 
 	}
 
 	zoom = value->value.i_val;
-	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "waylandsink")) {
+	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "tizenwlsink")) {
 		vs_element = sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst;
 
 		MMCAMCORDER_G_OBJECT_SET(vs_element, "zoom", (float)(zoom + 1));

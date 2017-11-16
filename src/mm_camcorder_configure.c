@@ -120,7 +120,7 @@ int _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf *configure
 	static type_string* __videosink_default_string_array[] = {NULL};
 	static type_element _videosink_element_overlay_default = {
 		"VideosinkElementOverlay",
-		"waylandsink",
+		"tizenwlsink",
 		__videosink_default_int_array,
 		sizeof(__videosink_default_int_array) / sizeof(type_int*),
 		__videosink_default_string_array,
