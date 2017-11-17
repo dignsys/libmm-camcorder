@@ -1,6 +1,6 @@
 Name:       libmm-camcorder
 Summary:    Camera and recorder library
-Version:    0.10.143
+Version:    0.10.144
 Release:    0
 Group:      Multimedia/Libraries
 License:    Apache-2.0
@@ -22,8 +22,7 @@ BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(libtbm)
 BuildRequires:  pkgconfig(storage)
 %if "%{TIZEN_PRODUCT_TV}" != "1"
-BuildRequires:  pkgconfig(murphy-resource)
-BuildRequires:  pkgconfig(murphy-glib)
+BuildRequires:  pkgconfig(mm-resource-manager)
 %else
 BuildRequires:  pkgconfig(tv-resource-manager)
 BuildRequires:  pkgconfig(aul)
@@ -56,7 +55,7 @@ export CFLAGS+=" -D_LARGEFILE64_SOURCE -DGST_USE_UNSTABLE_API -DSYSCONFDIR=\\\"%
 ./autogen.sh
 %configure \
 %if "%{TIZEN_PRODUCT_TV}" != "1"
-	--enable-murphy \
+	--enable-mm-resource-manager \
 %else
 	--enable-rm \
 	--enable-product-tv \

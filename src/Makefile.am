@@ -17,8 +17,7 @@ noinst_HEADERS = include/mm_camcorder_audiorec.h \
 		 include/mm_camcorder_util.h \
 		 include/mm_camcorder_exifinfo.h \
 		 include/mm_camcorder_exifdef.h \
-		 include/mm_camcorder_sound.h \
-		 include/mm_camcorder_resource.h
+		 include/mm_camcorder_sound.h
 
 libmmfcamcorder_la_SOURCES = mm_camcorder.c \
 			     mm_camcorder_internal.c \
@@ -75,10 +74,9 @@ libmmfcamcorder_la_CFLAGS += -fdata-sections -ffunction-sections -Wl,--gc-sectio
 libmmfcamcorder_la_LDFLAGS = -Wl,--gc-sections
 libmmfcamcorder_la_LIBADD += $(SYSTEMINFO_LIBS)
 
-if MURPHY_SUPPORT
-libmmfcamcorder_la_SOURCES += mm_camcorder_resource.c
-libmmfcamcorder_la_CFLAGS += $(MURPHY_RESOURCE_CFLAGS) $(MURPHY_GLIB_CFLAGS) -D_MMCAMCORDER_MURPHY_SUPPORT
-libmmfcamcorder_la_LIBADD += $(MURPHY_RESOURCE_LIBS) $(MURPHY_GLIB_LIBS)
+if MM_RESOURCE_MANAGER_SUPPORT
+libmmfcamcorder_la_CFLAGS += $(MM_RESOURCE_MANAGER_CFLAGS) -D_MMCAMCORDER_MM_RM_SUPPORT
+libmmfcamcorder_la_LIBADD += $(MM_RESOURCE_MANAGER_LIBS)
 endif
 
 if RM_SUPPORT

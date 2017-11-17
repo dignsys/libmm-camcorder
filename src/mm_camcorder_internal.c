@@ -40,10 +40,6 @@
 
 #include <system_info.h>
 
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
-#include <murphy/common/glib-glue.h>
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
-
 #ifdef _MMCAMCORDER_RM_SUPPORT
 #include <aul.h>
 #endif /* _MMCAMCORDER_RM_SUPPORT */
@@ -75,6 +71,11 @@ static gint     __mmcamcorder_gst_handle_core_error(MMHandleType handle, int cod
 static gint     __mmcamcorder_gst_handle_resource_warning(MMHandleType handle, GstMessage *message , GError *error);
 static gboolean __mmcamcorder_handle_gst_warning(MMHandleType handle, GstMessage *message, GError *error);
 static int      __mmcamcorder_simulate_asm_conflict_table(int session_type, int pid);
+
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
+static int      __mmcamcorder_resource_release_cb(mm_resource_manager_h rm,
+		mm_resource_manager_res_h res, void *user_data);
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 #ifdef _MMCAMCORDER_RM_SUPPORT
 rm_cb_result _mmcamcorder_rm_callback(int handle, rm_callback_type event_src,
@@ -140,10 +141,9 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 	g_mutex_init(&(hcamcorder->mtsafe).vstream_cb_lock);
 	g_mutex_init(&(hcamcorder->mtsafe).astream_cb_lock);
 	g_mutex_init(&(hcamcorder->mtsafe).mstream_cb_lock);
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
-	g_cond_init(&(hcamcorder->mtsafe).resource_cond);
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
 	g_mutex_init(&(hcamcorder->mtsafe).resource_lock);
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 	g_mutex_init(&hcamcorder->restart_preview_lock);
 
@@ -396,29 +396,17 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 			_mmcam_dbg_log("DPM camera changed cb id %d", hcamcorder->dpm_camera_cb_id);
 		}
 
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
-		/* set camcorder handle */
-		hcamcorder->resource_manager.id = MM_CAMCORDER_RESOURCE_ID_MAIN;
-		hcamcorder->resource_manager.hcamcorder = hcamcorder;
-		hcamcorder->resource_manager_sub.id = MM_CAMCORDER_RESOURCE_ID_SUB;
-		hcamcorder->resource_manager_sub.hcamcorder = hcamcorder;
-
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
 		/* initialize resource manager */
-		ret = _mmcamcorder_resource_manager_init(&hcamcorder->resource_manager);
-		if (ret != MM_ERROR_NONE) {
+		ret = mm_resource_manager_create(MM_RESOURCE_MANAGER_APP_CLASS_MEDIA,
+				__mmcamcorder_resource_release_cb, hcamcorder,
+				&hcamcorder->resource_manager);
+		if (ret != MM_RESOURCE_MANAGER_ERROR_NONE) {
 			_mmcam_dbg_err("failed to initialize resource manager");
 			ret = MM_ERROR_CAMCORDER_INTERNAL;
 			goto _ERR_DEFAULT_VALUE_INIT;
 		}
-#ifdef _MMCAMCORDER_INIT_RESOURCE_MANAGER_SUB
-		ret = _mmcamcorder_resource_manager_init(&hcamcorder->resource_manager_sub);
-		if (ret != MM_ERROR_NONE) {
-			_mmcam_dbg_err("failed to initialize resource manager sub");
-			ret = MM_ERROR_CAMCORDER_INTERNAL;
-			goto _ERR_DEFAULT_VALUE_INIT;
-		}
-#endif
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 	} else {
 		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
 			CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
@@ -497,23 +485,6 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 	_mmcam_dbg_warn("software version [%s], ret 0x%x",
 		hcamcorder->software_version ? hcamcorder->software_version : "NULL", sys_info_ret);
 
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
-	if (info->videodev_type != MM_VIDEO_DEVICE_NONE) {
-		ret = _mmcamcorder_resource_wait_for_connection(&hcamcorder->resource_manager);
-		if (ret != MM_ERROR_NONE) {
-			_mmcam_dbg_err("failed to connect resource manager");
-			goto _ERR_DEFAULT_VALUE_INIT;
-		}
-#ifdef _MMCAMCORDER_INIT_RESOURCE_MANAGER_SUB
-		ret = _mmcamcorder_resource_wait_for_connection(&hcamcorder->resource_manager_sub);
-		if (ret != MM_ERROR_NONE) {
-			_mmcam_dbg_err("failed to connect resource manager");
-			goto _ERR_DEFAULT_VALUE_INIT;
-		}
-#endif
-	}
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
-
 	/* Set initial state */
 	_mmcamcorder_set_state((MMHandleType)hcamcorder, MM_CAMCORDER_STATE_NULL);
 
@@ -524,13 +495,11 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 	return MM_ERROR_NONE;
 
 _ERR_DEFAULT_VALUE_INIT:
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
 	/* de-initialize resource manager */
-#ifdef _MMCAMCORDER_INIT_RESOURCE_MANAGER_SUB
-	_mmcamcorder_resource_manager_deinit(&hcamcorder->resource_manager_sub);
-#endif
-	_mmcamcorder_resource_manager_deinit(&hcamcorder->resource_manager);
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
+	if (hcamcorder->resource_manager != NULL)
+		mm_resource_manager_destroy(hcamcorder->resource_manager);
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 	/* release DPM related handle */
 	if (hcamcorder->dpm_handle) {
@@ -569,10 +538,9 @@ _ERR_DEFAULT_VALUE_INIT:
 	g_mutex_clear(&(hcamcorder->mtsafe).vstream_cb_lock);
 	g_mutex_clear(&(hcamcorder->mtsafe).astream_cb_lock);
 	g_mutex_clear(&(hcamcorder->mtsafe).mstream_cb_lock);
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
-	g_cond_clear(&(hcamcorder->mtsafe).resource_cond);
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
 	g_mutex_clear(&(hcamcorder->mtsafe).resource_lock);
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 	g_mutex_clear(&hcamcorder->snd_info.open_mutex);
 	g_cond_clear(&hcamcorder->snd_info.open_cond);
@@ -686,20 +654,18 @@ int _mmcamcorder_destroy(MMHandleType handle)
 		hcamcorder->sub_context = NULL;
 	}
 
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
 	/* de-initialize resource manager */
 	_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
 
-	ret = _mmcamcorder_resource_manager_deinit(&hcamcorder->resource_manager);
-	if (ret != MM_ERROR_NONE)
-		_mmcam_dbg_err("failed to de-initialize resource manager 0x%x", ret);
-
-	ret = _mmcamcorder_resource_manager_deinit(&hcamcorder->resource_manager_sub);
-	if (ret != MM_ERROR_NONE)
-		_mmcam_dbg_err("failed to de-initialize resource manager sub 0x%x", ret);
+	if (hcamcorder->resource_manager != NULL) {
+		ret = mm_resource_manager_destroy(hcamcorder->resource_manager);
+		if (ret != MM_RESOURCE_MANAGER_ERROR_NONE)
+			_mmcam_dbg_err("failed to de-initialize resource manager 0x%x", ret);
+	}
 
 	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 	/* Remove idle function which is not called yet */
 	if (hcamcorder->setting_event_id) {
@@ -811,10 +777,9 @@ int _mmcamcorder_destroy(MMHandleType handle)
 	g_mutex_clear(&(hcamcorder->mtsafe).vstream_cb_lock);
 	g_mutex_clear(&(hcamcorder->mtsafe).astream_cb_lock);
 	g_mutex_clear(&(hcamcorder->mtsafe).mstream_cb_lock);
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
-	g_cond_clear(&(hcamcorder->mtsafe).resource_cond);
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
 	g_mutex_clear(&(hcamcorder->mtsafe).resource_lock);
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 	g_mutex_clear(&hcamcorder->snd_info.open_mutex);
 	g_cond_clear(&hcamcorder->snd_info.open_cond);
@@ -1086,71 +1051,53 @@ int _mmcamcorder_realize(MMHandleType handle)
 			_mmcam_dbg_warn("NULL dpm_handle");
 		}
 
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
-		/* check connection */
-		ret = _mmcamcorder_resource_check_connection(&hcamcorder->resource_manager);
-		if (ret != MM_ERROR_NONE)
-			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
-
-		/* create resource set */
-		ret = _mmcamcorder_resource_create_resource_set(&hcamcorder->resource_manager);
-		if (ret != MM_ERROR_NONE)
-			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
-
-		hcamcorder->resource_manager.acquire_count = 0;
-
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
+		_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
 		/* prepare resource manager for camera */
-		ret = _mmcamcorder_resource_manager_prepare(&hcamcorder->resource_manager, MM_CAMCORDER_RESOURCE_TYPE_CAMERA);
-		if (ret != MM_ERROR_NONE) {
-			_mmcam_dbg_err("could not prepare for camera resource");
-			ret = MM_ERROR_CAMCORDER_INTERNAL;
-			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
+		if (hcamcorder->camera_resource == NULL) {
+			ret = mm_resource_manager_mark_for_acquire(hcamcorder->resource_manager,
+					MM_RESOURCE_MANAGER_RES_TYPE_CAMERA,
+					MM_RESOURCE_MANAGER_RES_VOLUME_FULL,
+					&hcamcorder->camera_resource);
+			if (ret != MM_RESOURCE_MANAGER_ERROR_NONE) {
+				_mmcam_dbg_err("could not prepare for camera resource");
+				ret = MM_ERROR_CAMCORDER_INTERNAL;
+				_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+				goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
+			}
+		} else {
+			_mmcam_dbg_log("camera already acquired");
 		}
 
 		/* prepare resource manager for "video_overlay only if display surface is X" */
 		if (display_surface_type == MM_DISPLAY_SURFACE_OVERLAY) {
-			ret = _mmcamcorder_resource_manager_prepare(&hcamcorder->resource_manager, MM_CAMCORDER_RESOURCE_TYPE_VIDEO_OVERLAY);
-			if (ret != MM_ERROR_NONE) {
-				_mmcam_dbg_err("could not prepare for video overlay resource");
-				ret = MM_ERROR_CAMCORDER_INTERNAL;
-				goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
+			if (hcamcorder->video_overlay_resource == NULL) {
+				ret = mm_resource_manager_mark_for_acquire(hcamcorder->resource_manager,
+						MM_RESOURCE_MANAGER_RES_TYPE_VIDEO_OVERLAY,
+						MM_RESOURCE_MANAGER_RES_VOLUME_FULL,
+						&hcamcorder->video_overlay_resource);
+				if (ret != MM_RESOURCE_MANAGER_ERROR_NONE) {
+					_mmcam_dbg_err("could not prepare for overlay resource");
+					ret = MM_ERROR_CAMCORDER_INTERNAL;
+					_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+					goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
+				}
+			} else {
+				_mmcam_dbg_log("overlay already acquired");
 			}
 		}
 
 		/* acquire resources */
-		_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
-
-		ret = _mmcamcorder_resource_manager_acquire(&hcamcorder->resource_manager);
-		if (ret != MM_ERROR_NONE) {
+		ret = mm_resource_manager_commit(hcamcorder->resource_manager);
+		if (ret != MM_RESOURCE_MANAGER_ERROR_NONE) {
 			_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 
 			_mmcam_dbg_err("could not acquire resources");
 
 			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 		}
-
-		if (hcamcorder->resource_manager.acquire_remain > 0) {
-			gint64 end_time = 0;
-
-			_mmcam_dbg_warn("wait for resource state change");
-
-			/* wait for resource state change */
-			end_time = g_get_monotonic_time() + (__MMCAMCORDER_RESOURCE_WAIT_TIME * G_TIME_SPAN_SECOND);
-
-			if (_MMCAMCORDER_RESOURCE_WAIT_UNTIL(hcamcorder, end_time)) {
-				_mmcam_dbg_warn("signal received");
-			} else {
-				_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
-				_mmcam_dbg_err("timeout");
-				ret = MM_ERROR_RESOURCE_INTERNAL;
-				goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
-			}
-		} else {
-			_mmcam_dbg_log("already all acquired");
-		}
-
 		_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 #ifdef _MMCAMCORDER_RM_SUPPORT
 		mm_camcorder_get_attributes(handle, NULL,
@@ -1269,11 +1216,24 @@ int _mmcamcorder_realize(MMHandleType handle)
 	return MM_ERROR_NONE;
 
 _ERR_CAMCORDER_CMD:
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
 	/* release hw resources */
-	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE)
-		_mmcamcorder_resource_manager_release(&hcamcorder->resource_manager);
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
+	_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
+	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE) {
+		if (hcamcorder->camera_resource != NULL) {
+			mm_resource_manager_mark_for_release(hcamcorder->resource_manager,
+					hcamcorder->camera_resource);
+			hcamcorder->camera_resource = NULL;
+		}
+		if (hcamcorder->video_overlay_resource != NULL) {
+			mm_resource_manager_mark_for_release(hcamcorder->resource_manager,
+					hcamcorder->video_overlay_resource);
+			hcamcorder->video_overlay_resource = NULL;
+		}
+		mm_resource_manager_commit(hcamcorder->resource_manager);
+	}
+	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 #ifdef _MMCAMCORDER_RM_SUPPORT
 	if (hcamcorder->rm_handle) {
 		if (hcamcorder->returned_devices.allocated_num > 0) {
@@ -1356,22 +1316,42 @@ int _mmcamcorder_unrealize(MMHandleType handle)
 		hcamcorder->sub_context = NULL;
 	}
 
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
-	_mmcam_dbg_warn("lock resource - cb calling %d", hcamcorder->resource_manager.is_release_cb_calling);
-
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
 	_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
+	_mmcam_dbg_warn("lock resource - cb calling %d", hcamcorder->is_release_cb_calling);
 
 	if (hcamcorder->type == MM_CAMCORDER_MODE_VIDEO_CAPTURE &&
 		hcamcorder->state_change_by_system != _MMCAMCORDER_STATE_CHANGE_BY_RM &&
-		hcamcorder->resource_manager.is_release_cb_calling == FALSE) {
-		gint64 end_time = 0;
+		hcamcorder->is_release_cb_calling == FALSE) {
 
 		/* release resource */
-		ret = _mmcamcorder_resource_manager_release(&hcamcorder->resource_manager);
-		if (ret == MM_ERROR_RESOURCE_INVALID_STATE) {
-			_mmcam_dbg_warn("it could be in the middle of resource callback or there's no acquired resource");
-			ret = MM_ERROR_NONE;
-		} else if (ret != MM_ERROR_NONE) {
+		if (hcamcorder->camera_resource != NULL) {
+			ret = mm_resource_manager_mark_for_release(hcamcorder->resource_manager,
+					hcamcorder->camera_resource);
+			if (ret != MM_RESOURCE_MANAGER_ERROR_NONE) {
+				_mmcam_dbg_err("could not mark camera resource for release");
+				ret = MM_ERROR_CAMCORDER_INTERNAL;
+				_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+				_mmcam_dbg_log("unlock resource");
+				goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
+			}
+		}
+
+		if (hcamcorder->video_overlay_resource != NULL) {
+			ret = mm_resource_manager_mark_for_release(hcamcorder->resource_manager,
+					hcamcorder->video_overlay_resource);
+			if (ret != MM_RESOURCE_MANAGER_ERROR_NONE) {
+				_mmcam_dbg_err("could not mark overlay resource for release");
+				ret = MM_ERROR_CAMCORDER_INTERNAL;
+				_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+				_mmcam_dbg_log("unlock resource");
+				goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
+			}
+		}
+
+		ret = mm_resource_manager_commit(hcamcorder->resource_manager);
+
+		if (ret != MM_RESOURCE_MANAGER_ERROR_NONE) {
 			_mmcam_dbg_err("failed to release resource, ret(0x%x)", ret);
 			ret = MM_ERROR_CAMCORDER_INTERNAL;
 
@@ -1379,22 +1359,18 @@ int _mmcamcorder_unrealize(MMHandleType handle)
 			_mmcam_dbg_log("unlock resource");
 
 			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
-		}
-
-		if (hcamcorder->resource_manager.acquire_remain < hcamcorder->resource_manager.acquire_count) {
-			/* wait for resource release */
-			_mmcam_dbg_log("resource is not released all. wait for signal...");
-
-			end_time = g_get_monotonic_time() + (__MMCAMCORDER_RESOURCE_WAIT_TIME * G_TIME_SPAN_SECOND);
-
-			_MMCAMCORDER_RESOURCE_WAIT_UNTIL(hcamcorder, end_time);
+		} else {
+			if (hcamcorder->camera_resource != NULL)
+				hcamcorder->camera_resource = NULL;
+			if (hcamcorder->video_overlay_resource != NULL)
+				hcamcorder->video_overlay_resource = NULL;
 		}
 	}
 
 	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 
 	_mmcam_dbg_warn("unlock resource");
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 #ifdef _MMCAMCORDER_RM_SUPPORT
 	if (hcamcorder->rm_handle && (hcamcorder->returned_devices.allocated_num > 0)) {
@@ -4374,6 +4350,59 @@ void _mmcamcorder_emit_signal(MMHandleType handle, const char *object_name,
 
 	return;
 }
+
+
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
+static int __mmcamcorder_resource_release_cb(mm_resource_manager_h rm,
+		mm_resource_manager_res_h res, void *user_data)
+{
+	mmf_camcorder_t *hcamcorder = (mmf_camcorder_t *) user_data;
+
+	mmf_return_val_if_fail(hcamcorder, FALSE);
+
+	_mmcam_dbg_warn("enter");
+
+	_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
+
+	/* set flag for resource release callback */
+	hcamcorder->is_release_cb_calling = TRUE;
+
+	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+
+	_MMCAMCORDER_LOCK_ASM(hcamcorder);
+
+	if (res == hcamcorder->video_encoder_resource) {
+		/* Stop video recording */
+		if (_mmcamcorder_commit((MMHandleType)hcamcorder) != MM_ERROR_NONE) {
+			_mmcam_dbg_err("commit failed, cancel it");
+			_mmcamcorder_cancel((MMHandleType)hcamcorder);
+		}
+	} else {
+		/* Stop camera */
+		__mmcamcorder_force_stop(hcamcorder, _MMCAMCORDER_STATE_CHANGE_BY_RM);
+	}
+
+	_MMCAMCORDER_UNLOCK_ASM(hcamcorder);
+
+	_MMCAMCORDER_LOCK_RESOURCE(hcamcorder);
+
+	if (res == hcamcorder->camera_resource)
+		hcamcorder->camera_resource = NULL;
+	else if (res == hcamcorder->video_overlay_resource)
+		hcamcorder->video_overlay_resource = NULL;
+	else if (res == hcamcorder->video_encoder_resource)
+		hcamcorder->video_encoder_resource = NULL;
+
+	/* restore flag for resource release callback */
+	hcamcorder->is_release_cb_calling = FALSE;
+
+	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
+
+	_mmcam_dbg_warn("leave");
+
+	return FALSE;
+}
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 
 #ifdef _MMCAMCORDER_RM_SUPPORT

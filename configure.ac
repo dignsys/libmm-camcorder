@@ -43,23 +43,20 @@ PKG_CHECK_MODULES(MM_COMMON, mm-common)
 AC_SUBST(MM_COMMON_CFLAGS)
 AC_SUBST(MM_COMMON_LIBS)
 
-AC_ARG_ENABLE(murphy, AC_HELP_STRING([--enable-murphy], [enable murphy]),
+AC_ARG_ENABLE(mm-resource-manager, AC_HELP_STRING([--enable-mm-resource-manager], [enable mm-resource-manager]),
 [
   case "${enableval}" in
-    yes) MURPHY_SUPPORT=yes ;;
-    no)  MURPHY_SUPPORT=no ;;
-    *) AC_MSG_ERROR(bad value ${enableval} for --enable-murphy) ;;
+    yes) MM_RESOURCE_MANAGER_SUPPORT=yes ;;
+    no)  MM_RESOURCE_MANAGER_SUPPORT=no ;;
+    *) AC_MSG_ERROR(bad value ${enableval} for --enable-mm-resource-manager) ;;
   esac
-],[MURPHY_SUPPORT=no])
-if test "x$MURPHY_SUPPORT" = "xyes"; then
-PKG_CHECK_MODULES(MURPHY_RESOURCE, murphy-resource)
-AC_SUBST(MURPHY_RESOURCE_CFLAGS)
-AC_SUBST(MURPHY_RESOURCE_LIBS)
-PKG_CHECK_MODULES(MURPHY_GLIB, murphy-glib)
-AC_SUBST(MURPHY_GLIB_CFLAGS)
-AC_SUBST(MURPHY_GLIB_LIBS)
+],[MM_RESOURCE_MANAGER_SUPPORT=no])
+if test "x$MM_RESOURCE_MANAGER_SUPPORT" = "xyes"; then
+PKG_CHECK_MODULES(MM_RESOURCE_MANAGER, mm-resource-manager)
+AC_SUBST(MM_RESOURCE_MANAGER_CFLAGS)
+AC_SUBST(MM_RESOURCE_MANAGER_LIBS)
 fi
-AM_CONDITIONAL([MURPHY_SUPPORT], [test "x$MURPHY_SUPPORT" = "xyes"])
+AM_CONDITIONAL([MM_RESOURCE_MANAGER_SUPPORT], [test "x$MM_RESOURCE_MANAGER_SUPPORT" = "xyes"])
 
 PKG_CHECK_MODULES(MM_SOUND, mm-sound)
 AC_SUBST(MM_SOUND_CFLAGS)

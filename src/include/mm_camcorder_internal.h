@@ -46,9 +46,9 @@
 
 #include "mm_camcorder.h"
 
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
-#include "mm_camcorder_resource.h"
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
+#include <mm_resource_manager.h>
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 /* camcorder sub module */
 #include "mm_camcorder_attribute.h"
@@ -444,17 +444,12 @@ do { \
 #define _MMCAMCORDER_TRYLOCK_MSTREAM_CALLBACK(handle)       _MMCAMCORDER_TRYLOCK_FUNC(_MMCAMCORDER_GET_MSTREAM_CALLBACK_LOCK(handle))
 #define _MMCAMCORDER_UNLOCK_MSTREAM_CALLBACK(handle)        _MMCAMCORDER_UNLOCK_FUNC(_MMCAMCORDER_GET_MSTREAM_CALLBACK_LOCK(handle))
 
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
 /* for resource conflict */
 #define _MMCAMCORDER_GET_RESOURCE_LOCK(handle)              (_MMCAMCORDER_CAST_MTSAFE(handle).resource_lock)
-#define _MMCAMCORDER_GET_RESOURCE_COND(handle)              (_MMCAMCORDER_CAST_MTSAFE(handle).resource_cond)
 #define _MMCAMCORDER_LOCK_RESOURCE(handle)                  _MMCAMCORDER_LOCK_FUNC(_MMCAMCORDER_GET_RESOURCE_LOCK(handle))
-#define _MMCAMCORDER_TRYLOCK_RESOURCE(handle)               _MMCAMCORDER_TRYLOCK_FUNC(_MMCAMCORDER_GET_RESOURCE_LOCK(handle))
 #define _MMCAMCORDER_UNLOCK_RESOURCE(handle)                _MMCAMCORDER_UNLOCK_FUNC(_MMCAMCORDER_GET_RESOURCE_LOCK(handle))
-#define _MMCAMCORDER_RESOURCE_WAIT(handle)                  g_cond_wait(&_MMCAMCORDER_GET_RESOURCE_COND(handle), &_MMCAMCORDER_GET_RESOURCE_LOCK(handle))
-#define _MMCAMCORDER_RESOURCE_WAIT_UNTIL(handle, end_time)  g_cond_wait_until(&_MMCAMCORDER_GET_RESOURCE_COND(handle), &_MMCAMCORDER_GET_RESOURCE_LOCK(handle), end_time)
-#define _MMCAMCORDER_RESOURCE_SIGNAL(handle)                g_cond_signal(&_MMCAMCORDER_GET_RESOURCE_COND(handle));
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 /**
  * Caster of main handle (camcorder)
@@ -662,10 +657,9 @@ typedef struct {
 	GMutex vstream_cb_lock;         /**< Mutex (for video stream callback) */
 	GMutex astream_cb_lock;         /**< Mutex (for audio stream callback) */
 	GMutex mstream_cb_lock;         /**< Mutex (for muxed stream callback) */
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
-	GCond resource_cond;            /**< Condition (for resource check) */
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
 	GMutex resource_lock;           /**< Mutex (for resource check) */
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 } _MMCamcorderMTSafe;
 
 /**
@@ -800,11 +794,14 @@ typedef struct mmf_camcorder {
 	GCond task_thread_cond;                                 /**< cond for task thread */
 	_MMCamcorderTaskThreadState task_thread_state;          /**< state of task thread */
 
-#ifdef _MMCAMCORDER_MURPHY_SUPPORT
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
 	/* resource manager for H/W resources */
-	MMCamcorderResourceManager resource_manager;
-	MMCamcorderResourceManager resource_manager_sub;
-#endif /* _MMCAMCORDER_MURPHY_SUPPORT */
+	mm_resource_manager_h resource_manager;
+	mm_resource_manager_res_h camera_resource;
+	mm_resource_manager_res_h video_overlay_resource;
+	mm_resource_manager_res_h video_encoder_resource;
+	gboolean is_release_cb_calling;
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 	/* gdbus */
 	GDBusConnection *gdbus_conn;                            /**< gdbus connection */
