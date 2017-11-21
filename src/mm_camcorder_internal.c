@@ -23,6 +23,7 @@
 |  INCLUDE FILES									|
 ========================================================================================*/
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <gst/gst.h>
