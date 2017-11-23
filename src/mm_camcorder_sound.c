@@ -63,7 +63,7 @@ gboolean _mmcamcorder_sound_init(MMHandleType handle)
 
 	/* check sound play enable */
 	mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL,
-		"capture-sound-enable", &sound_enable,
+		MMCAM_CAPTURE_SOUND_ENABLE, &sound_enable,
 		NULL);
 	_mmcam_dbg_log("Capture sound enable %d", sound_enable);
 	if (!sound_enable) {
@@ -102,7 +102,7 @@ gboolean _mmcamcorder_sound_play(MMHandleType handle, const char *sample_name, g
 
 	/* check sound play enable */
 	mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL,
-		"capture-sound-enable", &sound_enable,
+		MMCAM_CAPTURE_SOUND_ENABLE, &sound_enable,
 		NULL);
 	_mmcam_dbg_log("Capture sound enable %d", sound_enable);
 	if (!sound_enable) {
@@ -188,7 +188,7 @@ int _mmcamcorder_sound_solo_play(MMHandleType handle, const char *sample_name, g
 
 	/* check sound play enable */
 	mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL,
-		"capture-sound-enable", &sound_enable,
+		MMCAM_CAPTURE_SOUND_ENABLE, &sound_enable,
 		NULL);
 	_mmcam_dbg_log("Capture sound enable %d", sound_enable);
 	if (!sound_enable) {

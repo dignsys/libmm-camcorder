@@ -360,7 +360,7 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 				MMCAM_SUPPORT_MEDIA_PACKET_PREVIEW_CB, hcamcorder->support_media_packet_preview_cb,
 				MMCAM_CAMERA_FPS, fps_info.int_array.def,
 				MMCAM_DISPLAY_FLIP, camera_default_flip,
-				"capture-sound-enable", play_capture_sound,
+				MMCAM_CAPTURE_SOUND_ENABLE, play_capture_sound,
 				NULL);
 			if (err_attr_name) {
 				_mmcam_dbg_err("Set %s FAILED.", err_attr_name);
@@ -1642,7 +1642,7 @@ int _mmcamcorder_capture_start(MMHandleType handle)
 	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);
 
 	/* Init break continuous shot attr */
-	if (mm_camcorder_set_attributes(handle, NULL, "capture-break-cont-shot", 0, NULL) != MM_ERROR_NONE)
+	if (mm_camcorder_set_attributes(handle, NULL, MMCAM_CAPTURE_BREAK_CONTINUOUS_SHOT, 0, NULL) != MM_ERROR_NONE)
 		_mmcam_dbg_warn("capture-break-cont-shot set 0 failed");
 
 	return MM_ERROR_NONE;

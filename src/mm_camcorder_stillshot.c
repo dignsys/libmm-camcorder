@@ -1202,7 +1202,9 @@ static void __mmcamcorder_image_capture_cb(GstElement *element, GstSample *sampl
 
 	/* check capture state */
 	if (info->type == _MMCamcorder_MULTI_SHOT && info->capture_send_count > 0)
-		mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL, "capture-break-cont-shot", &stop_cont_shot, NULL);
+		mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL,
+			MMCAM_CAPTURE_BREAK_CONTINUOUS_SHOT, &stop_cont_shot,
+			NULL);
 
 	if (!info->capturing || stop_cont_shot) {
 		_mmcam_dbg_warn("stop command[%d] or not capturing state[%d]. skip this...", stop_cont_shot, info->capturing);

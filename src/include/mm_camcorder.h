@@ -1202,6 +1202,11 @@ extern "C" {
 #define MMCAM_RECOMMEND_CAMERA_HEIGHT           "recommend-camera-height"
 
 /**
+ * Enable to play capture sound
+ */
+#define MMCAM_CAPTURE_SOUND_ENABLE              "capture-sound-enable"
+
+/**
  * Flip of video input stream.
  * @see		MMFlipType (in mm_types.h)
  */
