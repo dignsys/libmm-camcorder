@@ -77,9 +77,6 @@ static inline gboolean   write_tag(FILE *f, const gchar *tag);
 static inline gboolean   write_to_32(FILE *f, guint val);
 static inline gboolean   write_to_16(FILE *f, guint val);
 static inline gboolean   write_to_24(FILE *f, guint val);
-#ifdef _USE_YUV_TO_RGB888_
-static gboolean _mmcamcorder_convert_YUV_to_RGB888(unsigned char *src, int src_fmt, guint width, guint height, unsigned char **dst, unsigned int *dst_len);
-#endif /* _USE_YUV_TO_RGB888_ */
 static gboolean _mmcamcorder_convert_YUYV_to_I420(unsigned char *src, guint width, guint height, unsigned char **dst, unsigned int *dst_len);
 static gboolean _mmcamcorder_convert_UYVY_to_I420(unsigned char *src, guint width, guint height, unsigned char **dst, unsigned int *dst_len);
 static gboolean _mmcamcorder_convert_NV12_to_I420(unsigned char *src, guint width, guint height, unsigned char **dst, unsigned int *dst_len);
@@ -2060,56 +2057,6 @@ void *_mmcamcorder_util_task_thread_func(void *data)
 
 	return NULL;
 }
-
-#ifdef _USE_YUV_TO_RGB888_
-static gboolean
-_mmcamcorder_convert_YUV_to_RGB888(unsigned char *src, int src_fmt, guint width, guint height, unsigned char **dst, unsigned int *dst_len)
-{
-	int ret = 0;
-	int src_cs = MM_UTIL_IMG_FMT_UYVY;
-	int dst_cs = MM_UTIL_IMG_FMT_RGB888;
-	unsigned int dst_size = 0;
-
-	if (src_fmt == COLOR_FORMAT_YUYV) {
-		_mmcam_dbg_log("Convert YUYV to RGB888\n");
-		src_cs = MM_UTIL_IMG_FMT_YUYV;
-	} else if (src_fmt == COLOR_FORMAT_UYVY) {
-		_mmcam_dbg_log("Convert UYVY to RGB888\n");
-		src_cs = MM_UTIL_IMG_FMT_UYVY;
-	} else if (src_fmt == COLOR_FORMAT_NV12) {
-		_mmcam_dbg_log("Convert NV12 to RGB888\n");
-		src_cs = MM_UTIL_IMG_FMT_NV12;
-	} else {
-		_mmcam_dbg_err("NOT supported format [%d]\n", src_fmt);
-		return FALSE;
-	}
-
-	ret = mm_util_get_image_size(dst_cs, width, height, &dst_size);
-	if (ret != 0) {
-		_mmcam_dbg_err("mm_util_get_image_size failed [%x]\n", ret);
-		return FALSE;
-	}
-
-	*dst = malloc(dst_size);
-	if (*dst == NULL) {
-		_mmcam_dbg_err("malloc failed\n");
-		return FALSE;
-	}
-
-	*dst_len = dst_size;
-	ret = mm_util_convert_colorspace(src, width, height, src_cs, *dst, dst_cs);
-	if (ret == 0) {
-		_mmcam_dbg_log("Convert [dst_size:%d] OK.\n", dst_size);
-		return TRUE;
-	} else {
-		free(*dst);
-		*dst = NULL;
-
-		_mmcam_dbg_err("Convert [size:%d] FAILED.\n", dst_size);
-		return FALSE;
-	}
-}
-#endif /* _USE_YUV_TO_RGB888_ */
 
 
 static gboolean _mmcamcorder_convert_YUYV_to_I420(unsigned char *src, guint width, guint height, unsigned char **dst, unsigned int *dst_len)
