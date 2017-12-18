@@ -629,9 +629,6 @@ int _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf *configure
 
 	/* [VideoInput] matching table */
 	static conf_info_table conf_main_video_input_table[] = {
-		{ "UseConfCtrl",        CONFIGURE_VALUE_INT,            {.value_int = 1} },
-		{ "ConfCtrlFile0",      CONFIGURE_VALUE_STRING,         {NULL} },
-		{ "ConfCtrlFile1",      CONFIGURE_VALUE_STRING,         {NULL} },
 		{ "VideosrcElement",    CONFIGURE_VALUE_ELEMENT,        {&_videosrc_element_default} },
 		{ "UseVideoscale",      CONFIGURE_VALUE_INT,            {.value_int = 0} },
 		{ "VideoscaleElement",  CONFIGURE_VALUE_ELEMENT,        {&_videoscale_element_default} },

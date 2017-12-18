@@ -54,6 +54,7 @@
 #define __MMCAMCORDER_FORCE_STOP_WAIT_TIME      100000  /* us */
 #define __MMCAMCORDER_SOUND_WAIT_TIMEOUT        3
 #define __MMCAMCORDER_FOCUS_CHANGE_REASON_LEN   64
+#define __MMCAMCORDER_CONF_FILENAME_LENGTH      32
 
 #define DPM_ALLOWED                             1
 #define DPM_DISALLOWED                          0
@@ -98,7 +99,6 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 {
 	int ret = MM_ERROR_NONE;
 	int sys_info_ret = SYSTEM_INFO_ERROR_NONE;
-	int UseConfCtrl = 0;
 	int rcmd_fmt_capture = MM_PIXEL_FORMAT_YUYV;
 	int rcmd_fmt_recording = MM_PIXEL_FORMAT_NV12;
 	int rcmd_dpy_rotation = MM_DISPLAY_ROTATION_270;
@@ -107,7 +107,6 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 	int camera_default_flip = MM_FLIP_NONE;
 	int camera_facing_direction = MM_CAMCORDER_CAMERA_FACING_DIRECTION_REAR;
 	char *err_attr_name = NULL;
-	const char *ConfCtrlFile = NULL;
 	mmf_camcorder_t *hcamcorder = NULL;
 	type_element *EvasSurfaceElement = NULL;
 
@@ -211,179 +210,157 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 	_mmcam_dbg_warn("DPM handle %p", hcamcorder->dpm_handle);
 
 	if (info->videodev_type != MM_VIDEO_DEVICE_NONE) {
+		char conf_file_name[__MMCAMCORDER_CONF_FILENAME_LENGTH] = {'\0',};
+		int resolution_width = 0;
+		int resolution_height = 0;
+		MMCamAttrsInfo fps_info;
+
+		snprintf(conf_file_name, sizeof(conf_file_name), "%s%d.ini",
+			CONFIGURE_CTRL_FILE_PREFIX, info->videodev_type);
+
+		_mmcam_dbg_log("Load control configure file [%d][%s]", info->videodev_type, conf_file_name);
+
+		ret = _mmcamcorder_conf_get_info((MMHandleType)hcamcorder,
+			CONFIGURE_TYPE_CTRL, (const char *)conf_file_name, &hcamcorder->conf_ctrl);
+		if (ret != MM_ERROR_NONE) {
+			_mmcam_dbg_err("Failed to get configure(control) info.");
+			goto _ERR_DEFAULT_VALUE_INIT;
+		}
+/*
+		_mmcamcorder_conf_print_info(&hcamcorder->conf_main);
+		_mmcamcorder_conf_print_info(&hcamcorder->conf_ctrl);
+*/
+		ret = _mmcamcorder_init_convert_table((MMHandleType)hcamcorder);
+		if (ret != MM_ERROR_NONE) {
+			_mmcam_dbg_warn("converting table initialize error!!");
+			ret = MM_ERROR_CAMCORDER_INTERNAL;
+			goto _ERR_DEFAULT_VALUE_INIT;
+		}
+
+		ret = _mmcamcorder_init_attr_from_configure((MMHandleType)hcamcorder, MM_CAMCONVERT_CATEGORY_ALL);
+		if (ret != MM_ERROR_NONE) {
+			_mmcam_dbg_warn("attribute initialize from configure error!!");
+			ret = MM_ERROR_CAMCORDER_INTERNAL;
+			goto _ERR_DEFAULT_VALUE_INIT;
+		}
+
+		/* Get device info, recommend preview fmt and display rotation from INI */
+		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
+			CONFIGURE_CATEGORY_CTRL_CAMERA,
+			"RecommendPreviewFormatCapture",
+			&rcmd_fmt_capture);
+
+		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
+			CONFIGURE_CATEGORY_CTRL_CAMERA,
+			"RecommendPreviewFormatRecord",
+			&rcmd_fmt_recording);
+
+		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
+			CONFIGURE_CATEGORY_CTRL_CAMERA,
+			"RecommendDisplayRotation",
+			&rcmd_dpy_rotation);
+
+		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
+			CONFIGURE_CATEGORY_MAIN_CAPTURE,
+			"PlayCaptureSound",
+			&play_capture_sound);
+
 		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
 			CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
-			"UseConfCtrl", &UseConfCtrl);
+			"DeviceCount",
+			&camera_device_count);
 
-		if (UseConfCtrl) {
-			int resolution_width = 0;
-			int resolution_height = 0;
-			MMCamAttrsInfo fps_info;
+		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
+			CONFIGURE_CATEGORY_CTRL_CAMERA,
+			"FacingDirection",
+			&camera_facing_direction);
 
-			_mmcam_dbg_log("Enable Configure Control system.");
+		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
+			CONFIGURE_CATEGORY_CTRL_EFFECT,
+			"BrightnessStepDenominator",
+			&hcamcorder->brightness_step_denominator);
 
-			switch (info->videodev_type) {
-			case MM_VIDEO_DEVICE_CAMERA0:
-				_mmcamcorder_conf_get_value_string((MMHandleType)hcamcorder, hcamcorder->conf_main,
-					CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
-					"ConfCtrlFile0", &ConfCtrlFile);
-				break;
-			case MM_VIDEO_DEVICE_CAMERA1:
-				_mmcamcorder_conf_get_value_string((MMHandleType)hcamcorder, hcamcorder->conf_main,
-					CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
-					"ConfCtrlFile1", &ConfCtrlFile);
-				break;
-			default:
-				_mmcam_dbg_err("Not supported camera type.");
-				ret = MM_ERROR_CAMCORDER_NOT_SUPPORTED;
-				goto _ERR_DEFAULT_VALUE_INIT;
-			}
+		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
+			CONFIGURE_CATEGORY_CTRL_CAPTURE,
+			"SupportZSL",
+			&hcamcorder->support_zsl_capture);
 
-			_mmcam_dbg_log("videodev_type : [%d], ConfCtrlPath : [%s]", info->videodev_type, ConfCtrlFile);
+		_mmcam_dbg_log("Recommend fmt[cap:%d,rec:%d], dpy rot %d, cap snd %d, dev cnt %d, cam facing dir %d, step denom %d, support zsl %d",
+			rcmd_fmt_capture, rcmd_fmt_recording, rcmd_dpy_rotation,
+			play_capture_sound, camera_device_count, camera_facing_direction,
+			hcamcorder->brightness_step_denominator, hcamcorder->support_zsl_capture);
 
-			ret = _mmcamcorder_conf_get_info((MMHandleType)hcamcorder, CONFIGURE_TYPE_CTRL, ConfCtrlFile, &hcamcorder->conf_ctrl);
-			if (ret != MM_ERROR_NONE) {
-				_mmcam_dbg_err("Failed to get configure(control) info.");
-				goto _ERR_DEFAULT_VALUE_INIT;
-			}
-/*
-			_mmcamcorder_conf_print_info(&hcamcorder->conf_main);
-			_mmcamcorder_conf_print_info(&hcamcorder->conf_ctrl);
-*/
-			ret = _mmcamcorder_init_convert_table((MMHandleType)hcamcorder);
-			if (ret != MM_ERROR_NONE) {
-				_mmcam_dbg_warn("converting table initialize error!!");
-				ret = MM_ERROR_CAMCORDER_INTERNAL;
-				goto _ERR_DEFAULT_VALUE_INIT;
-			}
+		/* Get UseZeroCopyFormat value from INI */
+		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
+			CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
+			"UseZeroCopyFormat",
+			&(hcamcorder->use_zero_copy_format));
 
-			ret = _mmcamcorder_init_attr_from_configure((MMHandleType)hcamcorder, MM_CAMCONVERT_CATEGORY_ALL);
-			if (ret != MM_ERROR_NONE) {
-				_mmcam_dbg_warn("converting table initialize error!!");
-				ret = MM_ERROR_CAMCORDER_INTERNAL;
-				goto _ERR_DEFAULT_VALUE_INIT;
-			}
+		/* Get SupportMediaPacketPreviewCb value from INI */
+		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
+			CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
+			"SupportMediaPacketPreviewCb",
+			&(hcamcorder->support_media_packet_preview_cb));
 
-			/* Get device info, recommend preview fmt and display rotation from INI */
-			_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
-				CONFIGURE_CATEGORY_CTRL_CAMERA,
-				"RecommendPreviewFormatCapture",
-				&rcmd_fmt_capture);
+		/* Get UseVideoconvert value from INI */
+		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
+			CONFIGURE_CATEGORY_MAIN_VIDEO_OUTPUT,
+			"UseVideoconvert",
+			&hcamcorder->use_videoconvert);
 
-			_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
-				CONFIGURE_CATEGORY_CTRL_CAMERA,
-				"RecommendPreviewFormatRecord",
-				&rcmd_fmt_recording);
+		ret = mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL,
+			MMCAM_CAMERA_WIDTH, &resolution_width,
+			MMCAM_CAMERA_HEIGHT, &resolution_height,
+			NULL);
 
-			_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
-				CONFIGURE_CATEGORY_CTRL_CAMERA,
-				"RecommendDisplayRotation",
-				&rcmd_dpy_rotation);
+		mm_camcorder_get_fps_list_by_resolution((MMHandleType)hcamcorder, resolution_width, resolution_height, &fps_info);
 
-			_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
-				CONFIGURE_CATEGORY_MAIN_CAPTURE,
-				"PlayCaptureSound",
-				&play_capture_sound);
+		_mmcam_dbg_log("UseZeroCopyFormat %d, UseVideoconvert %d, SupportMediaPacketPreviewCb %d",
+			hcamcorder->use_zero_copy_format, hcamcorder->use_videoconvert, hcamcorder->support_media_packet_preview_cb);
+		_mmcam_dbg_log("res : %d X %d, Default FPS by resolution  : %d",
+			resolution_width, resolution_height, fps_info.int_array.def);
 
-			_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
-				CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
-				"DeviceCount",
-				&camera_device_count);
+		if (camera_facing_direction == 1) {
+			if (rcmd_dpy_rotation == MM_DISPLAY_ROTATION_270 || rcmd_dpy_rotation == MM_DISPLAY_ROTATION_90)
+				camera_default_flip = MM_FLIP_VERTICAL;
+			else
+				camera_default_flip = MM_FLIP_HORIZONTAL;
 
-			_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
-				CONFIGURE_CATEGORY_CTRL_CAMERA,
-				"FacingDirection",
-				&camera_facing_direction);
-
-			_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
-				CONFIGURE_CATEGORY_CTRL_EFFECT,
-				"BrightnessStepDenominator",
-				&hcamcorder->brightness_step_denominator);
-
-			_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
-				CONFIGURE_CATEGORY_CTRL_CAPTURE,
-				"SupportZSL",
-				&hcamcorder->support_zsl_capture);
-
-			_mmcam_dbg_log("Recommend fmt[cap:%d,rec:%d], dpy rot %d, cap snd %d, dev cnt %d, cam facing dir %d, step denom %d, support zsl %d",
-				rcmd_fmt_capture, rcmd_fmt_recording, rcmd_dpy_rotation,
-				play_capture_sound, camera_device_count, camera_facing_direction,
-				hcamcorder->brightness_step_denominator, hcamcorder->support_zsl_capture);
-
-			/* Get UseZeroCopyFormat value from INI */
-			_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
-				CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
-				"UseZeroCopyFormat",
-				&(hcamcorder->use_zero_copy_format));
-
-			/* Get SupportMediaPacketPreviewCb value from INI */
-			_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
-				CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
-				"SupportMediaPacketPreviewCb",
-				&(hcamcorder->support_media_packet_preview_cb));
-
-			/* Get UseVideoconvert value from INI */
-			_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
-				CONFIGURE_CATEGORY_MAIN_VIDEO_OUTPUT,
-				"UseVideoconvert",
-				&hcamcorder->use_videoconvert);
-
-			ret = mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL,
-				MMCAM_CAMERA_WIDTH, &resolution_width,
-				MMCAM_CAMERA_HEIGHT, &resolution_height,
-				NULL);
-
-			mm_camcorder_get_fps_list_by_resolution((MMHandleType)hcamcorder, resolution_width, resolution_height, &fps_info);
-
-			_mmcam_dbg_log("UseZeroCopyFormat %d, UseVideoconvert %d, SupportMediaPacketPreviewCb %d",
-				hcamcorder->use_zero_copy_format, hcamcorder->use_videoconvert, hcamcorder->support_media_packet_preview_cb);
-			_mmcam_dbg_log("res : %d X %d, Default FPS by resolution  : %d",
-				resolution_width, resolution_height, fps_info.int_array.def);
-
-			if (camera_facing_direction == 1) {
-				if (rcmd_dpy_rotation == MM_DISPLAY_ROTATION_270 || rcmd_dpy_rotation == MM_DISPLAY_ROTATION_90)
-					camera_default_flip = MM_FLIP_VERTICAL;
-				else
-					camera_default_flip = MM_FLIP_HORIZONTAL;
-
-				_mmcam_dbg_log("camera_default_flip : [%d]", camera_default_flip);
-			}
-
-			mm_camcorder_set_attributes((MMHandleType)hcamcorder, &err_attr_name,
-				MMCAM_CAMERA_DEVICE_COUNT, camera_device_count,
-				MMCAM_CAMERA_FACING_DIRECTION, camera_facing_direction,
-				MMCAM_RECOMMEND_PREVIEW_FORMAT_FOR_CAPTURE, rcmd_fmt_capture,
-				MMCAM_RECOMMEND_PREVIEW_FORMAT_FOR_RECORDING, rcmd_fmt_recording,
-				MMCAM_RECOMMEND_DISPLAY_ROTATION, rcmd_dpy_rotation,
-				MMCAM_SUPPORT_ZSL_CAPTURE, hcamcorder->support_zsl_capture,
-				MMCAM_SUPPORT_ZERO_COPY_FORMAT, hcamcorder->use_zero_copy_format,
-				MMCAM_SUPPORT_MEDIA_PACKET_PREVIEW_CB, hcamcorder->support_media_packet_preview_cb,
-				MMCAM_CAMERA_FPS, fps_info.int_array.def,
-				MMCAM_DISPLAY_FLIP, camera_default_flip,
-				MMCAM_CAPTURE_SOUND_ENABLE, play_capture_sound,
-				NULL);
-			if (err_attr_name) {
-				_mmcam_dbg_err("Set %s FAILED.", err_attr_name);
-				SAFE_FREE(err_attr_name);
-				ret = MM_ERROR_CAMCORDER_INTERNAL;
-				goto _ERR_DEFAULT_VALUE_INIT;
-			}
-
-			/* Get default value of brightness */
-			mm_camcorder_get_attributes((MMHandleType)hcamcorder, &err_attr_name,
-				MMCAM_FILTER_BRIGHTNESS, &hcamcorder->brightness_default,
-				NULL);
-			if (err_attr_name) {
-				_mmcam_dbg_err("Get brightness FAILED.");
-				SAFE_FREE(err_attr_name);
-				ret = MM_ERROR_CAMCORDER_INTERNAL;
-				goto _ERR_DEFAULT_VALUE_INIT;
-			}
-			_mmcam_dbg_log("Default brightness : %d", hcamcorder->brightness_default);
-		} else {
-			_mmcam_dbg_log("Disable Configure Control system.");
-			hcamcorder->conf_ctrl = NULL;
+			_mmcam_dbg_log("camera_default_flip : [%d]", camera_default_flip);
 		}
+
+		mm_camcorder_set_attributes((MMHandleType)hcamcorder, &err_attr_name,
+			MMCAM_CAMERA_DEVICE_COUNT, camera_device_count,
+			MMCAM_CAMERA_FACING_DIRECTION, camera_facing_direction,
+			MMCAM_RECOMMEND_PREVIEW_FORMAT_FOR_CAPTURE, rcmd_fmt_capture,
+			MMCAM_RECOMMEND_PREVIEW_FORMAT_FOR_RECORDING, rcmd_fmt_recording,
+			MMCAM_RECOMMEND_DISPLAY_ROTATION, rcmd_dpy_rotation,
+			MMCAM_SUPPORT_ZSL_CAPTURE, hcamcorder->support_zsl_capture,
+			MMCAM_SUPPORT_ZERO_COPY_FORMAT, hcamcorder->use_zero_copy_format,
+			MMCAM_SUPPORT_MEDIA_PACKET_PREVIEW_CB, hcamcorder->support_media_packet_preview_cb,
+			MMCAM_CAMERA_FPS, fps_info.int_array.def,
+			MMCAM_DISPLAY_FLIP, camera_default_flip,
+			MMCAM_CAPTURE_SOUND_ENABLE, play_capture_sound,
+			NULL);
+		if (err_attr_name) {
+			_mmcam_dbg_err("Set %s FAILED.", err_attr_name);
+			SAFE_FREE(err_attr_name);
+			ret = MM_ERROR_CAMCORDER_INTERNAL;
+			goto _ERR_DEFAULT_VALUE_INIT;
+		}
+
+		/* Get default value of brightness */
+		mm_camcorder_get_attributes((MMHandleType)hcamcorder, &err_attr_name,
+			MMCAM_FILTER_BRIGHTNESS, &hcamcorder->brightness_default,
+			NULL);
+		if (err_attr_name) {
+			_mmcam_dbg_err("Get brightness FAILED.");
+			SAFE_FREE(err_attr_name);
+			ret = MM_ERROR_CAMCORDER_INTERNAL;
+			goto _ERR_DEFAULT_VALUE_INIT;
+		}
+
+		_mmcam_dbg_log("Default brightness : %d", hcamcorder->brightness_default);
 
 		/* add DPM camera policy changed callback */
 		if (hcamcorder->dpm_handle) {

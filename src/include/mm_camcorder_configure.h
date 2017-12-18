@@ -45,7 +45,8 @@ do { \
 	} \
 } while (0)
 
-#define CONFIGURE_MAIN_FILE		"mmfw_camcorder.ini"
+#define CONFIGURE_MAIN_FILE             "mmfw_camcorder.ini"
+#define CONFIGURE_CTRL_FILE_PREFIX      "mmfw_camcorder_camera"
 
 /*=======================================================================================
 | ENUM DEFINITIONS									|
