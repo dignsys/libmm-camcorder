@@ -797,6 +797,7 @@ int _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf *configure
 		{ "Contrast",             CONFIGURE_VALUE_INT_RANGE, {NULL} },
 		{ "Saturation",           CONFIGURE_VALUE_INT_RANGE, {NULL} },
 		{ "Sharpness",            CONFIGURE_VALUE_INT_RANGE, {NULL} },
+		{ "Hue",                  CONFIGURE_VALUE_INT_RANGE, {NULL} },
 		{ "WhiteBalance",         CONFIGURE_VALUE_INT_ARRAY, {NULL} },
 		{ "ColorTone",            CONFIGURE_VALUE_INT_ARRAY, {NULL} },
 		{ "Flip",                 CONFIGURE_VALUE_INT_ARRAY, {NULL} },
