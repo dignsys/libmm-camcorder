@@ -1720,7 +1720,7 @@ gboolean _mmcamcorder_resize_frame(unsigned char *src_data, unsigned int src_wid
 {
 	int ret = TRUE;
 	int mm_ret = MM_ERROR_NONE;
-	int input_format = MM_UTIL_IMG_FMT_YUV420;
+	int input_format = MM_UTIL_COLOR_YUV420;
 	unsigned char *dst_tmp_data = NULL;
 
 	if (!src_data || !dst_data || !dst_width || !dst_height || !dst_length) {
@@ -1731,22 +1731,22 @@ gboolean _mmcamcorder_resize_frame(unsigned char *src_data, unsigned int src_wid
 	/* set input format for mm-util */
 	switch (src_format) {
 	case MM_PIXEL_FORMAT_I420:
-		input_format = MM_UTIL_IMG_FMT_I420;
+		input_format = MM_UTIL_COLOR_I420;
 		break;
 	case MM_PIXEL_FORMAT_YV12:
-		input_format = MM_UTIL_IMG_FMT_YUV420;
+		input_format = MM_UTIL_COLOR_YUV420;
 		break;
 	case MM_PIXEL_FORMAT_NV12:
-		input_format = MM_UTIL_IMG_FMT_NV12;
+		input_format = MM_UTIL_COLOR_NV12;
 		break;
 	case MM_PIXEL_FORMAT_YUYV:
-		input_format = MM_UTIL_IMG_FMT_YUYV;
+		input_format = MM_UTIL_COLOR_YUYV;
 		break;
 	case MM_PIXEL_FORMAT_UYVY:
-		input_format = MM_UTIL_IMG_FMT_UYVY;
+		input_format = MM_UTIL_COLOR_UYVY;
 		break;
 	case MM_PIXEL_FORMAT_RGB888:
-		input_format = MM_UTIL_IMG_FMT_RGB888;
+		input_format = MM_UTIL_COLOR_RGB24;
 		break;
 	default:
 		_mmcam_dbg_err("NOT supported format [%d]", src_format);
@@ -1800,46 +1800,46 @@ gboolean _mmcamcorder_encode_jpeg(void *src_data, unsigned int src_width, unsign
 
 	switch (src_format) {
 	case MM_PIXEL_FORMAT_NV12:
-		//jpeg_format = MM_UTIL_JPEG_FMT_NV12;
+		//jpeg_format = MM_UTIL_COLOR_NV12;
 		ret_conv = _mmcamcorder_convert_NV12_to_I420(src_data, src_width, src_height, &converted_src, &converted_src_size);
-		jpeg_format = MM_UTIL_JPEG_FMT_YUV420;
+		jpeg_format = MM_UTIL_COLOR_YUV420;
 		break;
 	case MM_PIXEL_FORMAT_NV16:
-		jpeg_format = MM_UTIL_JPEG_FMT_NV16;
+		jpeg_format = MM_UTIL_COLOR_NV16;
 		converted_src = src_data;
 		break;
 	case MM_PIXEL_FORMAT_NV21:
-		jpeg_format = MM_UTIL_JPEG_FMT_NV21;
+		jpeg_format = MM_UTIL_COLOR_NV21;
 		converted_src = src_data;
 		break;
 	case MM_PIXEL_FORMAT_YUYV:
-		//jpeg_format = MM_UTIL_JPEG_FMT_YUYV;
+		//jpeg_format = MM_UTIL_COLOR_YUYV;
 		ret_conv = _mmcamcorder_convert_YUYV_to_I420(src_data, src_width, src_height, &converted_src, &converted_src_size);
-		jpeg_format = MM_UTIL_JPEG_FMT_YUV420;
+		jpeg_format = MM_UTIL_COLOR_YUV420;
 		break;
 	case MM_PIXEL_FORMAT_UYVY:
-		//jpeg_format = MM_UTIL_JPEG_FMT_UYVY;
+		//jpeg_format = MM_UTIL_COLOR_UYVY;
 		ret_conv = _mmcamcorder_convert_UYVY_to_I420(src_data, src_width, src_height, &converted_src, &converted_src_size);
-		jpeg_format = MM_UTIL_JPEG_FMT_YUV420;
+		jpeg_format = MM_UTIL_COLOR_YUV420;
 		break;
 	case MM_PIXEL_FORMAT_I420:
-		jpeg_format = MM_UTIL_JPEG_FMT_YUV420;
+		jpeg_format = MM_UTIL_COLOR_YUV420;
 		converted_src = src_data;
 		break;
 	case MM_PIXEL_FORMAT_RGB888:
-		jpeg_format = MM_UTIL_JPEG_FMT_RGB888;
+		jpeg_format = MM_UTIL_COLOR_RGB24;
 		converted_src = src_data;
 		break;
 	case MM_PIXEL_FORMAT_RGBA:
-		jpeg_format = MM_UTIL_JPEG_FMT_RGBA8888;
+		jpeg_format = MM_UTIL_COLOR_RGBA;
 		converted_src = src_data;
 		break;
 	case MM_PIXEL_FORMAT_ARGB:
-		jpeg_format = MM_UTIL_JPEG_FMT_ARGB8888;
+		jpeg_format = MM_UTIL_COLOR_ARGB;
 		converted_src = src_data;
 		break;
 	case MM_PIXEL_FORMAT_422P:
-		jpeg_format = MM_UTIL_JPEG_FMT_YUV422;	// not supported
+		jpeg_format = MM_UTIL_COLOR_YUV422;	// not supported
 		return FALSE;
 	case MM_PIXEL_FORMAT_NV12T:
 	case MM_PIXEL_FORMAT_YV12:
