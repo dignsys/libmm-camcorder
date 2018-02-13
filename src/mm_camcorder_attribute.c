@@ -37,6 +37,7 @@
 #define MMCAMCORDER_DEFAULT_CAMERA_HEIGHT       480
 #define MMCAMCORDER_DEFAULT_ENCODED_PREVIEW_BITRATE (1024*1024*10)
 #define MMCAMCORDER_DEFAULT_ENCODED_PREVIEW_GOP_INTERVAL 1000
+#define MMCAMCORDER_DEFAULT_REPLAY_GAIN_REFERENCE_LEVEL  89.0
 
 /*---------------------------------------------------------------------------------------
 |    GLOBAL VARIABLE DEFINITIONS for internal						|
@@ -216,7 +217,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"camera-device-name",
 			MMF_VALUE_TYPE_STRING,
 			MM_ATTRS_FLAG_RW,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -261,7 +262,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"audio-volume",
 			MMF_VALUE_TYPE_DOUBLE,
 			MM_ATTRS_FLAG_RW,
-			{(void*)1},
+			{.value_double = 1.0},
 			MM_ATTRS_VALID_TYPE_DOUBLE_RANGE,
 			{.double_min = 0.0},
 			{.double_max = 10.0},
@@ -383,7 +384,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"camera-recording-motion-rate",
 			MMF_VALUE_TYPE_DOUBLE,
 			MM_ATTRS_FLAG_RW,
-			{(void*)1},
+			{.value_double = 1.0},
 			MM_ATTRS_VALID_TYPE_DOUBLE_RANGE,
 			{.double_min = 0.0},
 			{.double_max = _MMCAMCORDER_MAX_DOUBLE},
@@ -671,7 +672,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"display-handle",
 			MMF_VALUE_TYPE_DATA,
 			MM_ATTRS_FLAG_RW,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -838,7 +839,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"target-filename",
 			MMF_VALUE_TYPE_STRING,
 			MM_ATTRS_FLAG_RW,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -882,7 +883,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"tag-image-description",
 			MMF_VALUE_TYPE_STRING,
 			MM_ATTRS_FLAG_RW,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -904,7 +905,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"tag-software",
 			MMF_VALUE_TYPE_STRING,
 			MM_ATTRS_FLAG_RW,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -916,7 +917,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"tag-latitude",
 			MMF_VALUE_TYPE_DOUBLE,
 			MM_ATTRS_FLAG_RW,
-			{(void*)0},
+			{.value_double = 0.0},
 			MM_ATTRS_VALID_TYPE_DOUBLE_RANGE,
 			{.double_min = -360.0},
 			{.double_max = 360.0},
@@ -927,7 +928,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"tag-longitude",
 			MMF_VALUE_TYPE_DOUBLE,
 			MM_ATTRS_FLAG_RW,
-			{(void*)0},
+			{.value_double = 0.0},
 			MM_ATTRS_VALID_TYPE_DOUBLE_RANGE,
 			{.double_min = -360.0},
 			{.double_max = 360.0},
@@ -938,7 +939,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"tag-altitude",
 			MMF_VALUE_TYPE_DOUBLE,
 			MM_ATTRS_FLAG_RW,
-			{(void*)0},
+			{.value_double = 0.0},
 			MM_ATTRS_VALID_TYPE_DOUBLE_RANGE,
 			{.double_min = -999999.0},
 			{.double_max = 999999.0},
@@ -1093,7 +1094,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"camera-focal-length",
 			MMF_VALUE_TYPE_DOUBLE,
 			MM_ATTRS_FLAG_RW,
-			{(void*)0},
+			{.value_double = 0.0},
 			MM_ATTRS_VALID_TYPE_DOUBLE_RANGE,
 			{.double_min = 0.0},
 			{.double_max = 1000.0},
@@ -1138,7 +1139,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"tag-gps-time-stamp",
 			MMF_VALUE_TYPE_DOUBLE,
 			MM_ATTRS_FLAG_RW,
-			{(void*)0},
+			{.value_double = 0.0},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -1149,7 +1150,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"tag-gps-date-stamp",
 			MMF_VALUE_TYPE_STRING,
 			MM_ATTRS_FLAG_RW,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -1160,7 +1161,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"tag-gps-processing-method",
 			MMF_VALUE_TYPE_STRING,
 			MM_ATTRS_FLAG_RW,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -1182,7 +1183,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"captured-screennail",
 			MMF_VALUE_TYPE_DATA,
 			MM_ATTRS_FLAG_READABLE,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -1282,7 +1283,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"captured-exif-raw-data",
 			MMF_VALUE_TYPE_DATA,
 			MM_ATTRS_FLAG_READABLE,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -1293,7 +1294,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"display-evas-surface-sink",
 			MMF_VALUE_TYPE_STRING,
 			MM_ATTRS_FLAG_READABLE,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -1504,7 +1505,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"display-socket-path",
 			MMF_VALUE_TYPE_STRING,
 			MM_ATTRS_FLAG_RW,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -1526,7 +1527,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"root-directory",
 			MMF_VALUE_TYPE_STRING,
 			MM_ATTRS_FLAG_RW,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -1548,7 +1549,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"sound-stream-type",
 			MMF_VALUE_TYPE_STRING,
 			MM_ATTRS_FLAG_RW,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -1570,7 +1571,7 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"display-reuse-element",
 			MMF_VALUE_TYPE_DATA,
 			MM_ATTRS_FLAG_RW,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
@@ -1581,11 +1582,33 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			"gdbus-connection",
 			MMF_VALUE_TYPE_DATA,
 			MM_ATTRS_FLAG_RW,
-			{(void*)NULL},
+			{NULL},
 			MM_ATTRS_VALID_TYPE_NONE,
 			{0},
 			{0},
 			NULL,
+		},
+		{
+			MM_CAM_AUDIO_REPLAY_GAIN_ENABLE,
+			"audio-replay-gain-enable",
+			MMF_VALUE_TYPE_INT,
+			MM_ATTRS_FLAG_RW,
+			{(void*)FALSE},
+			MM_ATTRS_VALID_TYPE_INT_RANGE,
+			{.int_min = 0},
+			{.int_max = 1},
+			_mmcamcorder_commit_audio_replay_gain,
+		},
+		{
+			MM_CAM_AUDIO_REPLAY_GAIN_REFERENCE_LEVEL,
+			"audio-replay-gain-reference-level",
+			MMF_VALUE_TYPE_DOUBLE,
+			MM_ATTRS_FLAG_RW,
+			{.value_double = MMCAMCORDER_DEFAULT_REPLAY_GAIN_REFERENCE_LEVEL},
+			MM_ATTRS_VALID_TYPE_DOUBLE_RANGE,
+			{.double_min = 0.0},
+			{.double_max = 150.0},
+			_mmcamcorder_commit_audio_replay_gain,
 		}
 	};
 
@@ -1630,41 +1653,46 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 	__mmcamcorder_set_conf_to_valid_info(handle);
 
 	for (idx = 0; idx < attr_count; idx++) {
-/*		_mmcam_dbg_log("Valid type [%s:%d, %d, %d]", cam_attrs_const_info[idx].name, cam_attrs_const_info[idx].validity_type
-			, cam_attrs_const_info[idx].validity_value1, cam_attrs_const_info[idx].validity_value2);
-*/
-		mmf_attrs_set_valid_type(attrs, idx, hcamcorder->cam_attrs_const_info[idx].validity_type);
+		mm_cam_attr_construct_info *attr_info = &hcamcorder->cam_attrs_const_info[idx];
 
-		switch (hcamcorder->cam_attrs_const_info[idx].validity_type) {
+/*
+		_mmcam_dbg_log("Valid type [%s:%d, %d, %d]",
+			attr_info->name, attr_info->validity_type,
+			attr_info->validity_value1, attr_info->validity_value2);
+*/
+		mmf_attrs_set_valid_type(attrs, idx, attr_info->validity_type);
+
+		switch (attr_info->validity_type) {
 		case MM_ATTRS_VALID_TYPE_INT_ARRAY:
-			if (hcamcorder->cam_attrs_const_info[idx].validity_value_1.int_array &&
-			    hcamcorder->cam_attrs_const_info[idx].validity_value_2.count > 0) {
+			if (attr_info->validity_value_1.int_array &&
+			    attr_info->validity_value_2.count > 0) {
 				mmf_attrs_set_valid_array(attrs, idx,
-					(const int *)(hcamcorder->cam_attrs_const_info[idx].validity_value_1.int_array),
-					hcamcorder->cam_attrs_const_info[idx].validity_value_2.count,
-					hcamcorder->cam_attrs_const_info[idx].default_value.value_int);
+					(const int *)(attr_info->validity_value_1.int_array),
+					attr_info->validity_value_2.count,
+					attr_info->default_value.value_int);
 			}
 			break;
 		case MM_ATTRS_VALID_TYPE_INT_RANGE:
 			mmf_attrs_set_valid_range(attrs, idx,
-				hcamcorder->cam_attrs_const_info[idx].validity_value_1.int_min,
-				hcamcorder->cam_attrs_const_info[idx].validity_value_2.int_max,
-				hcamcorder->cam_attrs_const_info[idx].default_value.value_int);
+				attr_info->validity_value_1.int_min,
+				attr_info->validity_value_2.int_max,
+				attr_info->default_value.value_int);
 			break;
 		case MM_ATTRS_VALID_TYPE_DOUBLE_ARRAY:
-			if (hcamcorder->cam_attrs_const_info[idx].validity_value_1.double_array &&
-			    hcamcorder->cam_attrs_const_info[idx].validity_value_2.count > 0) {
+			if (attr_info->validity_value_1.double_array &&
+			    attr_info->validity_value_2.count > 0) {
 				mmf_attrs_set_valid_double_array(attrs, idx,
-					(const double *)(hcamcorder->cam_attrs_const_info[idx].validity_value_1.double_array),
-					hcamcorder->cam_attrs_const_info[idx].validity_value_2.count,
-					hcamcorder->cam_attrs_const_info[idx].default_value.value_double);
+					(const double *)(attr_info->validity_value_1.double_array),
+					attr_info->validity_value_2.count,
+					attr_info->default_value.value_double);
 			}
 			break;
 		case MM_ATTRS_VALID_TYPE_DOUBLE_RANGE:
 			mmf_attrs_set_valid_double_range(attrs, idx,
-				hcamcorder->cam_attrs_const_info[idx].validity_value_1.double_min,
-				hcamcorder->cam_attrs_const_info[idx].validity_value_2.double_max,
-				hcamcorder->cam_attrs_const_info[idx].default_value.value_double);
+				attr_info->validity_value_1.double_min,
+				attr_info->validity_value_2.double_max,
+				attr_info->default_value.value_double);
+			((mmf_attrs_t *)attrs)->items[idx].value.value.d_val = attr_info->default_value.value_double;
 			break;
 		case MM_ATTRS_VALID_TYPE_NONE:
 			break;
@@ -4643,6 +4671,58 @@ bool _mmcamcorder_commit_tag(MMHandleType handle, int attr_idx, const mmf_value_
 	if (current_state == MM_CAMCORDER_STATE_CAPTURING) {
 		_mmcam_dbg_err("Can not set while CAPTURING");
 		hcamcorder->error_code = MM_ERROR_CAMCORDER_INVALID_STATE;
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+bool _mmcamcorder_commit_audio_replay_gain(MMHandleType handle, int attr_idx, const mmf_value_t *value)
+{
+	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
+
+	mmf_return_val_if_fail(hcamcorder && value, FALSE);
+
+	if (attr_idx == MM_CAM_AUDIO_REPLAY_GAIN_ENABLE) {
+		/* Replay gain enable */
+		int current_state = MM_CAMCORDER_STATE_NONE;
+		int audio_disable = FALSE;
+
+		current_state = _mmcamcorder_get_state(handle);
+		if (current_state >= MM_CAMCORDER_STATE_RECORDING) {
+			_mmcam_dbg_err("Can not set replay gain enable [state : %d]", current_state);
+			hcamcorder->error_code = MM_ERROR_CAMCORDER_INVALID_STATE;
+			return FALSE;
+		}
+
+		mm_camcorder_get_attributes(handle, NULL,
+			MMCAM_AUDIO_DISABLE, &audio_disable,
+			NULL);
+
+		if (audio_disable) {
+			_mmcam_dbg_err("audio is disabled");
+			hcamcorder->error_code = MM_ERROR_CAMCORDER_INVALID_CONDITION;
+			return FALSE;
+		}
+
+		_mmcam_dbg_log("set replay gain enable : %d", value->value.i_val);
+	} else if (attr_idx == MM_CAM_AUDIO_REPLAY_GAIN_REFERENCE_LEVEL) {
+		/* Replay gain reference level */
+		int replay_gain_enable = FALSE;
+
+		mm_camcorder_get_attributes(handle, NULL,
+			MMCAM_AUDIO_REPLAY_GAIN_ENABLE, &replay_gain_enable,
+			NULL);
+
+		if (replay_gain_enable == FALSE) {
+			_mmcam_dbg_err("replay gain is disabled");
+			hcamcorder->error_code = MM_ERROR_CAMCORDER_INVALID_CONDITION;
+			return FALSE;
+		}
+
+		_mmcam_dbg_log("set reference level for replay gain : %ld dB", value->value.d_val);
+	} else {
+		_mmcam_dbg_err("unknown attribute id %d", attr_idx);
 		return FALSE;
 	}
 

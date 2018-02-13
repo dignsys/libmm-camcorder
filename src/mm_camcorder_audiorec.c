@@ -195,6 +195,11 @@ static int __mmcamcorder_create_audiop_with_encodebin(MMHandleType handle)
 	srcpad = gst_element_get_static_pad(sc->encode_element[_MMCAMCORDER_ENCSINK_AENC].gst, "src");
 	MMCAMCORDER_ADD_BUFFER_PROBE(srcpad, _MMCAMCORDER_HANDLER_AUDIOREC,
 		__mmcamcorder_audio_dataprobe_record, hcamcorder);
+
+	/* for replay gain tag */
+	MMCAMCORDER_ADD_EVENT_PROBE(srcpad, _MMCAMCORDER_HANDLER_AUDIOREC,
+		__mmcamcorder_eventprobe_monitor, hcamcorder);
+
 	gst_object_unref(srcpad);
 	srcpad = NULL;
 

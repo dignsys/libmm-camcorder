@@ -570,6 +570,7 @@ typedef enum {
 	_MMCAMCORDER_AUDIOSRC_QUE,
 	_MMCAMCORDER_AUDIOSRC_CONV,
 	_MMCAMCORDER_AUDIOSRC_VOL,
+	_MMCAMCORDER_AUDIOSRC_RGA,	/* for replay gain analysis element */
 
 	/* Pipeline element of Encodebin */
 	_MMCAMCORDER_ENCSINK_BIN,
@@ -663,6 +664,16 @@ typedef struct {
 } _MMCamcorderMTSafe;
 
 /**
+ * MMCamcorder Replay gain value
+ */
+typedef struct {
+	gdouble track_peak;
+	gdouble track_gain;
+	gdouble album_peak;
+	gdouble album_gain;
+} _MMCamcorderReplayGain;
+
+/**
  * MMCamcorder Sub Context
  */
 typedef struct {
@@ -688,6 +699,9 @@ typedef struct {
 	/* For dropping video frame when start recording */
 	int drop_vframe;                        /**< When this value is bigger than zero and pass_first_vframe is zero, MSL will drop video frame though cam_stability count is bigger then zero. */
 	int pass_first_vframe;                  /**< When this value is bigger than zero, MSL won't drop video frame though "drop_vframe" is bigger then zero. */
+
+	/* Replay gain */
+	_MMCamcorderReplayGain replay_gain;     /**< Replay gain for audio recording */
 
 	/* INI information */
 	unsigned int fourcc;                    /**< Get fourcc value of camera INI file */

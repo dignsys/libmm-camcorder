@@ -1299,6 +1299,16 @@ extern "C" {
  */
 #define MMCAM_GDBUS_CONNECTION                  "gdbus-connection"
 
+/**
+ * Replay gain enable
+ */
+#define MMCAM_AUDIO_REPLAY_GAIN_ENABLE          "audio-replay-gain-enable"
+
+/**
+ * Reference level for replay gain
+ */
+#define MMCAM_AUDIO_REPLAY_GAIN_REFERENCE_LEVEL "audio-replay-gain-reference-level"
+
 /*=======================================================================================
 | ENUM DEFINITIONS									|
 ========================================================================================*/

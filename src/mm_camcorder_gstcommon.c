@@ -486,6 +486,8 @@ int _mmcamcorder_create_audiosrc_bin(MMHandleType handle)
 	int stream_index = 0;
 	int buffer_interval = 0;
 	int blocksize = 0;
+	int replay_gain_enable = FALSE;
+	double replay_gain_ref_level = 0.0;
 
 	GstCaps *caps = NULL;
 	GstPad *pad = NULL;
@@ -516,6 +518,8 @@ int _mmcamcorder_create_audiosrc_bin(MMHandleType handle)
 		MMCAM_AUDIO_FORMAT, &format,
 		MMCAM_AUDIO_CHANNEL, &channel,
 		MMCAM_AUDIO_VOLUME, &volume,
+		MMCAM_AUDIO_REPLAY_GAIN_ENABLE, &replay_gain_enable,
+		MMCAM_AUDIO_REPLAY_GAIN_REFERENCE_LEVEL, &replay_gain_ref_level,
 		MMCAM_SOUND_STREAM_TYPE, &stream_type, &stream_type_len,
 		MMCAM_SOUND_STREAM_INDEX, &stream_index,
 		NULL);
@@ -586,13 +590,12 @@ int _mmcamcorder_create_audiosrc_bin(MMHandleType handle)
 	MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_AUDIOSRC_QUE].gst, "max-size-bytes", 0);
 	MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_AUDIOSRC_QUE].gst, "max-size-time", 0);
 
-	if (a_enc != MM_AUDIO_CODEC_VORBIS)
-		_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_AUDIOSRC_VOL, "volume", "audiosrc_volume", element_list, err);
-
 	/* Set basic infomation */
 	if (a_enc != MM_AUDIO_CODEC_VORBIS) {
 		int depth = 0;
 		const gchar* format_name = NULL;
+
+		_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_AUDIOSRC_VOL, "volume", "audiosrc_volume", element_list, err);
 
 		if (volume == 0.0) {
 			/* Because data probe of audio src do the same job, it doesn't need to set "mute" here. Already null raw data. */
@@ -626,6 +629,17 @@ int _mmcamcorder_create_audiosrc_bin(MMHandleType handle)
 			NULL);
 		_mmcam_dbg_log("caps [x-raw (F32), rate:%d, channel:%d, endianness:%d, width:32]",
 			rate, channel, BYTE_ORDER);
+	}
+
+	/* Replay Gain */
+	_mmcam_dbg_log("Replay gain - enable : %d, reference level : %lf",
+		replay_gain_enable, replay_gain_ref_level);
+
+	if (replay_gain_enable) {
+		_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_AUDIOSRC_RGA, "rganalysis", "audiosrc_rga", element_list, err);
+		MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_AUDIOSRC_RGA].gst, "reference-level", replay_gain_ref_level);
+		/* If num-tracks is not set, album gain and peak event is not come. */
+		MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_AUDIOSRC_RGA].gst, "num-tracks", 1);
 	}
 
 	if (caps) {
@@ -2005,9 +2019,54 @@ GstPadProbeReturn __mmcamcorder_eventprobe_monitor(GstPad *pad, GstPadProbeInfo 
 	case GST_EVENT_NAVIGATION:
 	case GST_EVENT_LATENCY:
 	/* downstream serialized events */
-	case GST_EVENT_TAG:
 	case GST_EVENT_BUFFERSIZE:
 		_mmcam_dbg_log("[%s:%s] gots %s", GST_DEBUG_PAD_NAME(pad), GST_EVENT_TYPE_NAME(event));
+		break;
+	case GST_EVENT_TAG:
+		{
+			GstTagList *tag_list = NULL;
+			_MMCamcorderReplayGain *replay_gain = NULL;
+
+			_mmcam_dbg_log("[%s:%s] gots %s", GST_DEBUG_PAD_NAME(pad), GST_EVENT_TYPE_NAME(event));
+
+			hcamcorder = MMF_CAMCORDER(u_data);
+			if (!hcamcorder || !hcamcorder->sub_context) {
+				_mmcam_dbg_warn("NULL handle");
+				break;
+			}
+
+			replay_gain = &hcamcorder->sub_context->replay_gain;
+
+			gst_event_parse_tag(event, &tag_list);
+			if (!tag_list) {
+				_mmcam_dbg_warn("failed to get tag list");
+				break;
+			}
+
+			if (!gst_tag_list_get_double(tag_list, GST_TAG_TRACK_PEAK, &replay_gain->track_peak)) {
+				_mmcam_dbg_warn("failed to get GST_TAG_TRACK_PEAK");
+				break;
+			}
+
+			if (!gst_tag_list_get_double(tag_list, GST_TAG_TRACK_GAIN, &replay_gain->track_gain)) {
+				_mmcam_dbg_warn("failed to get GST_TAG_TRACK_GAIN");
+				break;
+			}
+
+			if (!gst_tag_list_get_double(tag_list, GST_TAG_ALBUM_PEAK, &replay_gain->album_peak)) {
+				_mmcam_dbg_warn("failed to get GST_TAG_ALBUM_PEAK");
+				break;
+			}
+
+			if (!gst_tag_list_get_double(tag_list, GST_TAG_ALBUM_GAIN, &replay_gain->album_gain)) {
+				_mmcam_dbg_warn("failed to get GST_TAG_ALBUM_PEAK");
+				break;
+			}
+
+			_mmcam_dbg_log("Track [peak %lf, gain %lf], Album [peak %lf, gain %lf]",
+				replay_gain->track_peak, replay_gain->track_gain,
+				replay_gain->album_peak, replay_gain->album_gain);
+		}
 		break;
 	case GST_EVENT_SEGMENT:
 		_mmcam_dbg_log("[%s:%s] gots %s", GST_DEBUG_PAD_NAME(pad), GST_EVENT_TYPE_NAME(event));

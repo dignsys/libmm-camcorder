@@ -186,6 +186,8 @@ typedef enum {
 	MM_CAM_DISPLAY_REUSE_HINT,
 	MM_CAM_DISPLAY_REUSE_ELEMENT,
 	MM_CAM_GDBUS_CONNECTION,			/* 130 */
+	MM_CAM_AUDIO_REPLAY_GAIN_ENABLE,
+	MM_CAM_AUDIO_REPLAY_GAIN_REFERENCE_LEVEL,
 	MM_CAM_ATTRIBUTE_NUM
 } MMCamcorderAttrsID;
 
@@ -388,6 +390,7 @@ bool _mmcamcorder_commit_encoded_preview_gop_interval(MMHandleType handle, int a
 bool _mmcamcorder_commit_pid_for_sound_focus(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 bool _mmcamcorder_commit_sound_stream_info(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 bool _mmcamcorder_commit_tag(MMHandleType handle, int attr_idx, const mmf_value_t *value);
+bool _mmcamcorder_commit_audio_replay_gain(MMHandleType handle, int attr_idx, const mmf_value_t *value);
 
 
 /**
