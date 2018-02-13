@@ -2621,7 +2621,7 @@ _MMCamcorderSubContext *_mmcamcorder_alloc_subcontext(int type)
 	}
 
 	sc->fourcc = 0x80000000;
-	sc->cam_stability_count = 0;
+	sc->frame_stability_count = 0;
 	sc->drop_vframe = 0;
 	sc->pass_first_vframe = 0;
 	sc->is_modified_rate = FALSE;

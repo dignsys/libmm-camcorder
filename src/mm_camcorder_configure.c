@@ -776,11 +776,12 @@ int _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf *configure
 		{ "FPS9",                 CONFIGURE_VALUE_INT_ARRAY,      {NULL} },
 		{ "PictureFormat",        CONFIGURE_VALUE_INT_ARRAY,      {NULL} },
 		{ "Overlay",              CONFIGURE_VALUE_INT_RANGE,      {NULL} },
-		{ "RecommendDisplayRotation", CONFIGURE_VALUE_INT,     {.value_int = 3}    },
+		{ "RecommendDisplayRotation", CONFIGURE_VALUE_INT,     {.value_int = 3} },
 		{ "RecommendPreviewFormatCapture", CONFIGURE_VALUE_INT, {.value_int = MM_PIXEL_FORMAT_YUYV} },
 		{ "RecommendPreviewFormatRecord",  CONFIGURE_VALUE_INT, {.value_int = MM_PIXEL_FORMAT_NV12} },
 		{ "RecommendPreviewResolution", CONFIGURE_VALUE_INT_PAIR_ARRAY, {NULL} },
 		{ "FacingDirection",      CONFIGURE_VALUE_INT, {.value_int = MM_CAMCORDER_CAMERA_FACING_DIRECTION_REAR} },
+		{ "FrameStabilityCount",  CONFIGURE_VALUE_INT,     {.value_int = 0} },
 	};
 
 	/* [Strobe] matching table */
@@ -838,6 +839,7 @@ int _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf *configure
 		{ "SensorEncodedCapture", CONFIGURE_VALUE_INT,       {.value_int = 1} },
 		{ "SupportHDR",           CONFIGURE_VALUE_INT_ARRAY, {NULL} },
 		{ "SupportZSL",           CONFIGURE_VALUE_INT,       {.value_int = FALSE} },
+		{ "FrameStabilityCount",  CONFIGURE_VALUE_INT,       {.value_int = 0} },
 	};
 
 	/* [Detect] matching table */

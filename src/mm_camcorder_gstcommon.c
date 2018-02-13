@@ -1481,12 +1481,11 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 }
 
 
-int _mmcamcorder_vframe_stablize(MMHandleType handle)
+int _mmcamcorder_video_frame_stabilize(MMHandleType handle, int cmd)
 {
+	int category = 0;
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 	_MMCamcorderSubContext *sc = NULL;
-
-	_mmcam_dbg_log("%d", _MMCAMCORDER_CAMSTABLE_COUNT);
 
 	mmf_return_val_if_fail(hcamcorder, MM_ERROR_CAMCORDER_NOT_INITIALIZED);
 
@@ -1494,8 +1493,23 @@ int _mmcamcorder_vframe_stablize(MMHandleType handle)
 
 	mmf_return_val_if_fail(sc, MM_ERROR_CAMCORDER_NOT_INITIALIZED);
 
-	if (sc->cam_stability_count != _MMCAMCORDER_CAMSTABLE_COUNT)
-		sc->cam_stability_count = _MMCAMCORDER_CAMSTABLE_COUNT;
+	switch (cmd) {
+	case _MMCamcorder_CMD_PREVIEW_START:
+		category = CONFIGURE_CATEGORY_CTRL_CAMERA;
+		break;
+	case _MMCamcorder_CMD_CAPTURE:
+		category = CONFIGURE_CATEGORY_CTRL_CAPTURE;
+		break;
+	default:
+		_mmcam_dbg_warn("unknown command : %d", cmd);
+		return MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
+	}
+
+	_mmcamcorder_conf_get_value_int(handle, hcamcorder->conf_ctrl,
+		category, "FrameStabilityCount", &sc->frame_stability_count);
+
+	_mmcam_dbg_log("[cmd %d] frame stability count : %d",
+		cmd, sc->frame_stability_count);
 
 	return MM_ERROR_NONE;
 }
@@ -1587,9 +1601,9 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 			_mmcam_dbg_log("Drop video frame by drop_vframe");
 			return GST_PAD_PROBE_DROP;
 		}
-	} else if (sc->cam_stability_count > 0) {
-		sc->cam_stability_count--;
-		_mmcam_dbg_log("Drop video frame by cam_stability_count");
+	} else if (sc->frame_stability_count > 0) {
+		sc->frame_stability_count--;
+		_mmcam_dbg_log("Drop video frame by frame_stability_count");
 		return GST_PAD_PROBE_DROP;
 	}
 

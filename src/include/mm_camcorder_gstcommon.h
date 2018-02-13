@@ -162,7 +162,7 @@ bool _mmcamcorder_recreate_decoder_for_encoded_preview(MMHandleType handle);
 
 /* etc */
 int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element *VideosinkElement);
-int _mmcamcorder_vframe_stablize(MMHandleType handle);
+int _mmcamcorder_video_frame_stabilize(MMHandleType handle, int cmd);
 gboolean _mmcamcorder_get_device_info(MMHandleType handle);
 int _mmcamcorder_get_eos_message(MMHandleType handle);
 void _mmcamcorder_remove_element_handle(MMHandleType handle, void *element, int first_elem, int last_elem);

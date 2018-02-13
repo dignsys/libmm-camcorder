@@ -530,6 +530,9 @@ int _mmcamcorder_image_cmd_capture(MMHandleType handle)
 
 			info->resolution_change = TRUE;
 
+			/* set frame stability count for capture */
+			_mmcamcorder_video_frame_stabilize(handle, _MMCamcorder_CMD_CAPTURE);
+
 			/* make pipeline state as PLAYING */
 			ret = _mmcamcorder_gst_set_state(handle, sc->element[_MMCAMCORDER_MAIN_PIPE].gst, GST_STATE_PLAYING);
 			if (ret != MM_ERROR_NONE) {
@@ -651,8 +654,6 @@ int _mmcamcorder_image_cmd_preview_start(MMHandleType handle)
 	info->next_shot_time = 0;
 	info->multi_shot_stop = TRUE;
 	info->capturing = FALSE;
-
-	_mmcamcorder_vframe_stablize(handle);
 
 	current_state = _mmcamcorder_get_state(handle);
 	_mmcam_dbg_log("current state [%d]", current_state);
@@ -783,6 +784,9 @@ int _mmcamcorder_image_cmd_preview_start(MMHandleType handle)
 					goto cmd_error;
 				}
 
+				/* set frame stability count for preview */
+				_mmcamcorder_video_frame_stabilize(handle, _MMCamcorder_CMD_PREVIEW_START);
+
 				ret = _mmcamcorder_gst_set_state(handle, pipeline, GST_STATE_PLAYING);
 				if (ret != MM_ERROR_NONE)
 					goto cmd_error;
@@ -800,6 +804,9 @@ int _mmcamcorder_image_cmd_preview_start(MMHandleType handle)
 
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_QUE].gst, "empty-buffers", FALSE);
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_QUE].gst, "empty-buffers", FALSE);
+
+		/* set frame stability count for preview */
+		_mmcamcorder_video_frame_stabilize(handle, _MMCamcorder_CMD_PREVIEW_START);
 
 		traceBegin(TTRACE_TAG_CAMERA, "MMCAMCORDER:START:SET_PLAYING_TO_PIPELINE");
 

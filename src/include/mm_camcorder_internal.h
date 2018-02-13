@@ -681,7 +681,7 @@ typedef struct {
 	bool isMaxtimePausing;                  /**< Because of time limit, pipeline is paused. */
 	int element_num;                        /**< count of element */
 	int encode_element_num;                 /**< count of encode element */
-	int cam_stability_count;                /**< camsensor stability count. the count of frame will drop */
+	int frame_stability_count;              /**< camsensor stability count. the count of frame will drop */
 	GstClockTime pipeline_time;             /**< current time of Gstreamer Pipeline */
 	GstClockTime pause_time;                /**< amount of time while pipeline is in PAUSE state.*/
 	GstClockTime stillshot_time;            /**< pipeline time of capturing moment*/

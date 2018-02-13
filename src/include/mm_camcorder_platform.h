@@ -135,7 +135,6 @@ extern "C" {
 #define MMF_CROP_CIF_BOTTOM			0
 
 /* Camera etc */
-#define _MMCAMCORDER_CAMSTABLE_COUNT		0		/* stablize count of camsensor */
 #define _MMCAMCORDER_MINIMUM_SPACE		(512*1024)      /* byte */
 #define _MMCAMCORDER_MMS_MARGIN_SPACE		(512)           /* byte */
 
