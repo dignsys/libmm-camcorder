@@ -1336,16 +1336,16 @@ gboolean _mmcamcorder_send_message(MMHandleType handle, _MMCamcorderMsgItem *dat
 		MMCamFaceDetectInfo *cam_fd_info = (MMCamFaceDetectInfo *)data->param.data;
 		if (cam_fd_info) {
 			SAFE_G_FREE(cam_fd_info->face_info);
-			SAFE_G_FREE(cam_fd_info);
-			data->param.size = 0;
+			data->param.data = NULL;
+			g_free(cam_fd_info);
 		}
 	} else if (data->id == MM_MESSAGE_CAMCORDER_VIDEO_CAPTURED || data->id == MM_MESSAGE_CAMCORDER_AUDIO_CAPTURED) {
 		MMCamRecordingReport *report = (MMCamRecordingReport *)data->param.data;
 		if (report) {
 			SAFE_G_FREE(report->recording_filename);
 			data->param.data = NULL;
+			g_free(report);
 		}
-		SAFE_G_FREE(report);
 	}
 #endif /* _MMCAMCORDER_ENABLE_IDLE_MESSAGE_CALLBACK */
 
@@ -1716,15 +1716,15 @@ gboolean _mmcamcorder_link_elements(GList *element_list)
 }
 
 gboolean _mmcamcorder_resize_frame(unsigned char *src_data, unsigned int src_width, unsigned int src_height, unsigned int src_length, int src_format,
-	unsigned char **dst_data, unsigned int *dst_width, unsigned int *dst_height, unsigned int *dst_length)
+	unsigned char **dst_data, unsigned int *dst_width, unsigned int *dst_height, size_t *dst_length)
 {
 	int ret = TRUE;
 	int mm_ret = MM_ERROR_NONE;
 	int input_format = MM_UTIL_COLOR_YUV420;
-	unsigned char *dst_tmp_data = NULL;
 
 	if (!src_data || !dst_data || !dst_width || !dst_height || !dst_length) {
-		_mmcam_dbg_err("something is NULL %p,%p,%p,%p,%p", src_data, dst_data, dst_width, dst_height, dst_length);
+		_mmcam_dbg_err("something is NULL %p,%p,%p,%p,%p",
+			src_data, dst_data, dst_width, dst_height, dst_length);
 		return FALSE;
 	}
 
@@ -1755,32 +1755,16 @@ gboolean _mmcamcorder_resize_frame(unsigned char *src_data, unsigned int src_wid
 
 	_mmcam_dbg_log("src size %dx%d -> dst size %dx%d", src_width, src_height, *dst_width, *dst_height);
 
-	/* get length of resized image */
-	mm_ret = mm_util_get_image_size(input_format, *dst_width, *dst_height, dst_length);
-	if (mm_ret != MM_ERROR_NONE) {
-		GST_ERROR("mm_util_get_image_size failed 0x%x", ret);
-		return FALSE;
-	}
-
-	_mmcam_dbg_log("dst_length : %d", *dst_length);
-
-	dst_tmp_data = (unsigned char *)malloc(*dst_length);
-	if (dst_tmp_data == NULL) {
-		_mmcam_dbg_err("failed to alloc dst_thumb_size(size %d)", *dst_length);
-		return FALSE;
-	}
-
-	mm_ret = mm_util_resize_image(src_data, src_width, src_height, input_format, dst_tmp_data, dst_width, dst_height);
+	mm_ret = mm_util_resize_image(src_data, src_width, src_height, input_format,
+		*dst_width, *dst_height, dst_data, dst_width, dst_height, dst_length);
 
 	if (mm_ret != MM_ERROR_NONE) {
 		GST_ERROR("mm_util_resize_image failed 0x%x", ret);
-		free(dst_tmp_data);
 		return FALSE;
 	}
 
-	*dst_data = dst_tmp_data;
-
-	_mmcam_dbg_log("resize done %p, %dx%d", *dst_data, *dst_width, *dst_height);
+	_mmcam_dbg_log("resize done %dx%d -> %dx%d, %p, length %zu",
+		src_width, src_height, *dst_width, *dst_height, *dst_data, *dst_length);
 
 	return TRUE;
 }

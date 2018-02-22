@@ -1404,9 +1404,9 @@ static void __mmcamcorder_image_capture_cb(GstElement *element, GstSample *sampl
 
 		/* encode thumbnail */
 		if (encode_src.data) {
+			size_t thumb_length = 0;
 			unsigned int thumb_width = 0;
 			unsigned int thumb_height = 0;
-			unsigned int thumb_length = 0;
 			unsigned char *thumb_raw_data = NULL;
 
 			/* encode image */

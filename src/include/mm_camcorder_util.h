@@ -276,7 +276,7 @@ gboolean _mmcamcorder_encode_jpeg(void *src_data, unsigned int src_width, unsign
 	void **result_data, unsigned int *result_length);
 /* resize */
 gboolean _mmcamcorder_resize_frame(unsigned char *src_data, unsigned int src_width, unsigned int src_height, unsigned int src_length, int src_format,
-	unsigned char **dst_data, unsigned int *dst_width, unsigned int *dst_height, unsigned int *dst_length);
+	unsigned char **dst_data, unsigned int *dst_width, unsigned int *dst_height, size_t *dst_length);
 gboolean _mmcamcorder_downscale_UYVYorYUYV(unsigned char *src, unsigned int src_width, unsigned int src_height,
 	unsigned char **dst, unsigned int dst_width, unsigned int dst_height);
 
