@@ -1209,18 +1209,8 @@ int _mmcamcorder_video_handle_eos(MMHandleType handle)
 
 	_mmcam_dbg_err("");
 
-	if (hcamcorder->state_change_by_system != _MMCAMCORDER_STATE_CHANGE_BY_FOCUS) {
-		/* Play record stop sound */
-		_mmcamcorder_sound_solo_play(handle, _MMCAMCORDER_SAMPLE_SOUND_NAME_REC_STOP, FALSE);
-	} else {
-		_mmcam_dbg_warn("Play stop sound through pulseaudio");
-
-		_mmcamcorder_sound_init(handle);
-
-		_mmcamcorder_sound_play((MMHandleType)hcamcorder, _MMCAMCORDER_SAMPLE_SOUND_NAME_REC_STOP, TRUE);
-
-		_mmcamcorder_sound_finalize(handle);
-	}
+	/* Play record stop sound */
+	_mmcamcorder_sound_solo_play(handle, _MMCAMCORDER_SAMPLE_SOUND_NAME_REC_STOP, FALSE);
 
 	/* remove blocking part */
 	MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_ENCBIN].gst, "block", FALSE);
@@ -1347,10 +1337,8 @@ int _mmcamcorder_video_handle_eos(MMHandleType handle)
 	info->filesize = 0;
 	info->b_commiting = FALSE;
 
-	if (hcamcorder->state_change_by_system != _MMCAMCORDER_STATE_CHANGE_BY_FOCUS) {
-		/* check recording stop sound */
-		_mmcamcorder_sound_solo_play_wait(handle);
-	}
+	/* check recording stop sound */
+	_mmcamcorder_sound_solo_play_wait(handle);
 
 	_mmcam_dbg_err("_MMCamcorder_CMD_COMMIT : end");
 

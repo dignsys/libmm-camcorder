@@ -22,8 +22,6 @@
 /*=======================================================================================
 |  INCLUDE FILES									|
 =======================================================================================*/
-#include <mm_sound.h>
-#include <mm_sound_private.h>
 #include "mm_camcorder_internal.h"
 #include "mm_camcorder_sound.h"
 

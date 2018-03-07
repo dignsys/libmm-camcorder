@@ -1512,15 +1512,15 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			NULL,
 		},
 		{
-			MM_CAM_PID_FOR_SOUND_FOCUS,
-			"pid-for-sound-focus",
+			MM_CAM_CLIENT_PID,
+			"client-pid",
 			MMF_VALUE_TYPE_INT,
 			MM_ATTRS_FLAG_RW,
 			{(void*)0},
 			MM_ATTRS_VALID_TYPE_INT_RANGE,
 			{.int_min = 0},
 			{.int_max = _MMCAMCORDER_MAX_INT},
-			_mmcamcorder_commit_pid_for_sound_focus,
+			NULL,
 		},
 		{
 			MM_CAM_ROOT_DIRECTORY,
@@ -4528,100 +4528,6 @@ bool _mmcamcorder_commit_encoded_preview_gop_interval(MMHandleType handle, int a
 }
 
 
-bool _mmcamcorder_commit_pid_for_sound_focus(MMHandleType handle, int attr_idx, const mmf_value_t *value)
-{
-	int new_pid = 0;
-	int ret = 0;
-	int current_state = MM_CAMCORDER_STATE_NONE;
-	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
-
-	mmf_return_val_if_fail(hcamcorder && value, FALSE);
-
-	/* state check */
-	current_state = _mmcamcorder_get_state(handle);
-	if (current_state > MM_CAMCORDER_STATE_NULL) {
-		_mmcam_dbg_log("invalid state %d", current_state);
-		hcamcorder->error_code = MM_ERROR_CAMCORDER_INVALID_STATE;
-		return FALSE;
-	}
-
-	new_pid = value->value.i_val;
-
-	_mmcam_dbg_warn("Commit : pid %d, current focus id %d, subscribe id %u",
-		new_pid, hcamcorder->sound_focus_id, hcamcorder->sound_focus_subscribe_id);
-
-	/* unregister sound focus and unsubscribe sound signal before set new one */
-	if (hcamcorder->sound_focus_id > 0) {
-		mm_sound_unregister_focus(hcamcorder->sound_focus_id);
-		_mmcam_dbg_log("unregister sound focus done");
-		hcamcorder->sound_focus_id = 0;
-	}
-
-	if (hcamcorder->sound_focus_subscribe_id > 0) {
-		mm_sound_unsubscribe_signal(hcamcorder->sound_focus_subscribe_id);
-		_mmcam_dbg_log("unsubscribe sound signal done");
-		hcamcorder->sound_focus_subscribe_id = 0;
-	}
-
-	ret = _mm_session_util_read_information(new_pid, &hcamcorder->session_type, &hcamcorder->session_flags);
-	if (ret == MM_ERROR_NONE) {
-		if (hcamcorder->session_type == MM_SESSION_TYPE_REPLACED_BY_STREAM) {
-			hcamcorder->sound_focus_register = FALSE;
-			_mmcam_dbg_warn("no need to use sound focus internally");
-		} else {
-			/* check my session type : allow only media & call series here */
-			if ((hcamcorder->session_type != MM_SESSION_TYPE_MEDIA) &&
-				(hcamcorder->session_type != MM_SESSION_TYPE_MEDIA_RECORD) &&
-				(hcamcorder->session_type != MM_SESSION_TYPE_CALL) &&
-				(hcamcorder->session_type != MM_SESSION_TYPE_VIDEOCALL) &&
-				(hcamcorder->session_type != MM_SESSION_TYPE_VOIP)) {
-				_mmcam_dbg_err("Blocked by session policy, my session_type[%s]", hcamcorder->session_type);
-				hcamcorder->error_code = MM_ERROR_POLICY_BLOCKED;
-				return FALSE;
-			}
-
-			ret = mm_sound_focus_get_id(&hcamcorder->sound_focus_id);
-			if (ret != MM_ERROR_NONE) {
-				_mmcam_dbg_err("mm_sound_focus_get_id failed");
-				hcamcorder->error_code = MM_ERROR_POLICY_BLOCKED;
-				return FALSE;
-			}
-
-			ret = mm_sound_register_focus_for_session(hcamcorder->sound_focus_id,
-				new_pid, "media", _mmcamcorder_sound_focus_cb, hcamcorder);
-			if (ret != MM_ERROR_NONE) {
-				_mmcam_dbg_err("mm_sound_register_focus_for_session failed 0x%x", ret);
-				hcamcorder->sound_focus_id = 0;
-				hcamcorder->error_code = MM_ERROR_POLICY_BLOCKED;
-				return FALSE;
-			}
-
-			hcamcorder->sound_focus_register = TRUE;
-
-			_mmcam_dbg_log("mm_sound_register_focus_for_session done - id %d, session type %d, flags 0x%x",
-				hcamcorder->sound_focus_id, hcamcorder->session_type, hcamcorder->session_flags);
-		}
-	} else {
-		hcamcorder->session_type = 0;
-		hcamcorder->session_flags = 0;
-		hcamcorder->sound_focus_register = TRUE;
-
-		_mmcam_dbg_warn("read session info failed. sound focus watch cb will be set.");
-
-		ret = mm_sound_subscribe_signal_for_daemon(MM_SOUND_SIGNAL_RELEASE_INTERNAL_FOCUS,
-			new_pid, &hcamcorder->sound_focus_subscribe_id,
-			(mm_sound_signal_callback)_mmcamcorder_sound_signal_callback, (void*)hcamcorder);
-		if (ret != MM_ERROR_NONE) {
-			_mmcam_dbg_err("subscribe sound signal failed [0x%x]", ret);
-			hcamcorder->error_code = MM_ERROR_POLICY_BLOCKED;
-			return FALSE;
-		}
-	}
-
-	return TRUE;
-}
-
-
 bool _mmcamcorder_commit_sound_stream_info(MMHandleType handle, int attr_idx, const mmf_value_t *value)
 {
 	int stream_index = 0;
@@ -4643,9 +4549,6 @@ bool _mmcamcorder_commit_sound_stream_info(MMHandleType handle, int attr_idx, co
 		_mmcam_dbg_err("invalid stream index %d", stream_index);
 		return FALSE;
 	}
-
-	/* unset watch callback if existed */
-	_mmcamcorder_sound_signal_callback(MM_SOUND_SIGNAL_RELEASE_INTERNAL_FOCUS, 1, (void *)handle);
 
 	sc = MMF_CAMCORDER_SUBCONTEXT(handle);
 	if (!sc || !sc->encode_element ||

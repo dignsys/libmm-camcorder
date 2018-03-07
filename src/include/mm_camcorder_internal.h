@@ -34,9 +34,6 @@
 #include <mm_attrs.h>
 #include <mm_attrs_private.h>
 #include <mm_message.h>
-#include <mm_session.h>
-#include <mm_session_private.h>
-#include <mm_sound_focus.h>
 #include <vconf.h>
 #include <gst/video/video-format.h>
 #include <ttrace.h>
@@ -395,11 +392,11 @@ do { \
 #define _MMCAMCORDER_CMD_WAIT_UNTIL(handle, end_time) g_cond_wait_until(&_MMCAMCORDER_GET_CMD_COND(handle), &_MMCAMCORDER_GET_CMD_LOCK(handle), end_time)
 #define _MMCAMCORDER_CMD_SIGNAL(handle)               g_cond_signal(&_MMCAMCORDER_GET_CMD_COND(handle));
 
-/* for ASM */
-#define _MMCAMCORDER_GET_ASM_LOCK(handle)           (_MMCAMCORDER_CAST_MTSAFE(handle).asm_lock)
-#define _MMCAMCORDER_LOCK_ASM(handle)               _MMCAMCORDER_LOCK_FUNC(_MMCAMCORDER_GET_ASM_LOCK(handle))
-#define _MMCAMCORDER_TRYLOCK_ASM(handle)            _MMCAMCORDER_TRYLOCK_FUNC(_MMCAMCORDER_GET_ASM_LOCK(handle))
-#define _MMCAMCORDER_UNLOCK_ASM(handle)             _MMCAMCORDER_UNLOCK_FUNC(_MMCAMCORDER_GET_ASM_LOCK(handle))
+/* for interruption */
+#define _MMCAMCORDER_GET_INTERRUPT_LOCK(handle)           (_MMCAMCORDER_CAST_MTSAFE(handle).interrupt_lock)
+#define _MMCAMCORDER_LOCK_INTERRUPT(handle)               _MMCAMCORDER_LOCK_FUNC(_MMCAMCORDER_GET_INTERRUPT_LOCK(handle))
+#define _MMCAMCORDER_TRYLOCK_INTERRUPT(handle)            _MMCAMCORDER_TRYLOCK_FUNC(_MMCAMCORDER_GET_INTERRUPT_LOCK(handle))
+#define _MMCAMCORDER_UNLOCK_INTERRUPT(handle)             _MMCAMCORDER_UNLOCK_FUNC(_MMCAMCORDER_GET_INTERRUPT_LOCK(handle))
 
 /* for state change */
 #define _MMCAMCORDER_GET_STATE_LOCK(handle)         (_MMCAMCORDER_CAST_MTSAFE(handle).state_lock)
@@ -611,7 +608,6 @@ typedef enum {
  */
 typedef enum {
 	_MMCAMCORDER_STATE_CHANGE_NORMAL = 0,
-	_MMCAMCORDER_STATE_CHANGE_BY_FOCUS,
 	_MMCAMCORDER_STATE_CHANGE_BY_RM,
 	_MMCAMCORDER_STATE_CHANGE_BY_DPM,
 	_MMCAMCORDER_STATE_CHANGE_BY_STORAGE
@@ -649,7 +645,7 @@ typedef struct {
 	GCond cond;                     /**< Condition (for general use) */
 	GMutex cmd_lock;                /**< Mutex (for command) */
 	GCond cmd_cond;                 /**< Condition (for command) */
-	GMutex asm_lock;                /**< Mutex (for ASM) */
+	GMutex interrupt_lock;          /**< Mutex (for interruption) */
 	GMutex state_lock;              /**< Mutex (for state change) */
 	GMutex gst_state_lock;          /**< Mutex (for gst pipeline state change) */
 	GMutex gst_encode_state_lock;   /**< Mutex (for gst encode pipeline state change) */
@@ -784,14 +780,7 @@ typedef struct mmf_camcorder {
 	int capture_sound_count;                                /**< count for capture sound */
 	char *root_directory;                                   /**< Root directory for device */
 	int resolution_changed;                                 /**< Flag for preview resolution change */
-	int sound_focus_register;                               /**< Use sound focus internally */
-	int sound_focus_id;                                     /**< id for sound focus */
-	int sound_focus_watch_id;                               /**< id for sound focus watch */
-	unsigned int sound_focus_subscribe_id;                  /**< subscribe id for sound focus signal */
 	int interrupt_code;                                     /**< Interrupt code */
-	int acquired_focus;                                     /**< Current acquired focus */
-	int session_type;                                       /**< Session type */
-	int session_flags;                                      /**< Session flags */
 	int recreate_decoder;                                   /**< Flag of decoder element recreation for encoded preview format */
 
 	_MMCamcorderInfoConverting caminfo_convert[CAMINFO_CONVERT_NUM];        /**< converting structure of camera info */
@@ -1295,14 +1284,8 @@ void _mmcamcorder_video_current_framerate_init(MMHandleType handle);
 int _mmcamcorder_video_current_framerate(MMHandleType handle);
 int _mmcamcorder_video_average_framerate(MMHandleType handle);
 
-/* sound focus related function */
+/* for stopping forcedly */
 void __mmcamcorder_force_stop(mmf_camcorder_t *hcamcorder, int state_change_by_system);
-void _mmcamcorder_sound_focus_cb(int id, mm_sound_focus_type_e focus_type,
-	mm_sound_focus_state_e focus_state, const char *reason_for_change,
-	int option, const char *additional_info, void *user_data);
-void _mmcamcorder_sound_focus_watch_cb(int id, mm_sound_focus_type_e focus_type, mm_sound_focus_state_e focus_state,
-	const char *reason_for_change, const char *additional_info, void *user_data);
-void _mmcamcorder_sound_signal_callback(mm_sound_signal_name_t signal, int value, void *user_data);
 
 /* device policy manager */
 void _mmcamcorder_dpm_camera_policy_changed_cb(const char *name, const char *value, void *user_data);

@@ -27,7 +27,6 @@
 ========================================================================================*/
 #include <gst/gst.h>
 #include <mm_types.h>
-#include <mm_sound.h>
 
 #ifdef __cplusplus
 extern "C" {

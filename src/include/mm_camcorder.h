@@ -1238,9 +1238,9 @@ extern "C" {
 #define MMCAM_DISPLAY_SOCKET_PATH               "display-socket-path"
 
 /**
- * PID for sound focus
+ * Client PID
  */
-#define MMCAM_PID_FOR_SOUND_FOCUS               "pid-for-sound-focus"
+#define MMCAM_CLIENT_PID                        "client-pid"
 
 /**
  * Root directory of application
@@ -2223,8 +2223,6 @@ int mm_camcorder_realize(MMHandleType camcorder);
  *  Most important resource that is released here is gstreamer pipeline of mm_camcorder.
  *  Because most of resources, such as camera device, video display device, and audio I/O device, are operating on the gstreamer pipeline,
  *  this function should be called to release its resources.
- *  Moreover, mm_camcorder is controlled by audio session manager. If an user doesn't call this function when he want to release mm_camcorder,
- *  other multimedia frameworks may face session problem. For more detail information, please refer mm_session module.
  *
  *	@param[in]	camcorder	A handle of camcorder.
  *	@return		This function returns zero(MM_ERROR_NONE) on success, or negative value with error code.\n

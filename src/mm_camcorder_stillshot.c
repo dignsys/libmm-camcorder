@@ -26,7 +26,6 @@
 #include <sys/time.h>
 #include <sys/times.h>
 #include <gst/video/cameracontrol.h>
-#include <mm_sound.h>
 #include "mm_camcorder_internal.h"
 #include "mm_camcorder_stillshot.h"
 #include "mm_camcorder_exifinfo.h"
@@ -385,7 +384,7 @@ int _mmcamcorder_image_cmd_capture(MMHandleType handle)
 		info->next_shot_time = 0;
 		info->multi_shot_stop = FALSE;
 
-		/* sound init to pause other session */
+		/* sound init */
 		_mmcamcorder_sound_init(handle);
 	}
 

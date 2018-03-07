@@ -87,7 +87,7 @@ int mm_camcorder_realize(MMHandleType camcorder)
 
 	_mmcam_dbg_err("");
 
-	_MMCAMCORDER_LOCK_ASM(camcorder);
+	_MMCAMCORDER_LOCK_INTERRUPT(camcorder);
 
 	traceBegin(TTRACE_TAG_CAMERA, "MMCAMCORDER:REALIZE");
 
@@ -95,7 +95,7 @@ int mm_camcorder_realize(MMHandleType camcorder)
 
 	traceEnd(TTRACE_TAG_CAMERA);
 
-	_MMCAMCORDER_UNLOCK_ASM(camcorder);
+	_MMCAMCORDER_UNLOCK_INTERRUPT(camcorder);
 
 	_mmcam_dbg_err("END");
 
@@ -111,7 +111,7 @@ int mm_camcorder_unrealize(MMHandleType camcorder)
 
 	_mmcam_dbg_err("");
 
-	_MMCAMCORDER_LOCK_ASM(camcorder);
+	_MMCAMCORDER_LOCK_INTERRUPT(camcorder);
 
 	traceBegin(TTRACE_TAG_CAMERA, "MMCAMCORDER:UNREALIZE");
 
@@ -119,7 +119,7 @@ int mm_camcorder_unrealize(MMHandleType camcorder)
 
 	traceEnd(TTRACE_TAG_CAMERA);
 
-	_MMCAMCORDER_UNLOCK_ASM(camcorder);
+	_MMCAMCORDER_UNLOCK_INTERRUPT(camcorder);
 
 	_mmcam_dbg_err("END");
 
@@ -135,7 +135,7 @@ int mm_camcorder_start(MMHandleType camcorder)
 
 	_mmcam_dbg_err("");
 
-	_MMCAMCORDER_LOCK_ASM(camcorder);
+	_MMCAMCORDER_LOCK_INTERRUPT(camcorder);
 
 	traceBegin(TTRACE_TAG_CAMERA, "MMCAMCORDER:START");
 
@@ -143,7 +143,7 @@ int mm_camcorder_start(MMHandleType camcorder)
 
 	traceEnd(TTRACE_TAG_CAMERA);
 
-	_MMCAMCORDER_UNLOCK_ASM(camcorder);
+	_MMCAMCORDER_UNLOCK_INTERRUPT(camcorder);
 
 	_mmcam_dbg_err("END");
 
@@ -159,7 +159,7 @@ int mm_camcorder_stop(MMHandleType camcorder)
 
 	_mmcam_dbg_err("");
 
-	_MMCAMCORDER_LOCK_ASM(camcorder);
+	_MMCAMCORDER_LOCK_INTERRUPT(camcorder);
 
 	traceBegin(TTRACE_TAG_CAMERA, "MMCAMCORDER:STOP");
 
@@ -167,7 +167,7 @@ int mm_camcorder_stop(MMHandleType camcorder)
 
 	traceEnd(TTRACE_TAG_CAMERA);
 
-	_MMCAMCORDER_UNLOCK_ASM(camcorder);
+	_MMCAMCORDER_UNLOCK_INTERRUPT(camcorder);
 
 	_mmcam_dbg_err("END");
 
@@ -183,11 +183,11 @@ int mm_camcorder_capture_start(MMHandleType camcorder)
 
 	_mmcam_dbg_err("");
 
-	_MMCAMCORDER_LOCK_ASM(camcorder);
+	_MMCAMCORDER_LOCK_INTERRUPT(camcorder);
 
 	error = _mmcamcorder_capture_start(camcorder);
 
-	_MMCAMCORDER_UNLOCK_ASM(camcorder);
+	_MMCAMCORDER_UNLOCK_INTERRUPT(camcorder);
 
 	_mmcam_dbg_err("END");
 
@@ -203,11 +203,11 @@ int mm_camcorder_capture_stop(MMHandleType camcorder)
 
 	_mmcam_dbg_err("");
 
-	_MMCAMCORDER_LOCK_ASM(camcorder);
+	_MMCAMCORDER_LOCK_INTERRUPT(camcorder);
 
 	error = _mmcamcorder_capture_stop(camcorder);
 
-	_MMCAMCORDER_UNLOCK_ASM(camcorder);
+	_MMCAMCORDER_UNLOCK_INTERRUPT(camcorder);
 
 	_mmcam_dbg_err("END");
 
@@ -223,11 +223,11 @@ int mm_camcorder_record(MMHandleType camcorder)
 
 	_mmcam_dbg_err("");
 
-	_MMCAMCORDER_LOCK_ASM(camcorder);
+	_MMCAMCORDER_LOCK_INTERRUPT(camcorder);
 
 	error = _mmcamcorder_record(camcorder);
 
-	_MMCAMCORDER_UNLOCK_ASM(camcorder);
+	_MMCAMCORDER_UNLOCK_INTERRUPT(camcorder);
 
 	_mmcam_dbg_err("END");
 
@@ -243,11 +243,11 @@ int mm_camcorder_pause(MMHandleType camcorder)
 
 	_mmcam_dbg_err("");
 
-	_MMCAMCORDER_LOCK_ASM(camcorder);
+	_MMCAMCORDER_LOCK_INTERRUPT(camcorder);
 
 	error = _mmcamcorder_pause(camcorder);
 
-	_MMCAMCORDER_UNLOCK_ASM(camcorder);
+	_MMCAMCORDER_UNLOCK_INTERRUPT(camcorder);
 
 	_mmcam_dbg_err("END");
 
@@ -263,11 +263,11 @@ int mm_camcorder_commit(MMHandleType camcorder)
 
 	_mmcam_dbg_err("");
 
-	_MMCAMCORDER_LOCK_ASM(camcorder);
+	_MMCAMCORDER_LOCK_INTERRUPT(camcorder);
 
 	error = _mmcamcorder_commit(camcorder);
 
-	_MMCAMCORDER_UNLOCK_ASM(camcorder);
+	_MMCAMCORDER_UNLOCK_INTERRUPT(camcorder);
 
 	_mmcam_dbg_err("END");
 
@@ -283,11 +283,11 @@ int mm_camcorder_cancel(MMHandleType camcorder)
 
 	_mmcam_dbg_err("");
 
-	_MMCAMCORDER_LOCK_ASM(camcorder);
+	_MMCAMCORDER_LOCK_INTERRUPT(camcorder);
 
 	error = _mmcamcorder_cancel(camcorder);
 
-	_MMCAMCORDER_UNLOCK_ASM(camcorder);
+	_MMCAMCORDER_UNLOCK_INTERRUPT(camcorder);
 
 	_mmcam_dbg_err("END");
 
