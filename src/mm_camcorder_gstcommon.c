@@ -260,9 +260,6 @@ int _mmcamcorder_create_preview_elements(MMHandleType handle)
 	 */
 	_MMCAMCORDER_ELEMENT_MAKE(sc, sc->element, _MMCAMCORDER_VIDEOSRC_SRC, videosrc_name, "videosrc_src", element_list, err);
 
-	/* Set video device index */
-	MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, "camera-id", input_index->default_value);
-
 	_MMCAMCORDER_ELEMENT_MAKE(sc, sc->element, _MMCAMCORDER_VIDEOSRC_FILT, "capsfilter", "videosrc_filter", element_list, err);
 
 	/* init high-speed-fps */
@@ -290,6 +287,9 @@ int _mmcamcorder_create_preview_elements(MMHandleType handle)
 
 	/* Set basic infomation of videosrc element */
 	_mmcamcorder_conf_set_value_element_property(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, VideosrcElement);
+
+	/* Set video device index */
+	MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, "camera-id", input_index->default_value);
 
 	/* make demux and decoder for H264 stream from videosrc */
 	if (sc->info_image->preview_format == MM_PIXEL_FORMAT_ENCODED_H264) {
