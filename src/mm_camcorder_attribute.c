@@ -3959,7 +3959,6 @@ bool _mmcamcorder_commit_display_geometry_method(MMHandleType handle, int attr_i
 bool _mmcamcorder_commit_display_rect(MMHandleType handle, int attr_idx, const mmf_value_t *value)
 {
 	int current_state = MM_CAMCORDER_STATE_NONE;
-	int method = 0;
 	int ret = MM_ERROR_NONE;
 	const char *videosink_name = NULL;
 
@@ -3982,15 +3981,6 @@ bool _mmcamcorder_commit_display_rect(MMHandleType handle, int attr_idx, const m
 	}
 
 	sc = MMF_CAMCORDER_SUBCONTEXT(handle);
-
-	/* check current method */
-	mm_camcorder_get_attributes(handle, NULL,
-		MMCAM_DISPLAY_GEOMETRY_METHOD, &method,
-		NULL);
-	if (method != MM_DISPLAY_METHOD_CUSTOM_ROI) {
-		_mmcam_dbg_log("current method[%d] is not supported rect", method);
-		return FALSE;
-	}
 
 	/* Get videosink name */
 	_mmcamcorder_conf_get_value_element_name(sc->VideosinkElement, &videosink_name);
