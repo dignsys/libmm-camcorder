@@ -899,7 +899,7 @@ int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebin
 			_mmcam_dbg_err("failed to get attributes [0x%x]", err);
 		}
 
-		return err;
+		goto pipeline_creation_error;
 	}
 
 	_mmcam_dbg_log("Profile[%d]", profile);
