@@ -1,7 +1,7 @@
 Name:       libmm-camcorder
 Summary:    Camera and recorder library
 Version:    0.10.157
-Release:    0
+Release:    1
 Group:      Multimedia/Libraries
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
@@ -20,11 +20,11 @@ BuildRequires:  pkgconfig(gstreamer-app-1.0)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(libtbm)
 BuildRequires:  pkgconfig(storage)
-%if "%{TIZEN_PRODUCT_TV}" != "1"
-BuildRequires:  pkgconfig(mm-resource-manager)
-%else
+%if "%{tizen_profile_name}" == "tv"
 BuildRequires:  pkgconfig(tv-resource-manager)
 BuildRequires:  pkgconfig(aul)
+%else
+BuildRequires:  pkgconfig(mm-resource-manager)
 %endif
 BuildRequires:  pkgconfig(ttrace)
 BuildRequires:  pkgconfig(libtzplatform-config)
@@ -53,11 +53,11 @@ Camera and recorder function supported library for development.
 export CFLAGS+=" -D_LARGEFILE64_SOURCE -DGST_USE_UNSTABLE_API -DSYSCONFDIR=\\\"%{_sysconfdir}\\\" -DTZ_SYS_ETC=\\\"%{TZ_SYS_ETC}\\\""
 ./autogen.sh
 %configure \
-%if "%{TIZEN_PRODUCT_TV}" != "1"
-	--enable-mm-resource-manager \
-%else
+%if "%{tizen_profile_name}" == "tv"
 	--enable-rm \
 	--enable-product-tv \
+%else
+	--enable-mm-resource-manager \
 %endif
 	--disable-static
 make %{?jobs:-j%jobs}
