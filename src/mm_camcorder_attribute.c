@@ -4613,7 +4613,7 @@ bool _mmcamcorder_commit_audio_replay_gain(MMHandleType handle, int attr_idx, co
 			return FALSE;
 		}
 
-		_mmcam_dbg_log("set reference level for replay gain : %ld dB", value->value.d_val);
+		_mmcam_dbg_log("set reference level for replay gain : %lf dB", value->value.d_val);
 	} else {
 		_mmcam_dbg_err("unknown attribute id %d", attr_idx);
 		return FALSE;
