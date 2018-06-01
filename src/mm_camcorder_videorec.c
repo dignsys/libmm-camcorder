@@ -559,7 +559,7 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 						&hcamcorder->video_encoder_resource);
 				if (ret != MM_RESOURCE_MANAGER_ERROR_NONE) {
 					_mmcam_dbg_err("could not prepare for encoder resource");
-					ret = MM_ERROR_CAMCORDER_INTERNAL;
+					ret = MM_ERROR_RESOURCE_INTERNAL;
 					_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 					goto _ERR_CAMCORDER_VIDEO_COMMAND;
 				}
@@ -570,10 +570,9 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 			/* acquire resources */
 			ret = mm_resource_manager_commit(hcamcorder->resource_manager);
 			if (ret != MM_RESOURCE_MANAGER_ERROR_NONE) {
-				_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
-
 				_mmcam_dbg_err("could not acquire resources");
-
+				ret = MM_ERROR_RESOURCE_INTERNAL;
+				_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 				goto _ERR_CAMCORDER_VIDEO_COMMAND;
 			}
 

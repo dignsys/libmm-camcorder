@@ -951,7 +951,7 @@ int _mmcamcorder_realize(MMHandleType handle)
 					&hcamcorder->camera_resource);
 			if (ret != MM_RESOURCE_MANAGER_ERROR_NONE) {
 				_mmcam_dbg_err("could not prepare for camera resource");
-				ret = MM_ERROR_CAMCORDER_INTERNAL;
+				ret = MM_ERROR_RESOURCE_INTERNAL;
 				_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 				goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 			}
@@ -968,7 +968,7 @@ int _mmcamcorder_realize(MMHandleType handle)
 						&hcamcorder->video_overlay_resource);
 				if (ret != MM_RESOURCE_MANAGER_ERROR_NONE) {
 					_mmcam_dbg_err("could not prepare for overlay resource");
-					ret = MM_ERROR_CAMCORDER_INTERNAL;
+					ret = MM_ERROR_RESOURCE_INTERNAL;
 					_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 					goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 				}
@@ -980,10 +980,9 @@ int _mmcamcorder_realize(MMHandleType handle)
 		/* acquire resources */
 		ret = mm_resource_manager_commit(hcamcorder->resource_manager);
 		if (ret != MM_RESOURCE_MANAGER_ERROR_NONE) {
-			_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
-
 			_mmcam_dbg_err("could not acquire resources");
-
+			ret = MM_ERROR_RESOURCE_INTERNAL;
+			_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 		}
 		_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
@@ -1001,7 +1000,7 @@ int _mmcamcorder_realize(MMHandleType handle)
 			iret = rm_register((rm_resource_cb)_mmcamcorder_rm_callback, (void*)hcamcorder, &(hcamcorder->rm_handle), &rci);
 			if (iret != RM_OK) {
 				_mmcam_dbg_err("rm_register fail");
-				ret = MM_ERROR_POLICY_BLOCKED;
+				ret = MM_ERROR_RESOURCE_INTERNAL;
 				goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 			}
 		}
@@ -1064,7 +1063,7 @@ int _mmcamcorder_realize(MMHandleType handle)
 		iret = rm_allocate_resources(hcamcorder->rm_handle, &(hcamcorder->request_resources), &hcamcorder->returned_devices);
 		if (iret != RM_OK) {
 			_mmcam_dbg_err("Resource allocation request failed");
-			ret = MM_ERROR_POLICY_BLOCKED;
+			ret = MM_ERROR_RESOURCE_INTERNAL;
 			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 		}
 #endif /* _MMCAMCORDER_RM_SUPPORT */
