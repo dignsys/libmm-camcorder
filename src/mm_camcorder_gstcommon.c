@@ -757,6 +757,7 @@ int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebin
 	int auto_audio_convert = 0;
 	int auto_audio_resample = 0;
 	int auto_color_space = 0;
+	int cap_format = MM_PIXEL_FORMAT_INVALID;
 	const char *gst_element_venc_name = NULL;
 	const char *gst_element_aenc_name = NULL;
 	const char *gst_element_ienc_name = NULL;
@@ -884,12 +885,18 @@ int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebin
 	_MMCAMCORDER_ELEMENT_MAKE(sc, sc->encode_element, _MMCAMCORDER_ENCSINK_ENCBIN, "encodebin", "encodesink_encbin", element_list, err);
 
 	/* check element availability */
-	err = mm_camcorder_get_attributes(handle, &err_name,
-		MMCAM_AUDIO_ENCODER, &audio_enc,
-		MMCAM_AUDIO_CHANNEL, &channel,
-		MMCAM_VIDEO_ENCODER_BITRATE, &v_bitrate,
-		MMCAM_AUDIO_ENCODER_BITRATE, &a_bitrate,
-		NULL);
+	if (profile == MM_CAMCORDER_ENCBIN_PROFILE_IMAGE) {
+		err = mm_camcorder_get_attributes(handle, &err_name,
+			MMCAM_CAPTURE_FORMAT, &cap_format,
+			NULL);
+	} else {
+		err = mm_camcorder_get_attributes(handle, &err_name,
+			MMCAM_AUDIO_ENCODER, &audio_enc,
+			MMCAM_AUDIO_CHANNEL, &channel,
+			MMCAM_VIDEO_ENCODER_BITRATE, &v_bitrate,
+			MMCAM_AUDIO_ENCODER_BITRATE, &a_bitrate,
+			NULL);
+	}
 
 	if (err != MM_ERROR_NONE) {
 		if (err_name) {
@@ -951,10 +958,12 @@ int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebin
 			goto pipeline_creation_error;
 		}
 
-		if (sc->info_image->preview_format == MM_PIXEL_FORMAT_ENCODED_H264)
-			gst_element_venc_name = "capsfilter";
-		else
+		if (sc->info_image->preview_format == MM_PIXEL_FORMAT_ENCODED_H264) {
+			/* set dummy element */
+			gst_element_venc_name = "identity";
+		} else {
 			_mmcamcorder_conf_get_value_element_name(VideoencElement, &gst_element_venc_name);
+		}
 
 		if (gst_element_venc_name) {
 			_mmcam_dbg_log("video encoder name [%s]", gst_element_venc_name);
@@ -1052,14 +1061,19 @@ int _mmcamcorder_create_encodesink_bin(MMHandleType handle, MMCamcorderEncodebin
 	}
 
 	if (profile == MM_CAMCORDER_ENCBIN_PROFILE_IMAGE) {
-		ImageencElement = _mmcamcorder_get_type_element(handle, MM_CAM_IMAGE_ENCODER);
-		if (!ImageencElement) {
-			_mmcam_dbg_err("Fail to get type element");
-			err = MM_ERROR_CAMCORDER_RESOURCE_CREATION;
-			goto pipeline_creation_error;
-		}
+		if (cap_format == MM_PIXEL_FORMAT_ENCODED) {
+			ImageencElement = _mmcamcorder_get_type_element(handle, MM_CAM_IMAGE_ENCODER);
+			if (!ImageencElement) {
+				_mmcam_dbg_err("Fail to get type element");
+				err = MM_ERROR_CAMCORDER_RESOURCE_CREATION;
+				goto pipeline_creation_error;
+			}
 
-		_mmcamcorder_conf_get_value_element_name(ImageencElement, &gst_element_ienc_name);
+			_mmcamcorder_conf_get_value_element_name(ImageencElement, &gst_element_ienc_name);
+		} else {
+			/* raw format - set dummy element */
+			gst_element_ienc_name = "identity";
+		}
 
 		MMCAMCORDER_G_OBJECT_SET_POINTER(sc->encode_element[_MMCAMCORDER_ENCSINK_ENCBIN].gst, "ienc-name", gst_element_ienc_name);
 		_MMCAMCORDER_ENCODEBIN_ELMGET(sc, _MMCAMCORDER_ENCSINK_IENC, "image-encode", err);

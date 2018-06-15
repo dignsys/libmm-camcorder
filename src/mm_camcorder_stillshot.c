@@ -1505,6 +1505,11 @@ static void __mmcamcorder_image_capture_cb(GstElement *element, GstSample *sampl
 		_mmcam_dbg_log("Done Internal Encode - data %p, length %d", dest.data, dest.length);
 	}
 
+	if (pixtype_main < MM_PIXEL_FORMAT_ENCODED) {
+		_mmcam_dbg_log("raw capture, skip EXIF related functions");
+		goto _CAPTURE_CB_EXIF_DONE;
+	}
+
 	/* create EXIF info */
 	if (!provide_exif) {	/* make new exif */
 		ret = mm_exif_create_exif_info(&(hcamcorder->exif_info));
@@ -1560,31 +1565,31 @@ static void __mmcamcorder_image_capture_cb(GstElement *element, GstSample *sampl
 	mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL, MMCAM_TAG_ENABLE, &tag_enable, NULL);
 
 	/* Set extra data for JPEG if tag enabled and doesn't provide EXIF */
-	if (dest.format == MM_PIXEL_FORMAT_ENCODED) {
-		if (tag_enable) {
-			mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL,
-				MMCAM_IMAGE_ENCODER, &codectype,
-				NULL);
-			_mmcam_dbg_log("codectype %d", codectype);
+	if (tag_enable) {
+		mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL,
+			MMCAM_IMAGE_ENCODER, &codectype,
+			NULL);
+		_mmcam_dbg_log("codectype %d", codectype);
 
-			switch (codectype) {
-			case MM_IMAGE_CODEC_JPEG:
-			case MM_IMAGE_CODEC_SRW:
-			case MM_IMAGE_CODEC_JPEG_SRW:
-				ret = __mmcamcorder_set_jpeg_data((MMHandleType)hcamcorder, &dest, &thumb, provide_exif);
-				if (ret != MM_ERROR_NONE) {
-					_mmcam_dbg_err("Error on setting extra data to jpeg");
-					MMCAM_SEND_MESSAGE(hcamcorder, MM_MESSAGE_CAMCORDER_ERROR, ret);
-					goto error;
-				}
-				break;
-			default:
-				_mmcam_dbg_err("The codectype is not supported. (%d)", codectype);
-				MMCAM_SEND_MESSAGE(hcamcorder, MM_MESSAGE_CAMCORDER_ERROR, MM_ERROR_CAMCORDER_INTERNAL);
+		switch (codectype) {
+		case MM_IMAGE_CODEC_JPEG:
+		case MM_IMAGE_CODEC_SRW:
+		case MM_IMAGE_CODEC_JPEG_SRW:
+			ret = __mmcamcorder_set_jpeg_data((MMHandleType)hcamcorder, &dest, &thumb, provide_exif);
+			if (ret != MM_ERROR_NONE) {
+				_mmcam_dbg_err("Error on setting extra data to jpeg");
+				MMCAM_SEND_MESSAGE(hcamcorder, MM_MESSAGE_CAMCORDER_ERROR, ret);
 				goto error;
 			}
+			break;
+		default:
+			_mmcam_dbg_err("The codectype is not supported. (%d)", codectype);
+			MMCAM_SEND_MESSAGE(hcamcorder, MM_MESSAGE_CAMCORDER_ERROR, MM_ERROR_CAMCORDER_INTERNAL);
+			goto error;
 		}
 	}
+
+_CAPTURE_CB_EXIF_DONE:
 
 	/* Handle Capture Callback */
 	_MMCAMCORDER_LOCK_VCAPTURE_CALLBACK(hcamcorder);
