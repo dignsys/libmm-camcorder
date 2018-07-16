@@ -1566,6 +1566,9 @@ unsigned int _mmcamcorder_get_fourcc(int pixtype, int codectype, int use_zero_co
 	case MM_PIXEL_FORMAT_ENCODED_H264:
 		fourcc = GST_MAKE_FOURCC('H', '2', '6', '4');
 		break;
+	case MM_PIXEL_FORMAT_INVZ:
+		fourcc = GST_MAKE_FOURCC('I', 'N', 'V', 'Z');
+		break;
 	default:
 		_mmcam_dbg_log("Not proper pixel type[%d]. Set default - I420", pixtype);
 		if (use_zero_copy_format)
@@ -1643,6 +1646,9 @@ int _mmcamcorder_get_pixtype(unsigned int fourcc)
 		break;
 	case GST_MAKE_FOURCC('H', '2', '6', '4'):
 		pixtype = MM_PIXEL_FORMAT_ENCODED_H264;
+		break;
+	case GST_MAKE_FOURCC('I', 'N', 'V', 'Z'):
+		pixtype = MM_PIXEL_FORMAT_INVZ;
 		break;
 	default:
 		_mmcam_dbg_log("Not supported fourcc type(%c%c%c%c)", fourcc, fourcc>>8, fourcc>>16, fourcc>>24);

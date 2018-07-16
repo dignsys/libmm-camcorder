@@ -1681,7 +1681,8 @@ typedef enum {
 	MM_CAM_STREAM_DATA_YUV420SP,            /**< YUV420 SemiPlannar type - 2 planes */
 	MM_CAM_STREAM_DATA_YUV420P,             /**< YUV420 Plannar type - 3 planes */
 	MM_CAM_STREAM_DATA_YUV422P,             /**< YUV422 Plannar type - 3 planes */
-	MM_CAM_STREAM_DATA_ENCODED              /**< Encoded data type - 1 plane */
+	MM_CAM_STREAM_DATA_ENCODED,             /**< Encoded data type - 1 plane */
+	MM_CAM_STREAM_DATA_DEPTH                /**< Depth data type - 1 plane */
 } MMCamStreamData;
 
 
@@ -1783,7 +1784,7 @@ typedef struct {
 		struct {
 			unsigned char *data;
 			unsigned int length_data;
-		} encoded;
+		} encoded, depth;
 	} data;                         /**< pointer of captured stream */
 	MMCamStreamData data_type;      /**< data type */
 	unsigned int length_total;      /**< total length of stream buffer (in byte)*/

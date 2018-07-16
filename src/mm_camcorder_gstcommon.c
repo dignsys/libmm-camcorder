@@ -1810,30 +1810,43 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 				gst_memory_unmap(metaBlock, &mapinfo);
 				metaBlock = NULL;
 			}
+
 			gst_memory_map(dataBlock, &mapinfo, GST_MAP_READWRITE);
-			if (stream.format == MM_PIXEL_FORMAT_YUYV ||
-			    stream.format == MM_PIXEL_FORMAT_UYVY ||
-			    stream.format == MM_PIXEL_FORMAT_422P ||
-			    stream.format == MM_PIXEL_FORMAT_ITLV_JPEG_UYVY) {
+
+			switch (stream.format) {
+			case MM_PIXEL_FORMAT_YUYV:
+			case MM_PIXEL_FORMAT_UYVY:
+			case MM_PIXEL_FORMAT_422P:
+			case MM_PIXEL_FORMAT_ITLV_JPEG_UYVY:
 				stream.data_type = MM_CAM_STREAM_DATA_YUV422;
 				stream.data.yuv422.yuv = mapinfo.data;
 				stream.data.yuv422.length_yuv = stream.length_total;
 				stream.stride[0] = stream.width << 1;
 				stream.elevation[0] = stream.height;
-			} else if (stream.format == MM_PIXEL_FORMAT_ENCODED_H264) {
-					stream.data_type = MM_CAM_STREAM_DATA_ENCODED;
-					stream.data.encoded.data = mapinfo.data;
-					stream.data.encoded.length_data = stream.length_total;
-					/*
-					_mmcam_dbg_log("H264[num_planes:%d] [0]p:%p,size:%d",
-						stream.num_planes, stream.data.encoded.data, stream.data.encoded.length_data);
-					*/
-			} else {
+				break;
+			case MM_PIXEL_FORMAT_ENCODED_H264:
+				stream.data_type = MM_CAM_STREAM_DATA_ENCODED;
+				stream.data.encoded.data = mapinfo.data;
+				stream.data.encoded.length_data = stream.length_total;
+				/*
+				_mmcam_dbg_log("H264[num_planes:%d] [0]p:%p,size:%d",
+					stream.num_planes, stream.data.encoded.data, stream.data.encoded.length_data);
+				*/
+				break;
+			case MM_PIXEL_FORMAT_INVZ:
+				stream.data_type = MM_CAM_STREAM_DATA_DEPTH;
+				stream.data.depth.data = mapinfo.data;
+				stream.data.depth.length_data = stream.length_total;
+				stream.stride[0] = stream.width << 1;
+				stream.elevation[0] = stream.height;
+				break;
+			default:
 				stream.data_type = MM_CAM_STREAM_DATA_YUV420;
 				stream.data.yuv420.yuv = mapinfo.data;
 				stream.data.yuv420.length_yuv = stream.length_total;
 				stream.stride[0] = (stream.width * 3) >> 1;
 				stream.elevation[0] = stream.height;
+				break;
 			}
 
 			stream.num_planes = 1;

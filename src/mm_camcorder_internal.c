@@ -947,7 +947,7 @@ int _mmcamcorder_realize(MMHandleType handle)
 		if (hcamcorder->camera_resource == NULL) {
 			ret = mm_resource_manager_mark_for_acquire(hcamcorder->resource_manager,
 					MM_RESOURCE_MANAGER_RES_TYPE_CAMERA,
-					MM_RESOURCE_MANAGER_RES_VOLUME_FULL,
+					1,
 					&hcamcorder->camera_resource);
 			if (ret != MM_RESOURCE_MANAGER_ERROR_NONE) {
 				_mmcam_dbg_err("could not prepare for camera resource");
