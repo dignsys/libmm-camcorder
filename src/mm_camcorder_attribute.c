@@ -72,7 +72,6 @@ static int readonly_attributes[] = {
 static bool __mmcamcorder_set_capture_resolution(MMHandleType handle, int width, int height);
 static int  __mmcamcorder_set_conf_to_valid_info(MMHandleType handle);
 static int  __mmcamcorder_release_conf_valid_info(MMHandleType handle);
-static bool __mmcamcorder_attrs_is_supported(MMHandleType handle, int idx);
 static int  __mmcamcorder_check_valid_pair(MMHandleType handle, char **err_attr_name, const char *attribute_name, va_list var_args);
 
 /*=======================================================================
@@ -1731,6 +1730,8 @@ _mmcamcorder_dealloc_attribute(MMHandleType handle, MMHandleType attrs)
 		hcamcorder->cam_attrs_const_info = NULL;
 		_mmcam_dbg_log("released attribute info");
 	}
+
+	return;
 }
 
 
@@ -1757,11 +1758,12 @@ _mmcamcorder_set_attributes(MMHandleType handle, char **err_attr_name, const cha
 {
 	MMHandleType attrs = 0;
 	int ret = MM_ERROR_NONE;
+	int err_index = 0;
+	char *tmp_err_attr_name = NULL;
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 	va_list var_args_copy;
 
 	mmf_return_val_if_fail(handle, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);
-	/*mmf_return_val_if_fail(err_attr_name, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);*/
 
 	if (!_MMCAMCORDER_TRYLOCK_CMD(handle)) {
 		_mmcam_dbg_err("Another command is running.");
@@ -1773,7 +1775,7 @@ _mmcamcorder_set_attributes(MMHandleType handle, char **err_attr_name, const cha
 
 	attrs = MMF_CAMCORDER_ATTRS(handle);
 	if (attrs) {
-		ret = __mmcamcorder_check_valid_pair(handle, err_attr_name, attribute_name, var_args);
+		ret = __mmcamcorder_check_valid_pair(handle, &tmp_err_attr_name, attribute_name, var_args);
 	} else {
 		_mmcam_dbg_err("handle %p, attrs is NULL, attr name [%s]", handle, attribute_name);
 		ret = MM_ERROR_CAMCORDER_NOT_INITIALIZED;
@@ -1782,7 +1784,7 @@ _mmcamcorder_set_attributes(MMHandleType handle, char **err_attr_name, const cha
 	if (ret == MM_ERROR_NONE) {
 		hcamcorder->error_code = MM_ERROR_NONE;
 		/* In 64bit environment, unexpected result is returned if var_args is used again. */
-		ret = mm_attrs_set_valist(attrs, err_attr_name, attribute_name, var_args_copy);
+		ret = mm_attrs_set_valist(attrs, &tmp_err_attr_name, attribute_name, var_args_copy);
 	}
 
 	va_end(var_args_copy);
@@ -1790,13 +1792,32 @@ _mmcamcorder_set_attributes(MMHandleType handle, char **err_attr_name, const cha
 	_MMCAMCORDER_UNLOCK_CMD(handle);
 
 	if (ret != MM_ERROR_NONE) {
+		if (ret == MM_ERROR_COMMON_OUT_OF_RANGE) {
+			if (mm_attrs_get_index(attrs, tmp_err_attr_name, &err_index) == MM_ERROR_NONE &&
+				_mmcamcorder_check_supported_attribute(handle, err_index)) {
+				_mmcam_dbg_err("[%s] is supported, but value is invalid",
+					tmp_err_attr_name ? tmp_err_attr_name : "NULL");
+				ret = MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
+			}
+		}
+
 		if (hcamcorder->error_code != MM_ERROR_NONE) {
-			_mmcam_dbg_err("error_code is not NONE. origin 0x%x, modified 0x%x", ret, hcamcorder->error_code);
+			_mmcam_dbg_err("error_code is set. ret 0x%x -> modified 0x%x", ret, hcamcorder->error_code);
 			ret = hcamcorder->error_code;
 			hcamcorder->error_code = MM_ERROR_NONE;
 		}
 
 		_mmcam_dbg_err("failed error code 0x%x - handle %p", ret, (mmf_camcorder_t *)handle);
+	}
+
+	if (tmp_err_attr_name) {
+		if (!err_attr_name) {
+			_mmcam_dbg_err("set attribute[%s] error, but err name is NULL", tmp_err_attr_name);
+			free(tmp_err_attr_name);
+			tmp_err_attr_name = NULL;
+		} else {
+			*err_attr_name = tmp_err_attr_name;
+		}
 	}
 
 	return ret;
@@ -3658,7 +3679,7 @@ bool _mmcamcorder_commit_filter_scene_mode(MMHandleType handle, int attr_idx, co
 				mmf_attrs_t *attr = (mmf_attrs_t *)MMF_CAMCORDER_ATTRS(handle);
 
 				for (i = 0 ; i < ARRAY_SIZE(attr_idxs) ; i++) {
-					if (__mmcamcorder_attrs_is_supported((MMHandleType)attr, attr_idxs[i]))
+					if (_mmcamcorder_check_supported_attribute(handle, attr_idxs[i]))
 						mmf_attribute_set_modified(&(attr->items[attr_idxs[i]]));
 				}
 			}
@@ -4623,35 +4644,6 @@ bool _mmcamcorder_commit_audio_replay_gain(MMHandleType handle, int attr_idx, co
 }
 
 
-static bool __mmcamcorder_attrs_is_supported(MMHandleType handle, int idx)
-{
-	mmf_attrs_t *attr = (mmf_attrs_t*)handle;
-	int flag;
-
-	if (mm_attrs_get_flags(handle, idx, &flag) == MM_ERROR_NONE) {
-		if (flag == MM_ATTRS_FLAG_NONE)
-			return FALSE;
-	} else {
-		return FALSE;
-	}
-
-	if (attr->items[idx].value_spec.type == MM_ATTRS_VALID_TYPE_INT_RANGE) {
-		int min, max;
-		mm_attrs_get_valid_range((MMHandleType)attr, idx, &min, &max);
-		if (max < min)
-			return FALSE;
-	} else if (attr->items[idx].value_spec.type == MM_ATTRS_VALID_TYPE_INT_ARRAY) {
-		int count;
-		int *array;
-		mm_attrs_get_valid_array((MMHandleType)attr, idx, &count, &array);
-		if (count == 0)
-			return FALSE;
-	}
-
-	return TRUE;
-}
-
-
 bool _mmcamcorder_set_attribute_to_camsensor(MMHandleType handle)
 {
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
@@ -4695,19 +4687,19 @@ bool _mmcamcorder_set_attribute_to_camsensor(MMHandleType handle)
 		_mmcam_dbg_log("attribute count(%d)", attr->count);
 
 		for (i = 0 ; i < ARRAY_SIZE(attr_idxs_default) ; i++) {
-			if (__mmcamcorder_attrs_is_supported((MMHandleType)attr, attr_idxs_default[i]))
+			if (_mmcamcorder_check_supported_attribute(handle, attr_idxs_default[i]))
 				mmf_attribute_set_modified(&(attr->items[attr_idxs_default[i]]));
 		}
 
 		/* Set extra if scene mode is NORMAL */
 		if (scene_mode == MM_CAMCORDER_SCENE_MODE_NORMAL) {
 			for (i = 0 ; i < ARRAY_SIZE(attr_idxs_extra) ; i++) {
-				if (__mmcamcorder_attrs_is_supported((MMHandleType)attr, attr_idxs_extra[i]))
+				if (_mmcamcorder_check_supported_attribute(handle, attr_idxs_extra[i]))
 					mmf_attribute_set_modified(&(attr->items[attr_idxs_extra[i]]));
 			}
 		} else {
 			/* Set scene mode if scene mode is NOT NORMAL */
-			if (__mmcamcorder_attrs_is_supported((MMHandleType)attr, MM_CAM_FILTER_SCENE_MODE))
+			if (_mmcamcorder_check_supported_attribute(handle, MM_CAM_FILTER_SCENE_MODE))
 				mmf_attribute_set_modified(&(attr->items[MM_CAM_FILTER_SCENE_MODE]));
 		}
 
@@ -4746,7 +4738,7 @@ bool _mmcamcorder_set_attribute_to_camsensor2(MMHandleType handle)
 		_mmcam_dbg_log("attribute count(%d)", attr->count);
 
 		for (i = 0 ; i < ARRAY_SIZE(attr_idxs) ; i++) {
-			if (__mmcamcorder_attrs_is_supported((MMHandleType)attr, attr_idxs[i]))
+			if (_mmcamcorder_check_supported_attribute(handle, attr_idxs[i]))
 				mmf_attribute_set_modified(&(attr->items[attr_idxs[i]]));
 		}
 
@@ -5066,21 +5058,21 @@ bool _mmcamcorder_check_supported_attribute(MMHandleType handle, int attr_index)
 		/*
 		_mmcam_dbg_log("int array count %d", info.int_array.count);
 		*/
-		if (info.int_array.count <= 1)
+		if (info.int_array.count < 1)
 			return FALSE;
 		break;
 	case MM_ATTRS_VALID_TYPE_INT_RANGE:
 		/*
 		_mmcam_dbg_log("int range min %d, max %d",info.int_range.min, info.int_range.max);
 		*/
-		if (info.int_range.min >= info.int_range.max)
+		if (info.int_range.min > info.int_range.max)
 			return FALSE;
 		break;
 	case MM_ATTRS_VALID_TYPE_DOUBLE_ARRAY:
 		/*
 		_mmcam_dbg_log("double array count %d", info.double_array.count);
 		*/
-		if (info.double_array.count <= 1)
+		if (info.double_array.count < 1)
 			return FALSE;
 		break;
 	case MM_ATTRS_VALID_TYPE_DOUBLE_RANGE:
