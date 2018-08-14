@@ -38,6 +38,8 @@
 #define MMCAMCORDER_DEFAULT_ENCODED_PREVIEW_BITRATE (1024*1024*10)
 #define MMCAMCORDER_DEFAULT_ENCODED_PREVIEW_GOP_INTERVAL 1000
 #define MMCAMCORDER_DEFAULT_REPLAY_GAIN_REFERENCE_LEVEL  89.0
+#define MMCAMCORDER_MAX_GOP_INTERVAL            (60*60*1000)    /* milisecond, 1 hour */
+#define MMCAMCORDER_MAX_ENCODED_BITRATE         (100*1000*1000) /* bps, 100 Mbps */
 
 /*---------------------------------------------------------------------------------------
 |    GLOBAL VARIABLE DEFINITIONS for internal						|
@@ -1473,8 +1475,8 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			MM_ATTRS_FLAG_RW,
 			{(void*)MMCAMCORDER_DEFAULT_ENCODED_PREVIEW_BITRATE},
 			MM_ATTRS_VALID_TYPE_INT_RANGE,
-			{.int_min = 0},
-			{.int_max = _MMCAMCORDER_MAX_INT},
+			{.int_min = 1},
+			{.int_max = MMCAMCORDER_MAX_ENCODED_BITRATE},
 			_mmcamcorder_commit_encoded_preview_bitrate,
 		},
 		{
@@ -1484,8 +1486,8 @@ _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
 			MM_ATTRS_FLAG_RW,
 			{(void*)MMCAMCORDER_DEFAULT_ENCODED_PREVIEW_GOP_INTERVAL},
 			MM_ATTRS_VALID_TYPE_INT_RANGE,
-			{.int_min = 0},
-			{.int_max = _MMCAMCORDER_MAX_INT},
+			{.int_min = 1},
+			{.int_max = MMCAMCORDER_MAX_GOP_INTERVAL},
 			_mmcamcorder_commit_encoded_preview_gop_interval,
 		},
 		{
