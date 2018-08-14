@@ -1478,7 +1478,7 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 
 		if (display_geometry_method == MM_DISPLAY_METHOD_CUSTOM_ROI) {
 			if (!strcmp(videosink_name, "tizenwlsink")) {
-			    gst_video_overlay_set_render_rectangle(GST_VIDEO_OVERLAY(vsink),
+			    gst_video_overlay_set_display_roi_area(GST_VIDEO_OVERLAY(vsink),
 					rect_x, rect_y, rect_width, rect_height);
 			} else {
 				g_object_set(vsink,

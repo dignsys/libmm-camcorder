@@ -4065,10 +4065,10 @@ bool _mmcamcorder_commit_display_rect(MMHandleType handle, int attr_idx, const m
 			_mmcam_dbg_log("RECT(x,y,w,h) = (%d,%d,%d,%d)", rect_x, rect_y, rect_width, rect_height);
 
 			if (!strcmp(videosink_name, "tizenwlsink")) {
-			    ret = gst_video_overlay_set_render_rectangle(GST_VIDEO_OVERLAY(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst),
+			    ret = gst_video_overlay_set_display_roi_area(GST_VIDEO_OVERLAY(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst),
 					rect_x, rect_y, rect_width, rect_height);
 				if (!ret) {
-					_mmcam_dbg_err("FAILED : could not set render rectangle.");
+					_mmcam_dbg_err("FAILED : could not set display roi area.");
 					return FALSE;
 				}
 			} else {
