@@ -152,6 +152,11 @@ mm_exif_get_exif_from_info(mm_exif_info_t *info)
 	unsigned char size[2];
 	unsigned int i;
 
+	if (!info) {
+		_mmcam_dbg_err("NULL exif info");
+		return NULL;
+	}
+
 	/*get ExifData from info*/
 	loader = exif_loader_new();
 
