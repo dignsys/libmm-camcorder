@@ -35,6 +35,7 @@ libmmfcamcorder_la_SOURCES = mm_camcorder.c \
 libmmfcamcorder_la_CFLAGS = -I$(srcdir)/include \
 			     $(GST_CFLAGS) \
 			     $(GST_PLUGIN_BASE_CFLAGS) \
+			     $(GST_ALLOCATORS_CFLAGS) \
 			     $(GST_VIDEO_CFLAGS) \
 			     $(GST_APP_CFLAGS) \
 			     $(EXIF_CFLAGS) \
@@ -54,6 +55,7 @@ libmmfcamcorder_la_LIBADD = \
 			    $(GIO_LIBS) \
 			    $(GST_LIBS) \
 			    $(GST_PLUGIN_BASE_LIBS) \
+			    $(GST_ALLOCATORS_LIBS) \
 			    $(GST_VIDEO_LIBS) \
 			    $(GST_APP_LIBS) \
 			    $(MM_COMMON_LIBS) \

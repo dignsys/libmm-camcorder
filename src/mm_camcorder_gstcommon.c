@@ -22,6 +22,7 @@
 /*=======================================================================================
 |  INCLUDE FILES									|
 =======================================================================================*/
+#include <gst/allocators/gsttizenmemory.h>
 #include <gst/audio/audio-format.h>
 #include <gst/video/videooverlay.h>
 #include <gst/video/cameracontrol.h>
@@ -29,6 +30,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <tbm_bufmgr.h>
+#include <tbm_surface.h>
+#include <tbm_surface_internal.h>
 
 #include "mm_camcorder_internal.h"
 #include "mm_camcorder_gstcommon.h"
@@ -1591,9 +1594,6 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 	_MMCamcorderSubContext *sc = NULL;
 	_MMCamcorderKPIMeasure *kpi = NULL;
 	GstBuffer *buffer = GST_PAD_PROBE_INFO_BUFFER(info);
-	GstMemory *dataBlock = NULL;
-	GstMemory *metaBlock = NULL;
-	GstMapInfo mapinfo;
 
 	mmf_return_val_if_fail(buffer, GST_PAD_PROBE_DROP);
 	mmf_return_val_if_fail(gst_buffer_n_memory(buffer), GST_PAD_PROBE_DROP);
@@ -1601,8 +1601,6 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 
 	sc = MMF_CAMCORDER_SUBCONTEXT(u_data);
 	mmf_return_val_if_fail(sc, GST_PAD_PROBE_DROP);
-
-	memset(&mapinfo, 0x0, sizeof(GstMapInfo));
 
 	current_state = hcamcorder->state;
 
@@ -1659,13 +1657,19 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 
 	/* video stream callback */
 	if (hcamcorder->vstream_cb && buffer) {
+		int state = MM_CAMCORDER_STATE_NULL;
+		int num_bos = 0;
+		unsigned int fourcc = 0;
+		const gchar *string_format = NULL;
+
+		MMCamcorderVideoStreamDataType stream;
+		tbm_surface_h t_surface = NULL;
+		tbm_surface_info_s t_info;
+
 		GstCaps *caps = NULL;
 		GstStructure *structure = NULL;
-		int state = MM_CAMCORDER_STATE_NULL;
-		unsigned int fourcc = 0;
-		MMCamcorderVideoStreamDataType stream;
-		MMVideoBuffer *mm_buf = NULL;
-		const gchar *string_format = NULL;
+		GstMemory *memory = NULL;
+		GstMapInfo mapinfo;
 
 		state = _mmcamcorder_get_state((MMHandleType)hcamcorder);
 		if (state < MM_CAMCORDER_STATE_PREPARE) {
@@ -1679,7 +1683,8 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 			return GST_PAD_PROBE_OK;
 		}
 
-		/* clear stream data structure */
+		/* clear data structure */
+		memset(&mapinfo, 0x0, sizeof(GstMapInfo));
 		memset(&stream, 0x0, sizeof(MMCamcorderVideoStreamDataType));
 
 		structure = gst_caps_get_structure(caps, 0);
@@ -1715,29 +1720,54 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 		}
 
 		/* set size and timestamp */
-		dataBlock = gst_buffer_peek_memory(buffer, 0);
-		stream.length_total = gst_memory_get_sizes(dataBlock, NULL, NULL);
-		stream.timestamp = (unsigned int)(GST_BUFFER_PTS(buffer)/1000000); /* nano sec -> mili sec */
-
-		if (hcamcorder->use_zero_copy_format && gst_buffer_n_memory(buffer) > 1) {
-			metaBlock = gst_buffer_peek_memory(buffer, 1);
-			gst_memory_map(metaBlock, &mapinfo, GST_MAP_READ);
-			mm_buf = (MMVideoBuffer *)mapinfo.data;
+		memory = gst_buffer_peek_memory(buffer, 0);
+		if (!memory) {
+			_mmcam_dbg_err("GstMemory get failed from buffer %p", buffer);
+			return GST_PAD_PROBE_OK;
 		}
+
+		if (hcamcorder->use_zero_copy_format) {
+			t_surface = (tbm_surface_h)gst_tizen_memory_get_surface(memory);
+
+			if (tbm_surface_get_info(t_surface, &t_info) != TBM_SURFACE_ERROR_NONE) {
+				_mmcam_dbg_err("failed to get tbm surface[%p] info", t_surface);
+				return GST_PAD_PROBE_OK;
+			}
+
+			stream.length_total = t_info.size;
+
+			/* set bo, stride and elevation */
+			num_bos = gst_tizen_memory_get_num_bos(memory);
+			for (i = 0 ; i < num_bos ; i++)
+				stream.bo[i] = gst_tizen_memory_get_bos(memory, i);
+
+			for (i = 0 ; i < t_info.num_planes ; i++) {
+				stream.stride[i] = t_info.planes[i].stride;
+				stream.elevation[i] = t_info.planes[i].size / t_info.planes[i].stride;
+				/*_mmcam_dbg_log("[%d] %dx%d", i, stream.stride[i], stream.elevation[i]);*/
+			}
+
+			/* set gst buffer */
+			stream.internal_buffer = buffer;
+		} else {
+			stream.length_total = gst_memory_get_sizes(memory, NULL, NULL);
+		}
+
+		stream.timestamp = (unsigned int)(GST_BUFFER_PTS(buffer)/1000000); /* nano sec -> mili sec */
 
 		/* set data pointers */
 		if (stream.format == MM_PIXEL_FORMAT_NV12 ||
-		    stream.format == MM_PIXEL_FORMAT_NV21 ||
-		    stream.format == MM_PIXEL_FORMAT_I420) {
-			if (mm_buf) {
+			stream.format == MM_PIXEL_FORMAT_NV21 ||
+			stream.format == MM_PIXEL_FORMAT_I420) {
+			if (hcamcorder->use_zero_copy_format) {
 				if (stream.format == MM_PIXEL_FORMAT_NV12 ||
 				    stream.format == MM_PIXEL_FORMAT_NV21) {
 					stream.data_type = MM_CAM_STREAM_DATA_YUV420SP;
 					stream.num_planes = 2;
-					stream.data.yuv420sp.y = mm_buf->data[0];
-					stream.data.yuv420sp.length_y = stream.width * stream.height;
-					stream.data.yuv420sp.uv = mm_buf->data[1];
-					stream.data.yuv420sp.length_uv = stream.data.yuv420sp.length_y >> 1;
+					stream.data.yuv420sp.y = t_info.planes[0].ptr;
+					stream.data.yuv420sp.length_y = t_info.planes[0].size;
+					stream.data.yuv420sp.uv = t_info.planes[1].ptr;
+					stream.data.yuv420sp.length_uv = t_info.planes[1].size;
 					/*
 					_mmcam_dbg_log("format[%d][num_planes:%d] [Y]p:%p,size:%d [UV]p:%p,size:%d",
 						stream.format, stream.num_planes,
@@ -1747,12 +1777,12 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 				} else {
 					stream.data_type = MM_CAM_STREAM_DATA_YUV420P;
 					stream.num_planes = 3;
-					stream.data.yuv420p.y = mm_buf->data[0];
-					stream.data.yuv420p.length_y = stream.width * stream.height;
-					stream.data.yuv420p.u = mm_buf->data[1];
-					stream.data.yuv420p.length_u = stream.data.yuv420p.length_y >> 2;
-					stream.data.yuv420p.v = mm_buf->data[2];
-					stream.data.yuv420p.length_v = stream.data.yuv420p.length_u;
+					stream.data.yuv420p.y = t_info.planes[0].ptr;
+					stream.data.yuv420p.length_y = t_info.planes[0].size;
+					stream.data.yuv420p.u = t_info.planes[1].ptr;
+					stream.data.yuv420p.length_u = t_info.planes[1].size;
+					stream.data.yuv420p.v = t_info.planes[2].ptr;
+					stream.data.yuv420p.length_v = t_info.planes[2].size;
 					/*
 					_mmcam_dbg_log("S420[num_planes:%d] [Y]p:%p,size:%d [U]p:%p,size:%d [V]p:%p,size:%d",
 						stream.num_planes,
@@ -1762,9 +1792,9 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 					*/
 				}
 			} else {
-				gst_memory_map(dataBlock, &mapinfo, GST_MAP_READWRITE);
+				gst_memory_map(memory, &mapinfo, GST_MAP_READWRITE);
 				if (stream.format == MM_PIXEL_FORMAT_NV12 ||
-				    stream.format == MM_PIXEL_FORMAT_NV21) {
+					stream.format == MM_PIXEL_FORMAT_NV21) {
 					stream.data_type = MM_CAM_STREAM_DATA_YUV420SP;
 					stream.num_planes = 2;
 					stream.data.yuv420sp.y = mapinfo.data;
@@ -1806,12 +1836,7 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 				}
 			}
 		} else {
-			if (mm_buf) {
-				gst_memory_unmap(metaBlock, &mapinfo);
-				metaBlock = NULL;
-			}
-
-			gst_memory_map(dataBlock, &mapinfo, GST_MAP_READWRITE);
+			gst_memory_map(memory, &mapinfo, GST_MAP_READWRITE);
 
 			switch (stream.format) {
 			case MM_PIXEL_FORMAT_YUYV:
@@ -1857,36 +1882,22 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 			*/
 		}
 
-		/* set tbm bo */
-		if (mm_buf && mm_buf->type == MM_VIDEO_BUFFER_TYPE_TBM_BO) {
-			/* set bo, stride and elevation */
-			for (i = 0 ; i < MM_VIDEO_BUFFER_PLANE_MAX ; i++) {
-				stream.bo[i] = (void *)mm_buf->handle.bo[i];
-				stream.stride[i] = mm_buf->stride_width[i];
-				stream.elevation[i] = mm_buf->stride_height[i];
-			}
-
-			/* set gst buffer */
-			stream.internal_buffer = buffer;
-		}
-
 		/* call application callback */
 		_MMCAMCORDER_LOCK_VSTREAM_CALLBACK(hcamcorder);
 		if (hcamcorder->vstream_cb) {
 			hcamcorder->vstream_cb(&stream, hcamcorder->vstream_cb_param);
 
-			for (i = 0 ; i < MM_VIDEO_BUFFER_PLANE_MAX && stream.bo[i] ; i++) {
+			for (i = 0 ; i < TBM_SURF_PLANE_MAX && stream.bo[i] ; i++) {
 				tbm_bo_map(stream.bo[i], TBM_DEVICE_CPU, TBM_OPTION_READ|TBM_OPTION_WRITE);
 				tbm_bo_unmap(stream.bo[i]);
 			}
 		}
 
 		_MMCAMCORDER_UNLOCK_VSTREAM_CALLBACK(hcamcorder);
-		/* Either metaBlock was mapped, or dataBlock, but not both. */
-		if (metaBlock)
-			gst_memory_unmap(metaBlock, &mapinfo);
-		else
-			gst_memory_unmap(dataBlock, &mapinfo);
+
+		/* unmap memory */
+		if (mapinfo.data)
+			gst_memory_unmap(memory, &mapinfo);
 	}
 
 	return GST_PAD_PROBE_OK;
