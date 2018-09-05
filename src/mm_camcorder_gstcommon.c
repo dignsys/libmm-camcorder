@@ -1948,7 +1948,6 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_push_buffer_to_record(Gst
 
 		if (sc->encode_element[_MMCAMCORDER_AUDIOSRC_SRC].gst) {
 			if (sc->info_video->is_firstframe) {
-				sc->info_video->is_firstframe = FALSE;
 				clock = GST_ELEMENT_CLOCK(sc->encode_element[_MMCAMCORDER_AUDIOSRC_SRC].gst);
 				if (clock) {
 					gst_object_ref(clock);
@@ -1966,7 +1965,6 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_push_buffer_to_record(Gst
 					g_cond_signal(&hcamcorder->task_thread_cond);
 					g_mutex_unlock(&hcamcorder->task_thread_lock);
 				}
-				sc->info_video->is_firstframe = FALSE;
 				sc->info_video->base_video_ts = GST_BUFFER_PTS(buffer);
 			}
 		}
@@ -1994,6 +1992,16 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_push_buffer_to_record(Gst
 		g_signal_emit_by_name(sc->encode_element[_MMCAMCORDER_ENCSINK_SRC].gst, "push-buffer", buffer, &ret);
 
 		/*_mmcam_dbg_log("push buffer result : 0x%x", ret);*/
+
+		if (sc->info_video->is_firstframe) {
+			sc->info_video->is_firstframe = FALSE;
+
+			/* drop buffer if it's from tizen allocator */
+			if (gst_is_tizen_memory(gst_buffer_peek_memory(buffer, 0))) {
+				_mmcam_dbg_warn("drop first buffer from tizen allocator to avoid copy in basesrc");
+				return GST_PAD_PROBE_DROP;
+			}
+		}
 	}
 
 	/* skip display if too fast FPS */
