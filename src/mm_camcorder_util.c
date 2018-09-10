@@ -1546,6 +1546,12 @@ unsigned int _mmcamcorder_get_fourcc(int pixtype, int codectype, int use_zero_co
 	case MM_PIXEL_FORMAT_RGB888:
 		fourcc = GST_MAKE_FOURCC('R', 'G', 'B', ' ');
 		break;
+	case MM_PIXEL_FORMAT_RGBA:
+		fourcc = GST_MAKE_FOURCC('B', 'G', 'R', 'x');
+		break;
+	case MM_PIXEL_FORMAT_ARGB:
+		fourcc = GST_MAKE_FOURCC('x', 'R', 'G', 'B');
+		break;
 	case MM_PIXEL_FORMAT_ENCODED:
 		if (codectype == MM_IMAGE_CODEC_JPEG) {
 			fourcc = GST_MAKE_FOURCC('J', 'P', 'E', 'G');

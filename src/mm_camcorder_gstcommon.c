@@ -1865,6 +1865,14 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 				stream.stride[0] = stream.width << 1;
 				stream.elevation[0] = stream.height;
 				break;
+			case MM_PIXEL_FORMAT_RGBA:
+			case MM_PIXEL_FORMAT_ARGB:
+				stream.data_type = MM_CAM_STREAM_DATA_RGB;
+				stream.data.rgb.data = mapinfo.data;
+				stream.data.rgb.length_data = stream.length_total;
+				stream.stride[0] = stream.width << 2;
+				stream.elevation[0] = stream.height;
+				break;
 			default:
 				stream.data_type = MM_CAM_STREAM_DATA_YUV420;
 				stream.data.yuv420.yuv = mapinfo.data;
@@ -2714,7 +2722,16 @@ bool _mmcamcorder_set_videosrc_caps(MMHandleType handle, unsigned int fourcc, in
 		}
 
 		if (caps) {
-			_mmcam_dbg_log("vidoesrc new caps set. %"GST_PTR_FORMAT, caps);
+			gchar *caps_str = gst_caps_to_string(caps);
+
+			if (caps_str) {
+				_mmcam_dbg_log("vidoesrc new caps set [%s]", caps_str);
+				g_free(caps_str);
+				caps_str = NULL;
+			} else {
+				_mmcam_dbg_warn("caps string failed");
+			}
+
 			MMCAMCORDER_G_OBJECT_SET_POINTER(sc->element[_MMCAMCORDER_VIDEOSRC_FILT].gst, "caps", caps);
 			gst_caps_unref(caps);
 			caps = NULL;
