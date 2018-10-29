@@ -394,6 +394,12 @@ int _mmcamcorder_image_cmd_capture(MMHandleType handle)
 
 	/* check state */
 	if (current_state >= MM_CAMCORDER_STATE_RECORDING) {
+		if (sc->bencbin_capture) {
+			_mmcam_dbg_err("could not capture in this target while recording");
+			ret = MM_ERROR_CAMCORDER_INVALID_STATE;
+			goto cmd_done;
+		}
+
 		if (info->type == _MMCamcorder_MULTI_SHOT ||
 		    info->hdr_capture_mode != MM_CAMCORDER_HDR_OFF) {
 			_mmcam_dbg_err("does not support multi/HDR capture while recording");
@@ -463,12 +469,6 @@ int _mmcamcorder_image_cmd_capture(MMHandleType handle)
 		int set_width = 0;
 		int set_height = 0;
 		int cap_jpeg_quality = 0;
-
-		if (current_state >= MM_CAMCORDER_STATE_RECORDING) {
-			_mmcam_dbg_err("could not capture in this target while recording");
-			ret = MM_ERROR_CAMCORDER_INVALID_STATE;
-			goto cmd_done;
-		}
 
 		if (UseCaptureMode) {
 			if (width != MMFCAMCORDER_HIGHQUALITY_WIDTH || height != MMFCAMCORDER_HIGHQUALITY_HEIGHT)
@@ -600,8 +600,30 @@ int _mmcamcorder_image_cmd_capture(MMHandleType handle)
 	}
 
 cmd_done:
-	if (ret != MM_ERROR_NONE)
+	if (ret != MM_ERROR_NONE) {
 		info->capturing = FALSE;
+
+		/* sound finalize */
+		if (info->type == _MMCamcorder_MULTI_SHOT)
+			_mmcamcorder_sound_finalize(handle);
+
+		/* send signal for task thread : It prevent unnecessary invalid operation error in task thread */
+		if (hcamcorder->capture_in_recording) {
+			hcamcorder->capture_in_recording = FALSE;
+
+			g_mutex_lock(&hcamcorder->task_thread_lock);
+
+			if (hcamcorder->task_thread_state == _MMCAMCORDER_TASK_THREAD_STATE_CHECK_CAPTURE_IN_RECORDING) {
+				hcamcorder->task_thread_state = _MMCAMCORDER_TASK_THREAD_STATE_NONE;
+				_mmcam_dbg_log("send signal for capture in recording");
+				g_cond_signal(&hcamcorder->task_thread_cond);
+			} else {
+				_mmcam_dbg_warn("unexpected task thread state : %d", hcamcorder->task_thread_state);
+			}
+
+			g_mutex_unlock(&hcamcorder->task_thread_lock);
+		}
+	}
 
 	return ret;
 }
