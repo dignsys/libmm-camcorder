@@ -26,7 +26,6 @@
 #include <string.h>
 
 #include <mm_error.h>
-#include <mm_attrs_private.h>
 
 #include "mm_camcorder.h"
 #include "mm_camcorder_internal.h"

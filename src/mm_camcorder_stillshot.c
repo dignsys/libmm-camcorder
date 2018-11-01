@@ -213,9 +213,8 @@ void _mmcamcorder_destroy_video_capture_pipeline(MMHandleType handle)
 	_MMCamcorderSubContext *sc = NULL;
 	int display_reuse_hint = FALSE;
 	GstElement *sink_element = NULL;
-	mmf_attrs_t *attrs = NULL;
+	MMHandleType attrs;
 	int attr_index = 0;
-	mmf_attribute_t *attr_item = NULL;
 
 	mmf_return_if_fail(hcamcorder);
 
@@ -244,7 +243,7 @@ void _mmcamcorder_destroy_video_capture_pipeline(MMHandleType handle)
 			goto _REUSE_CHECK_DONE;
 		}
 
-		attrs = (mmf_attrs_t *)MMF_CAMCORDER_ATTRS(handle);
+		attrs = MMF_CAMCORDER_ATTRS(handle);
 		if (!attrs) {
 			_mmcam_dbg_warn("attribute is NULL");
 			goto _REUSE_CHECK_DONE;
@@ -263,9 +262,8 @@ void _mmcamcorder_destroy_video_capture_pipeline(MMHandleType handle)
 
 		/* set sink element pointer to attribute */
 		mm_attrs_get_index((MMHandleType)attrs, MMCAM_DISPLAY_REUSE_ELEMENT, &attr_index);
-		attr_item = &attrs->items[attr_index];
-		mmf_attribute_set_data(attr_item, (void *)sink_element, sizeof(*sink_element));
-		mmf_attribute_commit(attr_item);
+		mm_attrs_set_data(attrs, attr_index, (void *)sink_element, sizeof(*sink_element));
+		mm_attrs_commit(attrs, attr_index);
 
 		/* remove notify callback */
 		g_object_weak_unref(G_OBJECT(sink_element), (GWeakNotify)_mmcamcorder_element_release_noti, sc);
@@ -700,7 +698,7 @@ int _mmcamcorder_image_cmd_preview_start(MMHandleType handle)
 			}
 		} else {
 			int focus_mode = 0;
-			mmf_attrs_t *attr = (mmf_attrs_t *)MMF_CAMCORDER_ATTRS(handle);
+			MMHandleType attrs = MMF_CAMCORDER_ATTRS(handle);
 
 			/* This case is starting of preview */
 			ret = mm_camcorder_get_attributes(handle, &err_name,
@@ -717,10 +715,10 @@ int _mmcamcorder_image_cmd_preview_start(MMHandleType handle)
 			MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, "fps-auto", fps_auto);
 
 			/* set focus mode */
-			if (attr) {
+			if (attrs) {
 				if (_mmcamcorder_check_supported_attribute(handle, MM_CAM_CAMERA_FOCUS_MODE)) {
-					mmf_attribute_set_modified(&(attr->items[MM_CAM_CAMERA_FOCUS_MODE]));
-					mmf_attrs_commit((MMHandleType)attr);
+					mm_attrs_set_modified(attrs, MM_CAM_CAMERA_FOCUS_MODE);
+					mm_attrs_commit(attrs, MM_CAM_CAMERA_FOCUS_MODE);
 				} else {
 					_mmcam_dbg_log("focus mode is not supported");
 				}
@@ -740,12 +738,12 @@ int _mmcamcorder_image_cmd_preview_start(MMHandleType handle)
 			int try_count = 0;
 
 			if (hcamcorder->support_zsl_capture == FALSE) {
-				mmf_attrs_t *attr = (mmf_attrs_t *)MMF_CAMCORDER_ATTRS(handle);
+				MMHandleType attrs = MMF_CAMCORDER_ATTRS(handle);
 
 				/* Set strobe mode - strobe mode can not be set to driver while captuing */
-				if (attr) {
-					mmf_attribute_set_modified(&(attr->items[MM_CAM_STROBE_MODE]));
-					if (mmf_attrs_commit((MMHandleType) attr) == -1)
+				if (attrs) {
+					mm_attrs_set_modified(attrs, MM_CAM_STROBE_MODE);
+					if (mm_attrs_commit(attrs, MM_CAM_STROBE_MODE) == -1)
 						_mmcam_dbg_warn("Failed to set strobe mode");
 				}
 
@@ -1181,7 +1179,6 @@ static void __mmcamcorder_image_capture_cb(GstElement *element, GstSample *sampl
 	int pixtype_thumb = MM_PIXEL_FORMAT_INVALID;
 	int pixtype_scrnl = MM_PIXEL_FORMAT_INVALID;
 	int codectype = MM_IMAGE_CODEC_JPEG;
-	int attr_index = 0;
 	int count = 0;
 	int stop_cont_shot = FALSE;
 	int tag_enable = FALSE;
@@ -1208,9 +1205,9 @@ static void __mmcamcorder_image_capture_cb(GstElement *element, GstSample *sampl
 	GstMapInfo mapinfo2;
 	GstMapInfo mapinfo3;
 
-	mmf_attrs_t *attrs = NULL;
-	mmf_attribute_t *item_screennail = NULL;
-	mmf_attribute_t *item_exif_raw_data = NULL;
+	MMHandleType attrs;
+	int attr_index_for_screennail = 0;
+	int attr_index_for_exif = 0;
 
 	mmf_return_if_fail(hcamcorder);
 
@@ -1324,9 +1321,8 @@ static void __mmcamcorder_image_capture_cb(GstElement *element, GstSample *sampl
 		_mmcam_dbg_log("sample3[%p] is NULL or gst_buffer_map failed. Not Error.", sample3);
 
 	/* Screennail image buffer */
-	attrs = (mmf_attrs_t *)MMF_CAMCORDER_ATTRS(hcamcorder);
-	mm_attrs_get_index((MMHandleType)attrs, MMCAM_CAPTURED_SCREENNAIL, &attr_index);
-	item_screennail = &attrs->items[attr_index];
+	attrs = MMF_CAMCORDER_ATTRS(hcamcorder);
+	mm_attrs_get_index(attrs, MMCAM_CAPTURED_SCREENNAIL, &attr_index_for_screennail);
 
 	if (sample3 && mapinfo3.data && mapinfo3.size != 0) {
 		_mmcam_dbg_log("Screennail (sample3=%p,size=%d)", sample3, mapinfo3.size);
@@ -1335,15 +1331,15 @@ static void __mmcamcorder_image_capture_cb(GstElement *element, GstSample *sampl
 		__mmcamcorder_get_capture_data_from_buffer(&scrnail, pixtype_scrnl, sample3);
 
 		/* Set screennail attribute for application */
-		ret = mmf_attribute_set_data(item_screennail, &scrnail, sizeof(scrnail));
+		ret = mm_attrs_set_data(attrs, attr_index_for_screennail, &scrnail, sizeof(scrnail));
 		_mmcam_dbg_log("Screennail set attribute data %p, size %d, ret %x", &scrnail, sizeof(scrnail), ret);
 	} else {
 		_mmcam_dbg_log("Sample3 has wrong pointer. Not Error. (sample3=%p)", sample3);
-		mmf_attribute_set_data(item_screennail, NULL, 0);
+		mm_attrs_set_data(attrs, attr_index_for_screennail, NULL, 0);
 	}
 
 	/* commit screennail data */
-	mmf_attribute_commit(item_screennail);
+	mm_attrs_commit(attrs, attr_index_for_screennail);
 
 	/* init thumb data */
 	memset(&encode_src, 0x0, sizeof(MMCamcorderCaptureDataType));
@@ -1562,26 +1558,25 @@ static void __mmcamcorder_image_capture_cb(GstElement *element, GstSample *sampl
 	}
 
 	/* get attribute item for EXIF data */
-	mm_attrs_get_index((MMHandleType)attrs, MMCAM_CAPTURED_EXIF_RAW_DATA, &attr_index);
-	item_exif_raw_data = &attrs->items[attr_index];
+	mm_attrs_get_index((MMHandleType)attrs, MMCAM_CAPTURED_EXIF_RAW_DATA, &attr_index_for_exif);
 
 	/* set EXIF data to attribute */
 	if (hcamcorder->exif_info && hcamcorder->exif_info->data) {
 		exif_raw_data = (unsigned char *)malloc(hcamcorder->exif_info->size);
 		if (exif_raw_data) {
 			memcpy(exif_raw_data, hcamcorder->exif_info->data, hcamcorder->exif_info->size);
-			mmf_attribute_set_data(item_exif_raw_data, exif_raw_data, hcamcorder->exif_info->size);
+			mm_attrs_set_data(attrs, attr_index_for_exif, exif_raw_data, hcamcorder->exif_info->size);
 			_mmcam_dbg_log("set EXIF raw data %p, size %d", exif_raw_data, hcamcorder->exif_info->size);
 		} else {
 			_mmcam_dbg_warn("failed to alloc for EXIF, size %d", hcamcorder->exif_info->size);
 		}
 	} else {
 		_mmcam_dbg_warn("failed to create EXIF. set EXIF as NULL");
-		mmf_attribute_set_data(item_exif_raw_data, NULL, 0);
+		mm_attrs_set_data(attrs, attr_index_for_exif, NULL, 0);
 	}
 
 	/* commit EXIF data */
-	mmf_attribute_commit(item_exif_raw_data);
+	mm_attrs_commit(attrs, attr_index_for_exif);
 
 	/* get tag-enable */
 	mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL, MMCAM_TAG_ENABLE, &tag_enable, NULL);
@@ -1640,14 +1635,14 @@ err_release_exif:
 	_MMCAMCORDER_UNLOCK_VCAPTURE_CALLBACK(hcamcorder);
 
 	/* init screennail and EXIF raw data */
-	mmf_attribute_set_data(item_screennail, NULL, 0);
-	mmf_attribute_commit(item_screennail);
+	mm_attrs_set_data(attrs, attr_index_for_screennail, NULL, 0);
+	mm_attrs_commit(attrs, attr_index_for_screennail);
 	if (exif_raw_data) {
 		free(exif_raw_data);
 		exif_raw_data = NULL;
 
-		mmf_attribute_set_data(item_exif_raw_data, NULL, 0);
-		mmf_attribute_commit(item_exif_raw_data);
+		mm_attrs_set_data(attrs, attr_index_for_exif, NULL, 0);
+		mm_attrs_commit(attrs, attr_index_for_exif);
 	}
 
 	/* Release jpeg data */

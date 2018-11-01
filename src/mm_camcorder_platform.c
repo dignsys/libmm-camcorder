@@ -990,9 +990,9 @@ int __mmcamcorder_set_info_to_attr(MMHandleType handle, _MMCamcorderInfoConverti
 						info[i].attr_idx, iarray, iarray_size, idefault);
 					*/
 
-					/* "mmf_attrs_set_valid_type" initializes spec value in attribute, so allocated memory could be missed */
-					/* mmf_attrs_set_valid_type(attrs, info[i].attr_idx, MM_ATTRS_VALID_TYPE_INT_ARRAY); */
-					mmf_attrs_set_valid_array(attrs, info[i].attr_idx, iarray, iarray_size, idefault);
+					/* "mm_attrs_set_valid_type" initializes spec value in attribute, so allocated memory could be missed */
+					/* mm_attrs_set_valid_type(attrs, info[i].attr_idx, MM_ATTRS_VALID_TYPE_INT_ARRAY); */
+					mm_attrs_set_valid_array(attrs, info[i].attr_idx, iarray, iarray_size, idefault);
 
 					ret = mm_attrs_set_int(MMF_CAMCORDER_ATTRS(hcamcorder), info[i].attr_idx, idefault);
 				}
@@ -1012,9 +1012,9 @@ int __mmcamcorder_set_info_to_attr(MMHandleType handle, _MMCamcorderInfoConverti
 
 			if (irange) {
 				/* _mmcam_dbg_log("INT Range. m:%d, s:%d, min=%d, max=%d", info[i].main_key, info[i].sub_key1, irange->min, irange->max); */
-				/* "mmf_attrs_set_valid_type" initializes spec value in attribute, so allocated memory could be missed */
-				/* mmf_attrs_set_valid_type (attrs, info[i].attr_idx, MM_ATTRS_VALID_TYPE_INT_RANGE); */
-				mmf_attrs_set_valid_range(attrs, info[i].attr_idx, irange->min, irange->max, irange->default_value);
+				/* "mm_attrs_set_valid_type" initializes spec value in attribute, so allocated memory could be missed */
+				/* mm_attrs_set_valid_type (attrs, info[i].attr_idx, MM_ATTRS_VALID_TYPE_INT_RANGE); */
+				mm_attrs_set_valid_range(attrs, info[i].attr_idx, irange->min, irange->max, irange->default_value);
 
 				ret = mm_attrs_set_int(MMF_CAMCORDER_ATTRS(hcamcorder), info[i].attr_idx, irange->default_value);
 			}
@@ -1051,15 +1051,15 @@ int __mmcamcorder_set_info_to_attr(MMHandleType handle, _MMCamcorderInfoConverti
 				break; /* skip to set, but not error */
 
 			if (pair_array && pair_array->count > 0) {
-				/* "mmf_attrs_set_valid_type" initializes spec value in attribute, so allocated memory could be missed */
-				/* mmf_attrs_set_valid_type(attrs, info[i].attr_idx, MM_ATTRS_VALID_TYPE_INT_ARRAY); */
-				mmf_attrs_set_valid_array(attrs, info[i].attr_idx,
+				/* "mm_attrs_set_valid_type" initializes spec value in attribute, so allocated memory could be missed */
+				/* mm_attrs_set_valid_type(attrs, info[i].attr_idx, MM_ATTRS_VALID_TYPE_INT_ARRAY); */
+				mm_attrs_set_valid_array(attrs, info[i].attr_idx,
 					pair_array->value[0],
 					pair_array->count,
 					pair_array->default_value[0]);
-				/* "mmf_attrs_set_valid_type" initializes spec value in attribute, so allocated memory could be missed */
-				/* mmf_attrs_set_valid_type(attrs, info[i].attr_idx_pair, MM_ATTRS_VALID_TYPE_INT_ARRAY); */
-				mmf_attrs_set_valid_array(attrs, info[i].attr_idx_pair,
+				/* "mm_attrs_set_valid_type" initializes spec value in attribute, so allocated memory could be missed */
+				/* mm_attrs_set_valid_type(attrs, info[i].attr_idx_pair, MM_ATTRS_VALID_TYPE_INT_ARRAY); */
+				mm_attrs_set_valid_array(attrs, info[i].attr_idx_pair,
 					pair_array->value[1],
 					pair_array->count,
 					pair_array->default_value[1]);
@@ -1077,7 +1077,7 @@ int __mmcamcorder_set_info_to_attr(MMHandleType handle, _MMCamcorderInfoConverti
 		}
 	}
 
-	if (ret != MM_ERROR_NONE || mmf_attrs_commit(attrs) == -1)
+	if (ret != MM_ERROR_NONE || mm_attrs_commit_all(attrs) == -1)
 		return MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
 	else
 		return MM_ERROR_NONE;

@@ -433,14 +433,13 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 	if (EvasSurfaceElement) {
 		int attr_index = 0;
 		const char *evassink_name = NULL;
-		mmf_attribute_t *item_evassink_name = NULL;
-		mmf_attrs_t *attrs = (mmf_attrs_t *)MMF_CAMCORDER_ATTRS(hcamcorder);
+		MMHandleType attrs = MMF_CAMCORDER_ATTRS(hcamcorder);
 
 		_mmcamcorder_conf_get_value_element_name(EvasSurfaceElement, &evassink_name);
 		mm_attrs_get_index((MMHandleType)attrs, MMCAM_DISPLAY_EVAS_SURFACE_SINK, &attr_index);
-		item_evassink_name = &attrs->items[attr_index];
-		mmf_attribute_set_string(item_evassink_name, evassink_name, strlen(evassink_name));
-		mmf_attribute_commit(item_evassink_name);
+
+		mm_attrs_set_string(attrs, attr_index, evassink_name, strlen(evassink_name));
+		mm_attrs_commit(attrs, attr_index);
 
 		_mmcam_dbg_log("Evassink name : %s", evassink_name);
 	}

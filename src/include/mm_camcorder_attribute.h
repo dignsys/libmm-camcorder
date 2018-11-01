@@ -194,7 +194,7 @@ typedef enum {
 /*=======================================================================================
 | TYPE DEFINITIONS									|
 ========================================================================================*/
-typedef bool (*mmf_cam_commit_func_t)(MMHandleType handle, int attr_idx, const mmf_value_t *value);
+typedef bool (*mmf_cam_commit_func_t)(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
 
 /*=======================================================================================
 | STRUCTURE DEFINITIONS									|
@@ -322,7 +322,7 @@ int _mmcamcorder_get_attribute_info(MMHandleType handle, const char *attr_name, 
  * @see
  *
  */
-bool _mmcamcorder_commit_camcorder_attrs(int attr_idx, const char *attr_name, const mmf_value_t *value, void *commit_param);
+bool _mmcamcorder_commit_camcorder_attrs(int attr_idx, const char *attr_name, const MMAttrsValue *value, void *commit_param);
 
 /**
  * A commit function to set videosource attribute
@@ -339,57 +339,57 @@ bool _mmcamcorder_commit_camcorder_attrs(int attr_idx, const char *attr_name, co
  * @see
  *
  */
-bool _mmcamcorder_commit_capture_width(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_capture_height(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_capture_break_cont_shot(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_capture_count(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_capture_sound_enable(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_audio_volume(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_audio_input_route(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_audio_disable(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_format(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_fps(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_recording_motion_rate(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_width(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_height(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_video_size(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_zoom(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_ptz_type(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_pan(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_tilt(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_focus_mode(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_af_scan_range(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_af_touch_area(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_capture_mode(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_wdr(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_anti_handshake(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_video_stabilization(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_rotate(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_image_encoder_quality(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_target_filename(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_encoder_bitrate(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_recording_max_limit(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_filter(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_filter_scene_mode(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_filter_flip(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_display_handle(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_display_mode(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_display_rotation(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_display_flip(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_display_visible(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_display_geometry_method(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_display_rect(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_display_scale(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_display_evas_do_scaling(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_strobe(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_detect(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_flip(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_camera_hdr_capture(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_encoded_preview_bitrate(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_encoded_preview_gop_interval(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_sound_stream_info(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_tag(MMHandleType handle, int attr_idx, const mmf_value_t *value);
-bool _mmcamcorder_commit_audio_replay_gain(MMHandleType handle, int attr_idx, const mmf_value_t *value);
+bool _mmcamcorder_commit_capture_width(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_capture_height(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_capture_break_cont_shot(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_capture_count(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_capture_sound_enable(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_audio_volume(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_audio_input_route(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_audio_disable(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_format(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_fps(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_recording_motion_rate(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_width(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_height(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_video_size(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_zoom(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_ptz_type(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_pan(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_tilt(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_focus_mode(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_af_scan_range(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_af_touch_area(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_capture_mode(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_wdr(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_anti_handshake(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_video_stabilization(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_rotate(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_image_encoder_quality(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_target_filename(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_encoder_bitrate(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_recording_max_limit(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_filter(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_filter_scene_mode(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_filter_flip(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_display_handle(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_display_mode(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_display_rotation(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_display_flip(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_display_visible(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_display_geometry_method(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_display_rect(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_display_scale(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_display_evas_do_scaling(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_strobe(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_detect(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_flip(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_camera_hdr_capture(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_encoded_preview_bitrate(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_encoded_preview_gop_interval(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_sound_stream_info(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_tag(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
+bool _mmcamcorder_commit_audio_replay_gain(MMHandleType handle, int attr_idx, const MMAttrsValue *value);
 
 
 /**

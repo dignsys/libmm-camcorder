@@ -396,8 +396,7 @@ int _mmcamcorder_create_preview_elements(MMHandleType handle)
 
 		if (sink_element) {
 			int attr_index = 0;
-			mmf_attrs_t *attrs = MMF_CAMCORDER_ATTRS(handle);
-			mmf_attribute_t *attr_item = NULL;
+			MMHandleType attrs = MMF_CAMCORDER_ATTRS(handle);
 
 			_mmcam_dbg_log("reuse sink element %p in attribute", sink_element);
 
@@ -406,9 +405,8 @@ int _mmcamcorder_create_preview_elements(MMHandleType handle)
 			/* reset attribute */
 			if (attrs) {
 				mm_attrs_get_index((MMHandleType)attrs, MMCAM_DISPLAY_REUSE_ELEMENT, &attr_index);
-				attr_item = &attrs->items[attr_index];
-				mmf_attribute_set_data(attr_item, NULL, 0);
-				mmf_attribute_commit(attr_item);
+				mm_attrs_set_data(attrs, attr_index, NULL, 0);
+				mm_attrs_commit(attrs, attr_index);
 			} else {
 				_mmcam_dbg_warn("attribute is NULL");
 				err = MM_ERROR_CAMCORDER_NOT_INITIALIZED;

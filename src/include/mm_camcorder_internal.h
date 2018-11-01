@@ -32,7 +32,6 @@
 
 #include <mm_types.h>
 #include <mm_attrs.h>
-#include <mm_attrs_private.h>
 #include <mm_message.h>
 #include <vconf.h>
 #include <gst/video/video-format.h>
