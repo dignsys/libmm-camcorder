@@ -194,7 +194,7 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 		goto _ERR_DEFAULT_VALUE_INIT;
 	}
 
-	hcamcorder->attributes = _mmcamcorder_alloc_attribute((MMHandleType)hcamcorder, info);
+	hcamcorder->attributes = _mmcamcorder_alloc_attribute((MMHandleType)hcamcorder);
 	if (!(hcamcorder->attributes)) {
 		_mmcam_dbg_err("_mmcamcorder_create::alloc attribute error.");
 

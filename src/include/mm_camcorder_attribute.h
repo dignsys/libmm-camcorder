@@ -250,7 +250,7 @@ typedef struct {
  * @see		_mmcamcorder_dealloc_attribute()
  *
  */
-MMHandleType _mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info);
+MMHandleType _mmcamcorder_alloc_attribute(MMHandleType handle);
 
 /**
  * This function release structure of attributes.

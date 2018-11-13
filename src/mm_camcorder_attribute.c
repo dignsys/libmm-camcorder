@@ -81,7 +81,7 @@ static int  __mmcamcorder_check_valid_pair(MMHandleType handle, char **err_attr_
 |    GLOBAL FUNCTION DEFINITIONS:					|
 -----------------------------------------------------------------------*/
 MMHandleType
-_mmcamcorder_alloc_attribute(MMHandleType handle, MMCamPreset *info)
+_mmcamcorder_alloc_attribute(MMHandleType handle)
 {
 	_mmcam_dbg_log("");
 
