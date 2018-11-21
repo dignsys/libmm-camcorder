@@ -1,6 +1,6 @@
 Name:       libmm-camcorder
 Summary:    Camera and recorder library
-Version:    0.10.172
+Version:    0.10.173
 Release:    0
 Group:      Multimedia/Libraries
 License:    Apache-2.0
@@ -14,6 +14,7 @@ BuildRequires:  pkgconfig(mm-common)
 BuildRequires:  pkgconfig(libexif)
 BuildRequires:  pkgconfig(mmutil-imgp)
 BuildRequires:  pkgconfig(mmutil-jpeg)
+BuildRequires:  pkgconfig(gstreamer-1.0)
 BuildRequires:  pkgconfig(gstreamer-base-1.0)
 BuildRequires:  pkgconfig(gstreamer-allocators-1.0)
 BuildRequires:  pkgconfig(gstreamer-video-1.0)
@@ -31,6 +32,9 @@ BuildRequires:  pkgconfig(ttrace)
 BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  pkgconfig(dpm)
 BuildRequires:  pkgconfig(dlog)
+%if "%{gtests}" == "1"
+BuildRequires:  pkgconfig(gmock)
+%endif
 
 %description
 Camera and recorder function supported library.
@@ -60,6 +64,9 @@ export CFLAGS+=" -D_LARGEFILE64_SOURCE -DGST_USE_UNSTABLE_API -DSYSCONFDIR=\\\"%
 %else
 	--enable-mm-resource-manager \
 %endif
+%if "%{gtests}" == "1"
+	--enable-gtests \
+%endif
 	--disable-static
 make %{?jobs:-j%jobs}
 
@@ -78,6 +85,9 @@ make %{?jobs:-j%jobs}
 %defattr(-,root,root,-)
 %{_libdir}/*.so.*
 %{_datadir}/sounds/mm-camcorder/*
+%if "%{gtests}" == "1"
+%{_bindir}/gtests-libmm-camcorder
+%endif
 
 %files devel
 %defattr(-,root,root,-)

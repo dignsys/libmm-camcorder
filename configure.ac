@@ -21,6 +21,8 @@ AC_HEADER_STDC
 AC_HEADER_TIME
 AC_PROG_GCC_TRADITIONAL
 AC_PROG_LIBTOOL
+AC_PROG_CXX
+AC_SUBST(GCC_CXXFLAGS)
 
 # Checks for libraries.
 PKG_CHECK_MODULES(GST, gstreamer-1.0 >= 1.2.0)
@@ -139,6 +141,21 @@ AC_ARG_ENABLE(product-tv, AC_HELP_STRING([--enable-product-tv],[enable tv define
 ],[PRODUCT_TV=no])
 AM_CONDITIONAL([PRODUCT_TV], [test "x$PRODUCT_TV" = "xyes"])
 
+AC_ARG_ENABLE(gtests, AC_HELP_STRING([--enable-gtests], [enable gtests]),
+[
+  case "${enableval}" in
+    yes) GTESTS=yes ;;
+    no)  GTESTS=no ;;
+    *) AC_MSG_ERROR(bad value ${enableval} for --enable-gtests) ;;
+  esac
+],[GTESTS=no])
+if test "x$GTESTS" = "xyes"; then
+PKG_CHECK_MODULES(GMOCK, gmock)
+AC_SUBST(GMOCK_CFLAGS)
+AC_SUBST(GMOCK_LIBS)
+fi
+AM_CONDITIONAL([GTESTS], [test "x$GTESTS" = "xyes"])
+
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([fcntl.h memory.h stdlib.h string.h sys/time.h unistd.h])
@@ -159,6 +176,7 @@ AC_CHECK_FUNCS([memset select])
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
+unittest/Makefile
 mm-camcorder.pc
 ])
 AC_OUTPUT
