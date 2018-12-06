@@ -920,27 +920,24 @@ int _mmcamcorder_conf_get_info(MMHandleType handle, int type, const char *ConfFi
 	_mmcam_dbg_log("Try open Configure File[%s]", conf_path);
 
 	fp = fopen(conf_path, "r");
-	if (fp == NULL) {
+	if (!fp) {
 		_mmcam_dbg_warn("File open failed.[%s] retry...", conf_path);
 
 		snprintf(conf_path, sizeof(conf_path), "%s/multimedia/%s", TZ_SYS_ETC, ConfFile);
 		_mmcam_dbg_log("Try open Configure File[%s]", conf_path);
 		fp = fopen(conf_path, "r");
-		if (fp == NULL)
+		if (!fp) {
 			_mmcam_dbg_warn("open failed.[%s] errno [%d]", conf_path, errno);
+			ret = MM_ERROR_CAMCORDER_NOT_SUPPORTED;
+		}
 	}
 
-	if (fp != NULL) {
+	if (fp) {
 		ret = _mmcamcorder_conf_parse_info(handle, type, fp, configure_info);
 		fclose(fp);
-	} else {
-		if (errno == ENOENT)
-			ret = MM_ERROR_CAMCORDER_NOT_SUPPORTED;
-		else
-			ret = MM_ERROR_CAMCORDER_CREATE_CONFIGURE;
 	}
 
-	_mmcam_dbg_log("Leave...");
+	_mmcam_dbg_log("Leave [0x%x]", ret);
 
 	return ret;
 }
