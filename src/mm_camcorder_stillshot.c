@@ -1305,7 +1305,7 @@ static void __mmcamcorder_image_capture_cb(GstElement *element, GstSample *sampl
 		goto error;
 	} else {
 		if ((mapinfo1.data == NULL) && (mapinfo1.size == 0)) {
-			_mmcam_dbg_err("mapinfo1 is wrong (%p, size %d)", mapinfo1.data, mapinfo1.size);
+			_mmcam_dbg_err("mapinfo1 is wrong (%p, size %zu)", mapinfo1.data, mapinfo1.size);
 			MMCAM_SEND_MESSAGE(hcamcorder, MM_MESSAGE_CAMCORDER_ERROR, MM_ERROR_CAMCORDER_INTERNAL);
 			gst_buffer_unmap(gst_sample_get_buffer(sample1), &mapinfo1);
 			goto error;
@@ -1325,14 +1325,14 @@ static void __mmcamcorder_image_capture_cb(GstElement *element, GstSample *sampl
 	mm_attrs_get_index(attrs, MMCAM_CAPTURED_SCREENNAIL, &attr_index_for_screennail);
 
 	if (sample3 && mapinfo3.data && mapinfo3.size != 0) {
-		_mmcam_dbg_log("Screennail (sample3=%p,size=%d)", sample3, mapinfo3.size);
+		_mmcam_dbg_log("Screennail (sample3=%p,size=%zu)", sample3, mapinfo3.size);
 
 		pixtype_scrnl = _mmcamcorder_get_pixel_format(gst_sample_get_caps(sample3));
 		__mmcamcorder_get_capture_data_from_buffer(&scrnail, pixtype_scrnl, sample3);
 
 		/* Set screennail attribute for application */
 		ret = mm_attrs_set_data(attrs, attr_index_for_screennail, &scrnail, sizeof(scrnail));
-		_mmcam_dbg_log("Screennail set attribute data %p, size %d, ret %x", &scrnail, sizeof(scrnail), ret);
+		_mmcam_dbg_log("Screennail set attribute data %p, size %zu, ret %x", &scrnail, sizeof(scrnail), ret);
 	} else {
 		_mmcam_dbg_log("Sample3 has wrong pointer. Not Error. (sample3=%p)", sample3);
 		mm_attrs_set_data(attrs, attr_index_for_screennail, NULL, 0);

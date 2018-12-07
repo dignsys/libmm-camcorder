@@ -977,13 +977,13 @@ int _mmcamcorder_conf_parse_info(MMHandleType handle, int type, FILE *fp, camera
 
 	new_conf = (camera_conf *)g_malloc0(sizeof(camera_conf));
 	if (new_conf == NULL) {
-		_mmcam_dbg_err("new_conf alloc failed : %d", sizeof(camera_conf));
+		_mmcam_dbg_err("new_conf alloc failed : %zu", sizeof(camera_conf));
 		return MM_ERROR_CAMCORDER_LOW_MEMORY;
 	}
 
 	buffer_string = (char*)g_malloc0(sizeof(char) * BUFFER_LENGTH_STRING);
 	if (buffer_string == NULL) {
-		_mmcam_dbg_err("buffer_string alloc failed : %d", sizeof(char) * BUFFER_LENGTH_STRING);
+		_mmcam_dbg_err("buffer_string alloc failed : %zu", sizeof(char) * BUFFER_LENGTH_STRING);
 		g_free(new_conf);
 		return MM_ERROR_CAMCORDER_LOW_MEMORY;
 	}
@@ -1626,7 +1626,7 @@ int _mmcamcorder_conf_add_info(MMHandleType handle, int type, conf_detail **info
 						}
 					}
 				} else {
-					_mmcam_dbg_err("malloc failed : %d", sizeof(type_string2*)*(new_element->count_string));
+					_mmcam_dbg_err("malloc failed : %zu", sizeof(type_string2*)*(new_element->count_string));
 				}
 			} else {
 				/*_mmcam_dbg_err("invalid count - %d", new_element->count_string);*/
@@ -2765,7 +2765,7 @@ _mmcamcorder_get_available_format(MMHandleType handle, int conf_category, int **
 
 		arr = (int*) g_malloc0(count * sizeof(int));
 		if (arr == NULL) {
-			_mmcam_dbg_err("malloc failed : %d", count * sizeof(int));
+			_mmcam_dbg_err("malloc failed : %zu", count * sizeof(int));
 			return 0;
 		}
 

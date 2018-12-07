@@ -255,7 +255,7 @@ gint _mmcamcorder_find_tag(FILE *f, guint32 tag_fourcc, gboolean do_rewind)
 		uint32_t buf_fourcc = 0;
 
 		if (read_item < 8) {
-			_mmcam_dbg_err("fread failed : %d", read_item);
+			_mmcam_dbg_err("fread failed : %zu", read_item);
 			break;
 		}
 
@@ -284,7 +284,7 @@ gint _mmcamcorder_find_tag(FILE *f, guint32 tag_fourcc, gboolean do_rewind)
 				buf_size = buf_size - 8; /* include tag */
 			}
 
-			_mmcam_dbg_log("seek %llu", buf_size);
+			_mmcam_dbg_log("seek %lu", buf_size);
 			if (fseeko(f, (off_t)buf_size, SEEK_CUR) != 0) {
 				_mmcam_dbg_err("fseeko() fail");
 				return FALSE;
@@ -310,7 +310,7 @@ gboolean _mmcamcorder_find_fourcc(FILE *f, guint32 tag_fourcc, gboolean do_rewin
 		uint32_t buf_fourcc = 0;
 
 		if (read_item < 8) {
-			_mmcam_dbg_err("fread failed : %d", read_item);
+			_mmcam_dbg_err("fread failed : %zu", read_item);
 			break;
 		}
 
@@ -345,7 +345,7 @@ gboolean _mmcamcorder_find_fourcc(FILE *f, guint32 tag_fourcc, gboolean do_rewin
 				buf_size = buf_size - 8; /* include tag */
 			}
 
-			_mmcam_dbg_log("seek %llu", buf_size);
+			_mmcam_dbg_log("seek %lu", buf_size);
 			if (fseeko(f, (off_t)buf_size, SEEK_CUR) != 0) {
 				_mmcam_dbg_err("fseeko() fail");
 				return FALSE;
@@ -603,7 +603,7 @@ guint64 _mmcamcorder_get_container_size(const guchar *size)
 	result = result | (temp << 8);
 	result = result | size[3];
 
-	_mmcam_dbg_log("result : %llu", result);
+	_mmcam_dbg_log("result : %lu", result);
 
 	return result;
 }
@@ -630,7 +630,7 @@ guint64 _mmcamcorder_get_container_size64(const guchar *size)
 	result = result | (temp << 8);
 	result = result | size[7];
 
-	_mmcam_dbg_log("result : %llu", result);
+	_mmcam_dbg_log("result : %lu", result);
 
 	return result;
 }
@@ -764,7 +764,7 @@ int _mmcamcorder_get_freespace(storage_type_e type, guint64 *free_space)
 	*free_space = vfs.f_bsize * vfs.f_bavail;
 	/*
 	_mmcam_dbg_log("vfs.f_bsize [%lu], vfs.f_bavail [%lu]", vfs.f_bsize, vfs.f_bavail);
-	_mmcam_dbg_log("memory size %llu [%s]", *free_space, path);
+	_mmcam_dbg_log("memory size %lu [%s]", *free_space, path);
 	*/
 	return 0;
 }

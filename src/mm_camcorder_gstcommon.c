@@ -2164,7 +2164,7 @@ GstPadProbeReturn __mmcamcorder_eventprobe_monitor(GstPad *pad, GstPadProbeInfo 
 			const GstSegment *segment;
 			gst_event_parse_segment(event, &segment);
 			if (segment->format == GST_FORMAT_BYTES) {
-				_mmcam_dbg_log("change current offset %llu -> %llu",
+				_mmcam_dbg_log("change current offset %llu -> %lu",
 					sc->muxed_stream_offset, segment->start);
 
 				sc->muxed_stream_offset = (unsigned long long)segment->start;

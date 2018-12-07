@@ -484,11 +484,11 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 			if (info->filesize > 0) {
 				break;
 			} else if (count == _MMCAMCORDER_RETRIAL_COUNT) {
-				_mmcam_dbg_err("Pause fail, wait 200 ms, but file size is %lld",
+				_mmcam_dbg_err("Pause fail, wait 200 ms, but file size is %lu",
 					info->filesize);
 				return MM_ERROR_CAMCORDER_INVALID_CONDITION;
 			} else {
-				_mmcam_dbg_warn("Wait for enough audio frame, retry count[%d], file size is %lld",
+				_mmcam_dbg_warn("Wait for enough audio frame, retry count[%d], file size is %lu",
 					count, info->filesize);
 			}
 			usleep(_MMCAMCORDER_FRAME_WAIT_TIME);
@@ -551,11 +551,11 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 			if (info->filesize > 0) {
 				break;
 			} else if (count == _MMCAMCORDER_RETRIAL_COUNT) {
-				_mmcam_dbg_err("Commit fail, waited 200 ms, but file size is %lld", info->filesize);
+				_mmcam_dbg_err("Commit fail, waited 200 ms, but file size is %lu", info->filesize);
 					info->b_commiting = FALSE;
 				return MM_ERROR_CAMCORDER_INVALID_CONDITION;
 			} else {
-				_mmcam_dbg_warn("Waiting for enough audio frame, re-count[%d], file size is %lld",
+				_mmcam_dbg_warn("Waiting for enough audio frame, re-count[%d], file size is %lu",
 					count, info->filesize);
 			}
 			usleep(_MMCAMCORDER_FRAME_WAIT_TIME);
@@ -1106,7 +1106,7 @@ static gboolean __mmcamcorder_audio_add_metadata_info_m4a(MMHandleType handle)
 
 		nread = fread(&buf, sizeof(char), sizeof(buf), f);
 
-		_mmcam_dbg_log("recorded file fread %d", nread);
+		_mmcam_dbg_log("recorded file fread %zu", nread);
 
 		udta_size = _mmcamcorder_get_container_size(buf);
 
