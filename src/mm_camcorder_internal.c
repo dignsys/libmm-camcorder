@@ -63,7 +63,13 @@
 |    LOCAL FUNCTION PROTOTYPES:								|
 ---------------------------------------------------------------------------------------*/
 /* STATIC INTERNAL FUNCTION */
-static gboolean __mmcamcorder_gstreamer_init(camera_conf * conf);
+static gint     __mmcamcorder_init_handle(mmf_camcorder_t **hcamcorder, int device_type);
+static void     __mmcamcorder_deinit_handle(mmf_camcorder_t *hcamcorder);
+static gint     __mmcamcorder_init_configure_video_capture(mmf_camcorder_t *hcamcorder);
+static gint     __mmcamcorder_init_configure_audio(mmf_camcorder_t *hcamcorder);
+static void     __mmcamcorder_deinit_configure(mmf_camcorder_t *hcamcorder);
+static gboolean __mmcamcorder_init_gstreamer(camera_conf *conf);
+static void     __mmcamcorder_get_system_info(mmf_camcorder_t *hcamcorder);
 
 static gboolean __mmcamcorder_handle_gst_error(MMHandleType handle, GstMessage *message, GError *error);
 static gint     __mmcamcorder_gst_handle_stream_error(MMHandleType handle, int code, GstMessage *message);
@@ -72,15 +78,13 @@ static gint     __mmcamcorder_gst_handle_library_error(MMHandleType handle, int 
 static gint     __mmcamcorder_gst_handle_core_error(MMHandleType handle, int code, GstMessage *message);
 static gint     __mmcamcorder_gst_handle_resource_warning(MMHandleType handle, GstMessage *message , GError *error);
 static gboolean __mmcamcorder_handle_gst_warning(MMHandleType handle, GstMessage *message, GError *error);
-
 #ifdef _MMCAMCORDER_MM_RM_SUPPORT
 static int      __mmcamcorder_resource_release_cb(mm_resource_manager_h rm,
-		mm_resource_manager_res_h res, void *user_data);
+	mm_resource_manager_res_h res, void *user_data);
 #endif /* _MMCAMCORDER_MM_RM_SUPPORT */
-
 #ifdef _MMCAMCORDER_RM_SUPPORT
-rm_cb_result _mmcamcorder_rm_callback(int handle, rm_callback_type event_src,
-									  rm_device_request_s *info, void *cb_data);
+rm_cb_result    _mmcamcorder_rm_callback(int handle, rm_callback_type event_src,
+	rm_device_request_s *info, void *cb_data);
 #endif /* _MMCAMCORDER_RM_SUPPORT */
 #ifdef _MMCAMCORDER_USE_SET_ATTR_CB
 static gboolean __mmcamcorder_set_attr_to_camsensor_cb(gpointer data);
@@ -89,15 +93,223 @@ static gboolean __mmcamcorder_set_attr_to_camsensor_cb(gpointer data);
 /*=======================================================================================
 |  FUNCTION DEFINITIONS									|
 =======================================================================================*/
-/*---------------------------------------------------------------------------------------
-|    GLOBAL FUNCTION DEFINITIONS:							|
----------------------------------------------------------------------------------------*/
-
-/* Internal command functions {*/
-int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
+static gint __mmcamcorder_init_handle(mmf_camcorder_t **hcamcorder, int device_type)
 {
 	int ret = MM_ERROR_NONE;
-	int sys_info_ret = SYSTEM_INFO_ERROR_NONE;
+	mmf_camcorder_t *new_handle = NULL;
+
+	if (!hcamcorder) {
+		_mmcam_dbg_err("NULL handle");
+		return MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
+	}
+
+	/* Create mmf_camcorder_t handle and initialize every variable */
+	new_handle = (mmf_camcorder_t *)malloc(sizeof(mmf_camcorder_t));
+	if (!new_handle) {
+		_mmcam_dbg_err("new handle allocation failed");
+		return MM_ERROR_CAMCORDER_LOW_MEMORY;
+	}
+
+	memset(new_handle, 0x00, sizeof(mmf_camcorder_t));
+
+	/* set device type */
+	new_handle->device_type = device_type;
+
+	_mmcam_dbg_warn("Device Type : %d", new_handle->device_type);
+
+	new_handle->type = MM_CAMCORDER_MODE_VIDEO_CAPTURE;
+	new_handle->state = MM_CAMCORDER_STATE_NONE;
+	new_handle->old_state = MM_CAMCORDER_STATE_NONE;
+	new_handle->capture_in_recording = FALSE;
+
+	/* init mutex and cond */
+	g_mutex_init(&(new_handle->mtsafe).lock);
+	g_cond_init(&(new_handle->mtsafe).cond);
+	g_mutex_init(&(new_handle->mtsafe).cmd_lock);
+	g_cond_init(&(new_handle->mtsafe).cmd_cond);
+	g_mutex_init(&(new_handle->mtsafe).interrupt_lock);
+	g_mutex_init(&(new_handle->mtsafe).state_lock);
+	g_mutex_init(&(new_handle->mtsafe).gst_state_lock);
+	g_mutex_init(&(new_handle->mtsafe).gst_encode_state_lock);
+	g_mutex_init(&(new_handle->mtsafe).message_cb_lock);
+	g_mutex_init(&(new_handle->mtsafe).vcapture_cb_lock);
+	g_mutex_init(&(new_handle->mtsafe).vstream_cb_lock);
+	g_mutex_init(&(new_handle->mtsafe).astream_cb_lock);
+	g_mutex_init(&(new_handle->mtsafe).mstream_cb_lock);
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
+	g_mutex_init(&(new_handle->mtsafe).resource_lock);
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
+
+	g_mutex_init(&new_handle->restart_preview_lock);
+
+	g_mutex_init(&new_handle->snd_info.open_mutex);
+	g_cond_init(&new_handle->snd_info.open_cond);
+	g_mutex_init(&new_handle->snd_info.play_mutex);
+	g_cond_init(&new_handle->snd_info.play_cond);
+
+	g_mutex_init(&new_handle->task_thread_lock);
+	g_cond_init(&new_handle->task_thread_cond);
+	new_handle->task_thread_state = _MMCAMCORDER_TASK_THREAD_STATE_NONE;
+
+	if (device_type != MM_VIDEO_DEVICE_NONE) {
+		new_handle->gdbus_info_sound.mm_handle = new_handle;
+		g_mutex_init(&new_handle->gdbus_info_sound.sync_mutex);
+		g_cond_init(&new_handle->gdbus_info_sound.sync_cond);
+
+		new_handle->gdbus_info_solo_sound.mm_handle = new_handle;
+		g_mutex_init(&new_handle->gdbus_info_solo_sound.sync_mutex);
+		g_cond_init(&new_handle->gdbus_info_solo_sound.sync_cond);
+	}
+
+	/* create task thread */
+	new_handle->task_thread = g_thread_try_new("MMCAM_TASK_THREAD",
+		(GThreadFunc)_mmcamcorder_util_task_thread_func, (gpointer)new_handle, NULL);
+	if (new_handle->task_thread == NULL) {
+		_mmcam_dbg_err("_mmcamcorder_create::failed to create task thread");
+		ret = MM_ERROR_CAMCORDER_RESOURCE_CREATION;
+		goto _INIT_HANDLE_FAILED;
+	}
+
+	/* Get Camera Configure information from Camcorder INI file */
+	ret = _mmcamcorder_conf_get_info((MMHandleType)new_handle, CONFIGURE_TYPE_MAIN, CONFIGURE_MAIN_FILE, &new_handle->conf_main);
+	if (ret != MM_ERROR_NONE) {
+		_mmcam_dbg_err("Failed to get configure(main) info.");
+		goto _INIT_HANDLE_FAILED;
+	}
+
+	/* allocate attribute */
+	new_handle->attributes = _mmcamcorder_alloc_attribute((MMHandleType)new_handle);
+	if (!new_handle->attributes) {
+		ret = MM_ERROR_CAMCORDER_RESOURCE_CREATION;
+		goto _INIT_HANDLE_FAILED;
+	}
+
+	*hcamcorder = new_handle;
+
+	_mmcam_dbg_log("new handle %p", new_handle);
+
+	return MM_ERROR_NONE;
+
+_INIT_HANDLE_FAILED:
+	__mmcamcorder_deinit_handle(new_handle);
+	return ret;
+}
+
+
+static void __mmcamcorder_deinit_handle(mmf_camcorder_t *hcamcorder)
+{
+	if (!hcamcorder) {
+		_mmcam_dbg_err("NULL handle");
+		return;
+	}
+
+	/* Remove exif info */
+	if (hcamcorder->exif_info) {
+		mm_exif_destory_exif_info(hcamcorder->exif_info);
+		hcamcorder->exif_info = NULL;
+	}
+
+	/* remove attributes */
+	if (hcamcorder->attributes) {
+		_mmcamcorder_dealloc_attribute((MMHandleType)hcamcorder, hcamcorder->attributes);
+		hcamcorder->attributes = 0;
+	}
+
+	/* Release configure info */
+	__mmcamcorder_deinit_configure(hcamcorder);
+
+	/* remove task thread */
+	if (hcamcorder->task_thread) {
+		g_mutex_lock(&hcamcorder->task_thread_lock);
+		_mmcam_dbg_log("send signal for task thread exit");
+		hcamcorder->task_thread_state = _MMCAMCORDER_TASK_THREAD_STATE_EXIT;
+		g_cond_signal(&hcamcorder->task_thread_cond);
+		g_mutex_unlock(&hcamcorder->task_thread_lock);
+		g_thread_join(hcamcorder->task_thread);
+		hcamcorder->task_thread = NULL;
+	}
+
+	/* Release lock, cond */
+	g_mutex_clear(&(hcamcorder->mtsafe).lock);
+	g_cond_clear(&(hcamcorder->mtsafe).cond);
+	g_mutex_clear(&(hcamcorder->mtsafe).cmd_lock);
+	g_cond_clear(&(hcamcorder->mtsafe).cmd_cond);
+	g_mutex_clear(&(hcamcorder->mtsafe).interrupt_lock);
+	g_mutex_clear(&(hcamcorder->mtsafe).state_lock);
+	g_mutex_clear(&(hcamcorder->mtsafe).gst_state_lock);
+	g_mutex_clear(&(hcamcorder->mtsafe).gst_encode_state_lock);
+	g_mutex_clear(&(hcamcorder->mtsafe).message_cb_lock);
+	g_mutex_clear(&(hcamcorder->mtsafe).vcapture_cb_lock);
+	g_mutex_clear(&(hcamcorder->mtsafe).vstream_cb_lock);
+	g_mutex_clear(&(hcamcorder->mtsafe).astream_cb_lock);
+	g_mutex_clear(&(hcamcorder->mtsafe).mstream_cb_lock);
+#ifdef _MMCAMCORDER_MM_RM_SUPPORT
+	g_mutex_clear(&(hcamcorder->mtsafe).resource_lock);
+#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
+
+	g_mutex_clear(&hcamcorder->snd_info.open_mutex);
+	g_cond_clear(&hcamcorder->snd_info.open_cond);
+	g_mutex_clear(&hcamcorder->restart_preview_lock);
+
+	if (hcamcorder->device_type != MM_VIDEO_DEVICE_NONE) {
+		g_mutex_clear(&hcamcorder->gdbus_info_sound.sync_mutex);
+		g_cond_clear(&hcamcorder->gdbus_info_sound.sync_cond);
+		g_mutex_clear(&hcamcorder->gdbus_info_solo_sound.sync_mutex);
+		g_cond_clear(&hcamcorder->gdbus_info_solo_sound.sync_cond);
+	}
+
+	g_mutex_clear(&hcamcorder->task_thread_lock);
+	g_cond_clear(&hcamcorder->task_thread_cond);
+
+	if (hcamcorder->model_name)
+		free(hcamcorder->model_name);
+
+	if (hcamcorder->software_version)
+		free(hcamcorder->software_version);
+
+	/* Release handle */
+	memset(hcamcorder, 0x00, sizeof(mmf_camcorder_t));
+
+	free(hcamcorder);
+
+	return;
+}
+
+
+static void __mmcamcorder_get_system_info(mmf_camcorder_t *hcamcorder)
+{
+	int ret = 0;
+
+	if (!hcamcorder) {
+		_mmcam_dbg_err("NULL handle");
+		return;
+	}
+
+	/* get shutter sound policy */
+	vconf_get_int(VCONFKEY_CAMERA_SHUTTER_SOUND_POLICY, &hcamcorder->shutter_sound_policy);
+	_mmcam_dbg_log("current shutter sound policy : %d", hcamcorder->shutter_sound_policy);
+
+	/* get model name */
+	ret = system_info_get_platform_string("http://tizen.org/system/model_name", &hcamcorder->model_name);
+
+	_mmcam_dbg_warn("model name [%s], ret 0x%x",
+		hcamcorder->model_name ? hcamcorder->model_name : "NULL", ret);
+
+	/* get software version */
+	ret = system_info_get_platform_string("http://tizen.org/system/build.string", &hcamcorder->software_version);
+
+	_mmcam_dbg_warn("software version [%s], ret 0x%x",
+		hcamcorder->software_version ? hcamcorder->software_version : "NULL", ret);
+
+	return;
+}
+
+
+static gint __mmcamcorder_init_configure_video_capture(mmf_camcorder_t *hcamcorder)
+{
+	int ret = MM_ERROR_NONE;
+	int resolution_width = 0;
+	int resolution_height = 0;
 	int rcmd_fmt_capture = MM_PIXEL_FORMAT_YUYV;
 	int rcmd_fmt_recording = MM_PIXEL_FORMAT_NV12;
 	int rcmd_dpy_rotation = MM_DISPLAY_ROTATION_270;
@@ -106,259 +318,245 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 	int camera_default_flip = MM_FLIP_NONE;
 	int camera_facing_direction = MM_CAMCORDER_CAMERA_FACING_DIRECTION_REAR;
 	char *err_attr_name = NULL;
+	char conf_file_name[__MMCAMCORDER_CONF_FILENAME_LENGTH] = {'\0',};
+	MMCamAttrsInfo fps_info;
+
+	if (!hcamcorder) {
+		_mmcam_dbg_err("NULL handle");
+		return MM_ERROR_CAMCORDER_NOT_INITIALIZED;
+	}
+
+	snprintf(conf_file_name, sizeof(conf_file_name), "%s%d.ini",
+		CONFIGURE_CTRL_FILE_PREFIX, hcamcorder->device_type);
+
+	_mmcam_dbg_log("Load control configure file [%d][%s]", hcamcorder->device_type, conf_file_name);
+
+	ret = _mmcamcorder_conf_get_info((MMHandleType)hcamcorder,
+		CONFIGURE_TYPE_CTRL, (const char *)conf_file_name, &hcamcorder->conf_ctrl);
+	if (ret != MM_ERROR_NONE) {
+		_mmcam_dbg_err("Failed to get configure(control) info.");
+		return ret;
+	}
+/*
+	_mmcamcorder_conf_print_info(&hcamcorder->conf_main);
+	_mmcamcorder_conf_print_info(&hcamcorder->conf_ctrl);
+*/
+	ret = _mmcamcorder_init_convert_table((MMHandleType)hcamcorder);
+	if (ret != MM_ERROR_NONE) {
+		_mmcam_dbg_warn("converting table initialize error!!");
+		return MM_ERROR_CAMCORDER_INTERNAL;
+	}
+
+	ret = _mmcamcorder_init_attr_from_configure((MMHandleType)hcamcorder, MM_CAMCONVERT_CATEGORY_ALL);
+	if (ret != MM_ERROR_NONE) {
+		_mmcam_dbg_warn("attribute initialize from configure error!!");
+		return MM_ERROR_CAMCORDER_INTERNAL;
+	}
+
+	/* Get device info, recommend preview fmt and display rotation from INI */
+	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
+		CONFIGURE_CATEGORY_CTRL_CAMERA,
+		"RecommendPreviewFormatCapture",
+		&rcmd_fmt_capture);
+
+	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
+		CONFIGURE_CATEGORY_CTRL_CAMERA,
+		"RecommendPreviewFormatRecord",
+		&rcmd_fmt_recording);
+
+	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
+		CONFIGURE_CATEGORY_CTRL_CAMERA,
+		"RecommendDisplayRotation",
+		&rcmd_dpy_rotation);
+
+	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
+		CONFIGURE_CATEGORY_MAIN_CAPTURE,
+		"PlayCaptureSound",
+		&play_capture_sound);
+
+	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
+		CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
+		"DeviceCount",
+		&camera_device_count);
+
+	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
+		CONFIGURE_CATEGORY_CTRL_CAMERA,
+		"FacingDirection",
+		&camera_facing_direction);
+
+	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
+		CONFIGURE_CATEGORY_CTRL_EFFECT,
+		"BrightnessStepDenominator",
+		&hcamcorder->brightness_step_denominator);
+
+	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
+		CONFIGURE_CATEGORY_CTRL_CAPTURE,
+		"SupportZSL",
+		&hcamcorder->support_zsl_capture);
+
+	_mmcam_dbg_log("Recommend fmt[cap:%d,rec:%d], dpy rot %d, cap snd %d, dev cnt %d, cam facing dir %d, step denom %d, support zsl %d",
+		rcmd_fmt_capture, rcmd_fmt_recording, rcmd_dpy_rotation,
+		play_capture_sound, camera_device_count, camera_facing_direction,
+		hcamcorder->brightness_step_denominator, hcamcorder->support_zsl_capture);
+
+	/* Get UseZeroCopyFormat value from INI */
+	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
+		CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
+		"UseZeroCopyFormat",
+		&(hcamcorder->use_zero_copy_format));
+
+	/* Get SupportMediaPacketPreviewCb value from INI */
+	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
+		CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
+		"SupportMediaPacketPreviewCb",
+		&(hcamcorder->support_media_packet_preview_cb));
+
+	/* Get UseVideoconvert value from INI */
+	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
+		CONFIGURE_CATEGORY_MAIN_VIDEO_OUTPUT,
+		"UseVideoconvert",
+		&hcamcorder->use_videoconvert);
+
+	ret = mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL,
+		MMCAM_CAMERA_WIDTH, &resolution_width,
+		MMCAM_CAMERA_HEIGHT, &resolution_height,
+		NULL);
+
+	mm_camcorder_get_fps_list_by_resolution((MMHandleType)hcamcorder, resolution_width, resolution_height, &fps_info);
+
+	_mmcam_dbg_log("UseZeroCopyFormat %d, UseVideoconvert %d, SupportMediaPacketPreviewCb %d",
+		hcamcorder->use_zero_copy_format, hcamcorder->use_videoconvert, hcamcorder->support_media_packet_preview_cb);
+	_mmcam_dbg_log("res : %d X %d, Default FPS by resolution  : %d",
+		resolution_width, resolution_height, fps_info.int_array.def);
+
+	if (camera_facing_direction == 1) {
+		if (rcmd_dpy_rotation == MM_DISPLAY_ROTATION_270 || rcmd_dpy_rotation == MM_DISPLAY_ROTATION_90)
+			camera_default_flip = MM_FLIP_VERTICAL;
+		else
+			camera_default_flip = MM_FLIP_HORIZONTAL;
+
+		_mmcam_dbg_log("camera_default_flip : [%d]", camera_default_flip);
+	}
+
+	ret = mm_camcorder_set_attributes((MMHandleType)hcamcorder, &err_attr_name,
+		MMCAM_CAMERA_DEVICE_COUNT, camera_device_count,
+		MMCAM_CAMERA_FACING_DIRECTION, camera_facing_direction,
+		MMCAM_RECOMMEND_PREVIEW_FORMAT_FOR_CAPTURE, rcmd_fmt_capture,
+		MMCAM_RECOMMEND_PREVIEW_FORMAT_FOR_RECORDING, rcmd_fmt_recording,
+		MMCAM_RECOMMEND_DISPLAY_ROTATION, rcmd_dpy_rotation,
+		MMCAM_SUPPORT_ZSL_CAPTURE, hcamcorder->support_zsl_capture,
+		MMCAM_SUPPORT_ZERO_COPY_FORMAT, hcamcorder->use_zero_copy_format,
+		MMCAM_SUPPORT_MEDIA_PACKET_PREVIEW_CB, hcamcorder->support_media_packet_preview_cb,
+		MMCAM_CAMERA_FPS, fps_info.int_array.def,
+		MMCAM_DISPLAY_FLIP, camera_default_flip,
+		MMCAM_CAPTURE_SOUND_ENABLE, play_capture_sound,
+		NULL);
+	if (ret != MM_ERROR_NONE) {
+		_mmcam_dbg_err("[0x%x] Set %s FAILED.", ret, err_attr_name ? err_attr_name : "[UNKNOWN]");
+		SAFE_FREE(err_attr_name);
+		return MM_ERROR_CAMCORDER_INTERNAL;
+	}
+
+	/* Get default value of brightness */
+	ret = mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL,
+		MMCAM_FILTER_BRIGHTNESS, &hcamcorder->brightness_default,
+		NULL);
+	if (ret != MM_ERROR_NONE) {
+		_mmcam_dbg_err("Get brightness FAILED.");
+		return MM_ERROR_CAMCORDER_INTERNAL;
+	}
+
+	_mmcam_dbg_log("Default brightness : %d", hcamcorder->brightness_default);
+
+	return ret;
+}
+
+
+static gint __mmcamcorder_init_configure_audio(mmf_camcorder_t *hcamcorder)
+{
+	int ret = MM_ERROR_NONE;
+	int camera_device_count = 0;
+
+	if (!hcamcorder) {
+		_mmcam_dbg_err("NULL handle");
+		return MM_ERROR_CAMCORDER_NOT_INITIALIZED;
+	}
+
+	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
+		CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
+		"DeviceCount",
+		&camera_device_count);
+
+	ret = mm_camcorder_set_attributes((MMHandleType)hcamcorder, NULL,
+		MMCAM_CAMERA_DEVICE_COUNT, camera_device_count,
+		NULL);
+	if (ret != MM_ERROR_NONE) {
+		_mmcam_dbg_err("Set device count FAILED");
+		return MM_ERROR_CAMCORDER_INTERNAL;
+	}
+
+	ret = _mmcamcorder_init_attr_from_configure((MMHandleType)hcamcorder, MM_CAMCONVERT_CATEGORY_AUDIO);
+	if (ret != MM_ERROR_NONE) {
+		_mmcam_dbg_err("there is no audio device");
+		return MM_ERROR_CAMCORDER_NOT_SUPPORTED;
+	}
+
+	return ret;
+}
+
+
+static void __mmcamcorder_deinit_configure(mmf_camcorder_t *hcamcorder)
+{
+	if (!hcamcorder) {
+		_mmcam_dbg_err("NULL handle");
+		return;
+	}
+
+	if (hcamcorder->conf_ctrl)
+		_mmcamcorder_conf_release_info((MMHandleType)hcamcorder, &hcamcorder->conf_ctrl);
+
+	if (hcamcorder->conf_main)
+		_mmcamcorder_conf_release_info((MMHandleType)hcamcorder, &hcamcorder->conf_main);
+
+	return;
+}
+
+
+/*---------------------------------------------------------------------------------------
+|    GLOBAL FUNCTION DEFINITIONS:							|
+---------------------------------------------------------------------------------------*/
+/* Internal command functions {*/
+int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
+{
+	int ret = MM_ERROR_NONE;
 	mmf_camcorder_t *hcamcorder = NULL;
-	type_element *EvasSurfaceElement = NULL;
 
 	_mmcam_dbg_log("Entered");
 
-	mmf_return_val_if_fail(handle, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);
-	mmf_return_val_if_fail(info, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);
+	mmf_return_val_if_fail(handle && info, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);
 
-	/* Create mmf_camcorder_t handle and initialize every variable */
-	hcamcorder = (mmf_camcorder_t *)malloc(sizeof(mmf_camcorder_t));
-	mmf_return_val_if_fail(hcamcorder, MM_ERROR_CAMCORDER_LOW_MEMORY);
-	memset(hcamcorder, 0x00, sizeof(mmf_camcorder_t));
-
-	/* init values */
-	hcamcorder->type = 0;
-	hcamcorder->state = MM_CAMCORDER_STATE_NONE;
-	hcamcorder->sub_context = NULL;
-	hcamcorder->old_state = MM_CAMCORDER_STATE_NONE;
-	hcamcorder->capture_in_recording = FALSE;
-
-	g_mutex_init(&(hcamcorder->mtsafe).lock);
-	g_cond_init(&(hcamcorder->mtsafe).cond);
-	g_mutex_init(&(hcamcorder->mtsafe).cmd_lock);
-	g_cond_init(&(hcamcorder->mtsafe).cmd_cond);
-	g_mutex_init(&(hcamcorder->mtsafe).interrupt_lock);
-	g_mutex_init(&(hcamcorder->mtsafe).state_lock);
-	g_mutex_init(&(hcamcorder->mtsafe).gst_state_lock);
-	g_mutex_init(&(hcamcorder->mtsafe).gst_encode_state_lock);
-	g_mutex_init(&(hcamcorder->mtsafe).message_cb_lock);
-	g_mutex_init(&(hcamcorder->mtsafe).vcapture_cb_lock);
-	g_mutex_init(&(hcamcorder->mtsafe).vstream_cb_lock);
-	g_mutex_init(&(hcamcorder->mtsafe).astream_cb_lock);
-	g_mutex_init(&(hcamcorder->mtsafe).mstream_cb_lock);
-#ifdef _MMCAMCORDER_MM_RM_SUPPORT
-	g_mutex_init(&(hcamcorder->mtsafe).resource_lock);
-#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
-
-	g_mutex_init(&hcamcorder->restart_preview_lock);
-
-	/* Sound mutex/cond init */
-	g_mutex_init(&hcamcorder->snd_info.open_mutex);
-	g_cond_init(&hcamcorder->snd_info.open_cond);
-	g_mutex_init(&hcamcorder->snd_info.play_mutex);
-	g_cond_init(&hcamcorder->snd_info.play_cond);
-
-	/* init for sound thread */
-	g_mutex_init(&hcamcorder->task_thread_lock);
-	g_cond_init(&hcamcorder->task_thread_cond);
-	hcamcorder->task_thread_state = _MMCAMCORDER_TASK_THREAD_STATE_NONE;
-
-	if (info->videodev_type != MM_VIDEO_DEVICE_NONE) {
-		/* init for gdbus */
-		hcamcorder->gdbus_info_sound.mm_handle = hcamcorder;
-		g_mutex_init(&hcamcorder->gdbus_info_sound.sync_mutex);
-		g_cond_init(&hcamcorder->gdbus_info_sound.sync_cond);
-
-		hcamcorder->gdbus_info_solo_sound.mm_handle = hcamcorder;
-		g_mutex_init(&hcamcorder->gdbus_info_solo_sound.sync_mutex);
-		g_cond_init(&hcamcorder->gdbus_info_solo_sound.sync_cond);
-	}
-
-	/* create task thread */
-	hcamcorder->task_thread = g_thread_try_new("MMCAM_TASK_THREAD",
-		(GThreadFunc)_mmcamcorder_util_task_thread_func, (gpointer)hcamcorder, NULL);
-	if (hcamcorder->task_thread == NULL) {
-		_mmcam_dbg_err("_mmcamcorder_create::failed to create task thread");
-		ret = MM_ERROR_CAMCORDER_RESOURCE_CREATION;
-		goto _ERR_DEFAULT_VALUE_INIT;
-	}
-
+	/* check device type */
 	if (info->videodev_type < MM_VIDEO_DEVICE_NONE ||
 	    info->videodev_type >= MM_VIDEO_DEVICE_NUM) {
-		_mmcam_dbg_err("_mmcamcorder_create::video device type is out of range.");
-		ret = MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
-		goto _ERR_DEFAULT_VALUE_INIT;
+		_mmcam_dbg_err("video device type[%d] is out of range.", info->videodev_type);
+		return MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
 	}
 
-	/* set device type */
-	hcamcorder->device_type = info->videodev_type;
-	_mmcam_dbg_warn("Device Type : %d", hcamcorder->device_type);
-
-	/* Get Camera Configure information from Camcorder INI file */
-	ret = _mmcamcorder_conf_get_info((MMHandleType)hcamcorder, CONFIGURE_TYPE_MAIN, CONFIGURE_MAIN_FILE, &hcamcorder->conf_main);
-	if (ret != MM_ERROR_NONE) {
-		_mmcam_dbg_err("Failed to get configure(main) info.");
-		goto _ERR_DEFAULT_VALUE_INIT;
-	}
-
-	hcamcorder->attributes = _mmcamcorder_alloc_attribute((MMHandleType)hcamcorder);
-	if (!(hcamcorder->attributes)) {
-		_mmcam_dbg_err("_mmcamcorder_create::alloc attribute error.");
-
-		ret = MM_ERROR_CAMCORDER_RESOURCE_CREATION;
-		goto _ERR_DEFAULT_VALUE_INIT;
-	}
+	/* init handle */
+	ret = __mmcamcorder_init_handle(&hcamcorder, info->videodev_type);
+	if (ret != MM_ERROR_NONE)
+		return ret;
 
 	/* get DPM handle for camera/microphone restriction */
 	hcamcorder->dpm_handle = dpm_manager_create();
 
 	_mmcam_dbg_warn("DPM handle %p", hcamcorder->dpm_handle);
 
-	if (info->videodev_type != MM_VIDEO_DEVICE_NONE) {
-		char conf_file_name[__MMCAMCORDER_CONF_FILENAME_LENGTH] = {'\0',};
-		int resolution_width = 0;
-		int resolution_height = 0;
-		MMCamAttrsInfo fps_info;
-
-		snprintf(conf_file_name, sizeof(conf_file_name), "%s%d.ini",
-			CONFIGURE_CTRL_FILE_PREFIX, info->videodev_type);
-
-		_mmcam_dbg_log("Load control configure file [%d][%s]", info->videodev_type, conf_file_name);
-
-		ret = _mmcamcorder_conf_get_info((MMHandleType)hcamcorder,
-			CONFIGURE_TYPE_CTRL, (const char *)conf_file_name, &hcamcorder->conf_ctrl);
+	if (hcamcorder->device_type != MM_VIDEO_DEVICE_NONE) {
+		ret = __mmcamcorder_init_configure_video_capture(hcamcorder);
 		if (ret != MM_ERROR_NONE) {
-			_mmcam_dbg_err("Failed to get configure(control) info.");
 			goto _ERR_DEFAULT_VALUE_INIT;
 		}
-/*
-		_mmcamcorder_conf_print_info(&hcamcorder->conf_main);
-		_mmcamcorder_conf_print_info(&hcamcorder->conf_ctrl);
-*/
-		ret = _mmcamcorder_init_convert_table((MMHandleType)hcamcorder);
-		if (ret != MM_ERROR_NONE) {
-			_mmcam_dbg_warn("converting table initialize error!!");
-			ret = MM_ERROR_CAMCORDER_INTERNAL;
-			goto _ERR_DEFAULT_VALUE_INIT;
-		}
-
-		ret = _mmcamcorder_init_attr_from_configure((MMHandleType)hcamcorder, MM_CAMCONVERT_CATEGORY_ALL);
-		if (ret != MM_ERROR_NONE) {
-			_mmcam_dbg_warn("attribute initialize from configure error!!");
-			ret = MM_ERROR_CAMCORDER_INTERNAL;
-			goto _ERR_DEFAULT_VALUE_INIT;
-		}
-
-		/* Get device info, recommend preview fmt and display rotation from INI */
-		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
-			CONFIGURE_CATEGORY_CTRL_CAMERA,
-			"RecommendPreviewFormatCapture",
-			&rcmd_fmt_capture);
-
-		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
-			CONFIGURE_CATEGORY_CTRL_CAMERA,
-			"RecommendPreviewFormatRecord",
-			&rcmd_fmt_recording);
-
-		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
-			CONFIGURE_CATEGORY_CTRL_CAMERA,
-			"RecommendDisplayRotation",
-			&rcmd_dpy_rotation);
-
-		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
-			CONFIGURE_CATEGORY_MAIN_CAPTURE,
-			"PlayCaptureSound",
-			&play_capture_sound);
-
-		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
-			CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
-			"DeviceCount",
-			&camera_device_count);
-
-		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
-			CONFIGURE_CATEGORY_CTRL_CAMERA,
-			"FacingDirection",
-			&camera_facing_direction);
-
-		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
-			CONFIGURE_CATEGORY_CTRL_EFFECT,
-			"BrightnessStepDenominator",
-			&hcamcorder->brightness_step_denominator);
-
-		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_ctrl,
-			CONFIGURE_CATEGORY_CTRL_CAPTURE,
-			"SupportZSL",
-			&hcamcorder->support_zsl_capture);
-
-		_mmcam_dbg_log("Recommend fmt[cap:%d,rec:%d], dpy rot %d, cap snd %d, dev cnt %d, cam facing dir %d, step denom %d, support zsl %d",
-			rcmd_fmt_capture, rcmd_fmt_recording, rcmd_dpy_rotation,
-			play_capture_sound, camera_device_count, camera_facing_direction,
-			hcamcorder->brightness_step_denominator, hcamcorder->support_zsl_capture);
-
-		/* Get UseZeroCopyFormat value from INI */
-		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
-			CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
-			"UseZeroCopyFormat",
-			&(hcamcorder->use_zero_copy_format));
-
-		/* Get SupportMediaPacketPreviewCb value from INI */
-		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
-			CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
-			"SupportMediaPacketPreviewCb",
-			&(hcamcorder->support_media_packet_preview_cb));
-
-		/* Get UseVideoconvert value from INI */
-		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
-			CONFIGURE_CATEGORY_MAIN_VIDEO_OUTPUT,
-			"UseVideoconvert",
-			&hcamcorder->use_videoconvert);
-
-		ret = mm_camcorder_get_attributes((MMHandleType)hcamcorder, NULL,
-			MMCAM_CAMERA_WIDTH, &resolution_width,
-			MMCAM_CAMERA_HEIGHT, &resolution_height,
-			NULL);
-
-		mm_camcorder_get_fps_list_by_resolution((MMHandleType)hcamcorder, resolution_width, resolution_height, &fps_info);
-
-		_mmcam_dbg_log("UseZeroCopyFormat %d, UseVideoconvert %d, SupportMediaPacketPreviewCb %d",
-			hcamcorder->use_zero_copy_format, hcamcorder->use_videoconvert, hcamcorder->support_media_packet_preview_cb);
-		_mmcam_dbg_log("res : %d X %d, Default FPS by resolution  : %d",
-			resolution_width, resolution_height, fps_info.int_array.def);
-
-		if (camera_facing_direction == 1) {
-			if (rcmd_dpy_rotation == MM_DISPLAY_ROTATION_270 || rcmd_dpy_rotation == MM_DISPLAY_ROTATION_90)
-				camera_default_flip = MM_FLIP_VERTICAL;
-			else
-				camera_default_flip = MM_FLIP_HORIZONTAL;
-
-			_mmcam_dbg_log("camera_default_flip : [%d]", camera_default_flip);
-		}
-
-		mm_camcorder_set_attributes((MMHandleType)hcamcorder, &err_attr_name,
-			MMCAM_CAMERA_DEVICE_COUNT, camera_device_count,
-			MMCAM_CAMERA_FACING_DIRECTION, camera_facing_direction,
-			MMCAM_RECOMMEND_PREVIEW_FORMAT_FOR_CAPTURE, rcmd_fmt_capture,
-			MMCAM_RECOMMEND_PREVIEW_FORMAT_FOR_RECORDING, rcmd_fmt_recording,
-			MMCAM_RECOMMEND_DISPLAY_ROTATION, rcmd_dpy_rotation,
-			MMCAM_SUPPORT_ZSL_CAPTURE, hcamcorder->support_zsl_capture,
-			MMCAM_SUPPORT_ZERO_COPY_FORMAT, hcamcorder->use_zero_copy_format,
-			MMCAM_SUPPORT_MEDIA_PACKET_PREVIEW_CB, hcamcorder->support_media_packet_preview_cb,
-			MMCAM_CAMERA_FPS, fps_info.int_array.def,
-			MMCAM_DISPLAY_FLIP, camera_default_flip,
-			MMCAM_CAPTURE_SOUND_ENABLE, play_capture_sound,
-			NULL);
-		if (err_attr_name) {
-			_mmcam_dbg_err("Set %s FAILED.", err_attr_name);
-			SAFE_FREE(err_attr_name);
-			ret = MM_ERROR_CAMCORDER_INTERNAL;
-			goto _ERR_DEFAULT_VALUE_INIT;
-		}
-
-		/* Get default value of brightness */
-		mm_camcorder_get_attributes((MMHandleType)hcamcorder, &err_attr_name,
-			MMCAM_FILTER_BRIGHTNESS, &hcamcorder->brightness_default,
-			NULL);
-		if (err_attr_name) {
-			_mmcam_dbg_err("Get brightness FAILED.");
-			SAFE_FREE(err_attr_name);
-			ret = MM_ERROR_CAMCORDER_INTERNAL;
-			goto _ERR_DEFAULT_VALUE_INIT;
-		}
-
-		_mmcam_dbg_log("Default brightness : %d", hcamcorder->brightness_default);
 
 		/* add DPM camera policy changed callback */
 		if (hcamcorder->dpm_handle) {
@@ -384,32 +582,15 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 		}
 #endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 	} else {
-		_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
-			CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
-			"DeviceCount",
-			&camera_device_count);
-
-		mm_camcorder_set_attributes((MMHandleType)hcamcorder, &err_attr_name,
-			MMCAM_CAMERA_DEVICE_COUNT, camera_device_count,
-			NULL);
-		if (err_attr_name) {
-			_mmcam_dbg_err("Set %s FAILED.", err_attr_name);
-			SAFE_FREE(err_attr_name);
-			ret = MM_ERROR_CAMCORDER_INTERNAL;
-			goto _ERR_DEFAULT_VALUE_INIT;
-		}
-
-		ret = _mmcamcorder_init_attr_from_configure((MMHandleType)hcamcorder, MM_CAMCONVERT_CATEGORY_AUDIO);
+		ret = __mmcamcorder_init_configure_audio(hcamcorder);
 		if (ret != MM_ERROR_NONE) {
-			_mmcam_dbg_err("there is no audio device");
-			ret = MM_ERROR_CAMCORDER_NOT_SUPPORTED;
 			goto _ERR_DEFAULT_VALUE_INIT;
 		}
 	}
 
 	traceBegin(TTRACE_TAG_CAMERA, "MMCAMCORDER:CREATE:INIT_GSTREAMER");
 
-	ret = __mmcamcorder_gstreamer_init(hcamcorder->conf_main);
+	ret = __mmcamcorder_init_gstreamer(hcamcorder->conf_main);
 
 	traceEnd(TTRACE_TAG_CAMERA);
 
@@ -425,40 +606,8 @@ int _mmcamcorder_create(MMHandleType *handle, MMCamPreset *info)
 	/* Disable attributes in each model */
 	_mmcamcorder_set_disabled_attributes((MMHandleType)hcamcorder);
 
-	/* Get videosink name for evas surface */
-	_mmcamcorder_conf_get_element((MMHandleType)hcamcorder, hcamcorder->conf_main,
-		CONFIGURE_CATEGORY_MAIN_VIDEO_OUTPUT,
-		"VideosinkElementEvas",
-		&EvasSurfaceElement);
-	if (EvasSurfaceElement) {
-		int attr_index = 0;
-		const char *evassink_name = NULL;
-		MMHandleType attrs = MMF_CAMCORDER_ATTRS(hcamcorder);
-
-		_mmcamcorder_conf_get_value_element_name(EvasSurfaceElement, &evassink_name);
-		mm_attrs_get_index((MMHandleType)attrs, MMCAM_DISPLAY_EVAS_SURFACE_SINK, &attr_index);
-
-		mm_attrs_set_string(attrs, attr_index, evassink_name, strlen(evassink_name));
-		mm_attrs_commit(attrs, attr_index);
-
-		_mmcam_dbg_log("Evassink name : %s", evassink_name);
-	}
-
-	/* get shutter sound policy */
-	vconf_get_int(VCONFKEY_CAMERA_SHUTTER_SOUND_POLICY, &hcamcorder->shutter_sound_policy);
-	_mmcam_dbg_log("current shutter sound policy : %d", hcamcorder->shutter_sound_policy);
-
-	/* get model name */
-	sys_info_ret = system_info_get_platform_string("http://tizen.org/system/model_name", &hcamcorder->model_name);
-
-	_mmcam_dbg_warn("model name [%s], ret 0x%x",
-		hcamcorder->model_name ? hcamcorder->model_name : "NULL", sys_info_ret);
-
-	/* get software version */
-	sys_info_ret = system_info_get_platform_string("http://tizen.org/system/build.string", &hcamcorder->software_version);
-
-	_mmcam_dbg_warn("software version [%s], ret 0x%x",
-		hcamcorder->software_version ? hcamcorder->software_version : "NULL", sys_info_ret);
+	/* get system information */
+	__mmcamcorder_get_system_info(hcamcorder);
 
 	/* Set initial state */
 	_mmcamcorder_set_state((MMHandleType)hcamcorder, MM_CAMCORDER_STATE_NULL);
@@ -493,72 +642,11 @@ _ERR_DEFAULT_VALUE_INIT:
 		hcamcorder->dpm_handle = NULL;
 	}
 
-	/* Remove attributes */
-	if (hcamcorder->attributes) {
-		_mmcamcorder_dealloc_attribute((MMHandleType)hcamcorder, hcamcorder->attributes);
-		hcamcorder->attributes = 0;
-	}
+	/* release configure info */
+	__mmcamcorder_deinit_configure(hcamcorder);
 
-	/* Release lock, cond */
-	g_mutex_clear(&(hcamcorder->mtsafe).lock);
-	g_cond_clear(&(hcamcorder->mtsafe).cond);
-	g_mutex_clear(&(hcamcorder->mtsafe).cmd_lock);
-	g_cond_clear(&(hcamcorder->mtsafe).cmd_cond);
-	g_mutex_clear(&(hcamcorder->mtsafe).interrupt_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).state_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).gst_state_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).gst_encode_state_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).message_cb_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).vcapture_cb_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).vstream_cb_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).astream_cb_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).mstream_cb_lock);
-#ifdef _MMCAMCORDER_MM_RM_SUPPORT
-	g_mutex_clear(&(hcamcorder->mtsafe).resource_lock);
-#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
-
-	g_mutex_clear(&hcamcorder->snd_info.open_mutex);
-	g_cond_clear(&hcamcorder->snd_info.open_cond);
-	g_mutex_clear(&hcamcorder->restart_preview_lock);
-
-	if (info->videodev_type != MM_VIDEO_DEVICE_NONE) {
-		g_mutex_clear(&hcamcorder->gdbus_info_sound.sync_mutex);
-		g_cond_clear(&hcamcorder->gdbus_info_sound.sync_cond);
-		g_mutex_clear(&hcamcorder->gdbus_info_solo_sound.sync_mutex);
-		g_cond_clear(&hcamcorder->gdbus_info_solo_sound.sync_cond);
-	}
-
-	if (hcamcorder->conf_ctrl)
-		_mmcamcorder_conf_release_info((MMHandleType)hcamcorder, &hcamcorder->conf_ctrl);
-
-	if (hcamcorder->conf_main)
-		_mmcamcorder_conf_release_info((MMHandleType)hcamcorder, &hcamcorder->conf_main);
-
-	if (hcamcorder->model_name) {
-		free(hcamcorder->model_name);
-		hcamcorder->model_name = NULL;
-	}
-
-	if (hcamcorder->software_version) {
-		free(hcamcorder->software_version);
-		hcamcorder->software_version = NULL;
-	}
-
-	if (hcamcorder->task_thread) {
-		g_mutex_lock(&hcamcorder->task_thread_lock);
-		_mmcam_dbg_log("send signal for task thread exit");
-		hcamcorder->task_thread_state = _MMCAMCORDER_TASK_THREAD_STATE_EXIT;
-		g_cond_signal(&hcamcorder->task_thread_cond);
-		g_mutex_unlock(&hcamcorder->task_thread_lock);
-		g_thread_join(hcamcorder->task_thread);
-		hcamcorder->task_thread = NULL;
-	}
-	g_mutex_clear(&hcamcorder->task_thread_lock);
-	g_cond_clear(&hcamcorder->task_thread_cond);
-
-	/* Release handle */
-	memset(hcamcorder, 0x00, sizeof(mmf_camcorder_t));
-	free(hcamcorder);
+	/* deinitialize handle */
+	__mmcamcorder_deinit_handle(hcamcorder);
 
 	return ret;
 }
@@ -596,13 +684,6 @@ int _mmcamcorder_destroy(MMHandleType handle)
 		ret = MM_ERROR_CAMCORDER_INVALID_STATE;
 		goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 	}
-
-	/* set exit state for sound thread */
-	g_mutex_lock(&hcamcorder->task_thread_lock);
-	_mmcam_dbg_log("send signal for task thread exit");
-	hcamcorder->task_thread_state = _MMCAMCORDER_TASK_THREAD_STATE_EXIT;
-	g_cond_signal(&hcamcorder->task_thread_cond);
-	g_mutex_unlock(&hcamcorder->task_thread_lock);
 
 	/* remove kept, but not used sink element in attribute */
 	mm_camcorder_get_attributes(handle, NULL,
@@ -649,25 +730,6 @@ int _mmcamcorder_destroy(MMHandleType handle)
 		hcamcorder->setting_event_id = 0;
 	}
 
-	/* Remove attributes */
-	if (hcamcorder->attributes) {
-		_mmcamcorder_dealloc_attribute(handle, hcamcorder->attributes);
-		hcamcorder->attributes = 0;
-	}
-
-	/* Remove exif info */
-	if (hcamcorder->exif_info) {
-		mm_exif_destory_exif_info(hcamcorder->exif_info);
-		hcamcorder->exif_info = NULL;
-	}
-
-	/* Release configure info */
-	if (hcamcorder->conf_ctrl)
-		_mmcamcorder_conf_release_info(handle, &hcamcorder->conf_ctrl);
-
-	if (hcamcorder->conf_main)
-		_mmcamcorder_conf_release_info(handle, &hcamcorder->conf_main);
-
 	/* Remove messages which are not called yet */
 	_mmcamcorder_remove_message_all(handle);
 
@@ -679,17 +741,6 @@ int _mmcamcorder_destroy(MMHandleType handle)
 		hcamcorder->rm_handle = 0;
 	}
 #endif /* _MMCAMCORDER_RM_SUPPORT */
-
-	/* release model_name */
-	if (hcamcorder->model_name) {
-		free(hcamcorder->model_name);
-		hcamcorder->model_name = NULL;
-	}
-
-	if (hcamcorder->software_version) {
-		free(hcamcorder->software_version);
-		hcamcorder->software_version = NULL;
-	}
 
 	/* release DPM handle */
 	if (hcamcorder->dpm_handle) {
@@ -708,47 +759,9 @@ int _mmcamcorder_destroy(MMHandleType handle)
 		hcamcorder->dpm_handle = NULL;
 	}
 
-	/* join task thread */
-	_mmcam_dbg_log("task thread join");
-	g_thread_join(hcamcorder->task_thread);
-	hcamcorder->task_thread = NULL;
-
 	_MMCAMCORDER_UNLOCK_CMD(hcamcorder);
 
-	/* Release lock, cond */
-	g_mutex_clear(&(hcamcorder->mtsafe).lock);
-	g_cond_clear(&(hcamcorder->mtsafe).cond);
-	g_mutex_clear(&(hcamcorder->mtsafe).cmd_lock);
-	g_cond_clear(&(hcamcorder->mtsafe).cmd_cond);
-	g_mutex_clear(&(hcamcorder->mtsafe).interrupt_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).state_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).gst_state_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).gst_encode_state_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).message_cb_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).vcapture_cb_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).vstream_cb_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).astream_cb_lock);
-	g_mutex_clear(&(hcamcorder->mtsafe).mstream_cb_lock);
-#ifdef _MMCAMCORDER_MM_RM_SUPPORT
-	g_mutex_clear(&(hcamcorder->mtsafe).resource_lock);
-#endif /* _MMCAMCORDER_MM_RM_SUPPORT */
-
-	g_mutex_clear(&hcamcorder->snd_info.open_mutex);
-	g_cond_clear(&hcamcorder->snd_info.open_cond);
-	g_mutex_clear(&hcamcorder->restart_preview_lock);
-	g_mutex_clear(&hcamcorder->task_thread_lock);
-	g_cond_clear(&hcamcorder->task_thread_cond);
-
-	if (hcamcorder->type != MM_CAMCORDER_MODE_AUDIO) {
-		g_mutex_clear(&hcamcorder->gdbus_info_sound.sync_mutex);
-		g_cond_clear(&hcamcorder->gdbus_info_sound.sync_cond);
-		g_mutex_clear(&hcamcorder->gdbus_info_solo_sound.sync_mutex);
-		g_cond_clear(&hcamcorder->gdbus_info_solo_sound.sync_cond);
-	}
-
-	/* Release handle */
-	memset(hcamcorder, 0x00, sizeof(mmf_camcorder_t));
-	free(hcamcorder);
+	__mmcamcorder_deinit_handle(hcamcorder);
 
 	return MM_ERROR_NONE;
 
@@ -2245,8 +2258,7 @@ int _mmcamcorder_stop_focusing(MMHandleType handle)
 /*-----------------------------------------------
 |	  CAMCORDER INTERNAL LOCAL		|
 -----------------------------------------------*/
-static gboolean
-__mmcamcorder_gstreamer_init(camera_conf * conf)
+static gboolean __mmcamcorder_init_gstreamer(camera_conf *conf)
 {
 	static const int max_argc = 10;
 	int i = 0;
@@ -3962,7 +3974,7 @@ void _mmcamcorder_emit_signal(MMHandleType handle, const char *object_name,
 
 #ifdef _MMCAMCORDER_MM_RM_SUPPORT
 static int __mmcamcorder_resource_release_cb(mm_resource_manager_h rm,
-		mm_resource_manager_res_h res, void *user_data)
+	mm_resource_manager_res_h res, void *user_data)
 {
 	mmf_camcorder_t *hcamcorder = (mmf_camcorder_t *) user_data;
 
