@@ -770,6 +770,7 @@ typedef struct mmf_camcorder {
 	int use_zero_copy_format;                               /**< Whether use zero copy format for camera input */
 	int use_videoconvert;                                   /**< Whether use videoconvert element for display */
 	int support_media_packet_preview_cb;                    /**< Whether support zero copy format for camera input */
+	int support_user_buffer;                                /**< Whether support user allocated buffer for zero copy */
 	int shutter_sound_policy;                               /**< shutter sound policy */
 	int brightness_default;                                 /**< default value of brightness */
 	int brightness_step_denominator;                        /**< denominator of brightness bias step */

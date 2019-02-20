@@ -635,6 +635,7 @@ int _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf *configure
 		{ "UseZeroCopyFormat",  CONFIGURE_VALUE_INT,            {.value_int = 0} },
 		{ "DeviceCount",        CONFIGURE_VALUE_INT,            {.value_int = MM_VIDEO_DEVICE_NUM} },
 		{ "SupportMediaPacketPreviewCb",  CONFIGURE_VALUE_INT,  {.value_int = 0} },
+		{ "SupportUserBuffer",  CONFIGURE_VALUE_INT,            {.value_int = 0} },
 	};
 
 	/* [AudioInput] matching table */

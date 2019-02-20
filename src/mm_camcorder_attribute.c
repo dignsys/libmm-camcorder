@@ -1609,6 +1609,28 @@ _mmcamcorder_alloc_attribute(MMHandleType handle)
 			{.double_min = 0.0},
 			{.double_max = 150.0},
 			_mmcamcorder_commit_audio_replay_gain,
+		},
+		{
+			MM_CAM_SUPPORT_USER_BUFFER,
+			"support-user-buffer",
+			MM_ATTRS_TYPE_INT,
+			MM_ATTRS_FLAG_RW,
+			{(void*)FALSE},
+			MM_ATTRS_VALID_TYPE_INT_RANGE,
+			{.int_min = FALSE},
+			{.int_max = TRUE},
+			NULL,
+		},
+		{
+			MM_CAM_USER_BUFFER_FD,
+			"user-buffer-fd",
+			MM_ATTRS_TYPE_DATA,
+			MM_ATTRS_FLAG_RW,
+			{NULL},
+			MM_ATTRS_VALID_TYPE_NONE,
+			{0},
+			{0},
+			NULL,
 		}
 	};
 

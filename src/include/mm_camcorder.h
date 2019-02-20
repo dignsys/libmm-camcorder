@@ -1228,6 +1228,16 @@ extern "C" {
 #define MMCAM_SUPPORT_MEDIA_PACKET_PREVIEW_CB   "support-media-packet-preview-cb"
 
 /**
+* Support user buffer for zero copy
+*/
+#define MMCAM_SUPPORT_USER_BUFFER               "support-user-buffer"
+
+/**
+* Buffer fd from user
+*/
+#define MMCAM_USER_BUFFER_FD                    "user-buffer-fd"
+
+/**
  * Enable to write tags for recorded file
  */
 #define MMCAM_RECORDER_TAG_ENABLE               "recorder-tag-enable"

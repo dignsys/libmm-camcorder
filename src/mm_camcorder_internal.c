@@ -403,13 +403,19 @@ static gint __mmcamcorder_init_configure_video_capture(mmf_camcorder_t *hcamcord
 	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
 		CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
 		"UseZeroCopyFormat",
-		&(hcamcorder->use_zero_copy_format));
+		&hcamcorder->use_zero_copy_format);
+
+	/* Get SupportUserBuffer value from INI */
+	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
+		CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
+		"SupportUserBuffer",
+		&hcamcorder->support_user_buffer);
 
 	/* Get SupportMediaPacketPreviewCb value from INI */
 	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
 		CONFIGURE_CATEGORY_MAIN_VIDEO_INPUT,
 		"SupportMediaPacketPreviewCb",
-		&(hcamcorder->support_media_packet_preview_cb));
+		&hcamcorder->support_media_packet_preview_cb);
 
 	/* Get UseVideoconvert value from INI */
 	_mmcamcorder_conf_get_value_int((MMHandleType)hcamcorder, hcamcorder->conf_main,
@@ -424,8 +430,10 @@ static gint __mmcamcorder_init_configure_video_capture(mmf_camcorder_t *hcamcord
 
 	mm_camcorder_get_fps_list_by_resolution((MMHandleType)hcamcorder, resolution_width, resolution_height, &fps_info);
 
-	_mmcam_dbg_log("UseZeroCopyFormat %d, UseVideoconvert %d, SupportMediaPacketPreviewCb %d",
-		hcamcorder->use_zero_copy_format, hcamcorder->use_videoconvert, hcamcorder->support_media_packet_preview_cb);
+	_mmcam_dbg_log("ZeroCopy %d, UserBuffer %d, Videoconvert %d, MPPreviewCb %d",
+		hcamcorder->use_zero_copy_format, hcamcorder->support_user_buffer,
+		hcamcorder->use_videoconvert, hcamcorder->support_media_packet_preview_cb);
+
 	_mmcam_dbg_log("res : %d X %d, Default FPS by resolution  : %d",
 		resolution_width, resolution_height, fps_info.int_array.def);
 
@@ -447,6 +455,7 @@ static gint __mmcamcorder_init_configure_video_capture(mmf_camcorder_t *hcamcord
 		MMCAM_SUPPORT_ZSL_CAPTURE, hcamcorder->support_zsl_capture,
 		MMCAM_SUPPORT_ZERO_COPY_FORMAT, hcamcorder->use_zero_copy_format,
 		MMCAM_SUPPORT_MEDIA_PACKET_PREVIEW_CB, hcamcorder->support_media_packet_preview_cb,
+		MMCAM_SUPPORT_USER_BUFFER, hcamcorder->support_user_buffer,
 		MMCAM_CAMERA_FPS, fps_info.int_array.def,
 		MMCAM_DISPLAY_FLIP, camera_default_flip,
 		MMCAM_CAPTURE_SOUND_ENABLE, play_capture_sound,
