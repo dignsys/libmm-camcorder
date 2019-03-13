@@ -35,6 +35,7 @@
 #include "mm_camcorder_internal.h"
 #include "mm_camcorder_util.h"
 #include "mm_camcorder_sound.h"
+#include <mm_util_image.h>
 #include <mm_util_imgp.h>
 #include <mm_util_jpeg.h>
 
@@ -1733,6 +1734,8 @@ gboolean _mmcamcorder_resize_frame(unsigned char *src_data, unsigned int src_wid
 	int ret = TRUE;
 	int mm_ret = MM_ERROR_NONE;
 	int input_format = MM_UTIL_COLOR_YUV420;
+	mm_util_image_h src_image = NULL;
+	mm_util_image_h dst_image = NULL;
 
 	if (!src_data || !dst_data || !dst_width || !dst_height || !dst_length) {
 		_mmcam_dbg_err("something is NULL %p,%p,%p,%p,%p",
@@ -1767,11 +1770,23 @@ gboolean _mmcamcorder_resize_frame(unsigned char *src_data, unsigned int src_wid
 
 	_mmcam_dbg_log("src size %dx%d -> dst size %dx%d", src_width, src_height, *dst_width, *dst_height);
 
-	mm_ret = mm_util_resize_image(src_data, src_width, src_height, input_format,
-		*dst_width, *dst_height, dst_data, dst_width, dst_height, dst_length);
+	mm_ret = mm_image_create_image(src_width, src_height, input_format, src_data, (size_t)src_length, &src_image);
+	if (mm_ret != MM_ERROR_NONE) {
+		GST_ERROR("mm_image_create_image failed 0x%x", ret);
+		return FALSE;
+	}
 
+	mm_ret = mm_util_resize_image(src_image, *dst_width, *dst_height, &dst_image);
+	mm_image_destroy_image(src_image);
 	if (mm_ret != MM_ERROR_NONE) {
 		GST_ERROR("mm_util_resize_image failed 0x%x", ret);
+		return FALSE;
+	}
+
+	mm_ret = mm_image_get_image(dst_image, dst_width, dst_height, NULL, dst_data, dst_length);
+	mm_image_destroy_image(dst_image);
+	if (mm_ret != MM_ERROR_NONE) {
+		GST_ERROR("mm_image_get_image failed 0x%x", ret);
 		return FALSE;
 	}
 
