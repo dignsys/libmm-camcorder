@@ -188,7 +188,10 @@ int _mmcamcorder_create_preview_elements(MMHandleType handle)
 	char decoder_name[20] = {'\0',};
 #endif /* _MMCAMCORDER_RM_SUPPORT */
 	GstElement *sink_element = NULL;
+	GstCameraControl *control = NULL;
 	int sink_element_size = 0;
+	int *fds = NULL;
+	int fd_number = 0;
 
 	GList *element_list = NULL;
 
@@ -248,6 +251,21 @@ int _mmcamcorder_create_preview_elements(MMHandleType handle)
 		return err;
 	}
 
+	if (hcamcorder->support_user_buffer) {
+		err = mm_camcorder_get_attributes(handle, NULL,
+			MMCAM_USER_BUFFER_FD, &fds, &fd_number,
+			NULL);
+		if (err != MM_ERROR_NONE || fd_number < 1) {
+			_mmcam_dbg_err("get user buffer fd failed 0x%x, number %d", err, fd_number);
+			return err;
+		}
+
+		/*
+		for (i = 0 ; i < fd_number ; i++)
+			_mmcam_dbg_log("fds[%d] %d", i, fds[i]);
+		*/
+	}
+
 	/* Get fourcc from picture format */
 	sc->fourcc = _mmcamcorder_get_fourcc(sc->info_image->preview_format, codectype, hcamcorder->use_zero_copy_format);
 
@@ -293,6 +311,15 @@ int _mmcamcorder_create_preview_elements(MMHandleType handle)
 
 	/* Set video device index */
 	MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, "camera-id", input_index->default_value);
+
+	/* set user buffer fd to videosrc element */
+	if (hcamcorder->support_user_buffer) {
+		control = GST_CAMERA_CONTROL(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst);
+		if (!gst_camera_control_set_user_buffer_fd(control, fds, fd_number)) {
+			_mmcam_dbg_err("set user buffer fd failed");
+			goto pipeline_creation_error;
+		}
+	}
 
 	/* make demux and decoder for H264 stream from videosrc */
 	if (sc->info_image->preview_format == MM_PIXEL_FORMAT_ENCODED_H264) {
