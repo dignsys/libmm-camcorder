@@ -1731,7 +1731,6 @@ gboolean _mmcamcorder_link_elements(GList *element_list)
 gboolean _mmcamcorder_resize_frame(unsigned char *src_data, unsigned int src_width, unsigned int src_height, unsigned int src_length, int src_format,
 	unsigned char **dst_data, unsigned int *dst_width, unsigned int *dst_height, size_t *dst_length)
 {
-	int ret = TRUE;
 	int mm_ret = MM_ERROR_NONE;
 	int input_format = MM_UTIL_COLOR_YUV420;
 	mm_util_image_h src_image = NULL;
@@ -1772,21 +1771,21 @@ gboolean _mmcamcorder_resize_frame(unsigned char *src_data, unsigned int src_wid
 
 	mm_ret = mm_image_create_image(src_width, src_height, input_format, src_data, (size_t)src_length, &src_image);
 	if (mm_ret != MM_ERROR_NONE) {
-		GST_ERROR("mm_image_create_image failed 0x%x", ret);
+		_mmcam_dbg_err("mm_image_create_image failed 0x%x", mm_ret);
 		return FALSE;
 	}
 
 	mm_ret = mm_util_resize_image(src_image, *dst_width, *dst_height, &dst_image);
 	mm_image_destroy_image(src_image);
 	if (mm_ret != MM_ERROR_NONE) {
-		GST_ERROR("mm_util_resize_image failed 0x%x", ret);
+		_mmcam_dbg_err("mm_util_resize_image failed 0x%x", mm_ret);
 		return FALSE;
 	}
 
 	mm_ret = mm_image_get_image(dst_image, dst_width, dst_height, NULL, dst_data, dst_length);
 	mm_image_destroy_image(dst_image);
 	if (mm_ret != MM_ERROR_NONE) {
-		GST_ERROR("mm_image_get_image failed 0x%x", ret);
+		_mmcam_dbg_err("mm_image_get_image failed 0x%x", mm_ret);
 		return FALSE;
 	}
 
