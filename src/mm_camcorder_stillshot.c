@@ -300,7 +300,6 @@ int _mmcamcorder_image_cmd_capture(MMHandleType handle)
 	int width = 0;
 	int height = 0;
 	int fps = 0;
-	int cap_format = MM_PIXEL_FORMAT_NV12;
 	int image_encoder = MM_IMAGE_CODEC_JPEG;
 	int strobe_mode = MM_CAMCORDER_STROBE_MODE_OFF;
 	int is_modified_size = FALSE;
@@ -355,7 +354,7 @@ int _mmcamcorder_image_cmd_capture(MMHandleType handle)
 		MMCAM_CAMERA_WIDTH, &width,
 		MMCAM_CAMERA_HEIGHT, &height,
 		MMCAM_CAMERA_FPS, &fps,
-		MMCAM_CAPTURE_FORMAT, &cap_format,
+		MMCAM_CAPTURE_FORMAT, &info->capture_format,
 		MMCAM_CAPTURE_WIDTH, &info->width,
 		MMCAM_CAPTURE_HEIGHT, &info->height,
 		MMCAM_CAPTURE_COUNT, &info->count,
@@ -387,7 +386,7 @@ int _mmcamcorder_image_cmd_capture(MMHandleType handle)
 	}
 
 	_mmcam_dbg_log("preview(%dx%d,fmt:%d), capture(%dx%d,fmt:%d), count(%d), hdr mode(%d), interval (%d)",
-		width, height, info->preview_format, info->width, info->height, cap_format,
+		width, height, info->preview_format, info->width, info->height, info->capture_format,
 		info->count, info->hdr_capture_mode, info->interval);
 
 	/* check state */
@@ -428,10 +427,10 @@ int _mmcamcorder_image_cmd_capture(MMHandleType handle)
 
 	if (!sc->bencbin_capture) {
 		/* Check encoding method */
-		if (cap_format == MM_PIXEL_FORMAT_ENCODED) {
+		if (info->capture_format == MM_PIXEL_FORMAT_ENCODED) {
 			if ((sc->SensorEncodedCapture && info->type == _MMCamcorder_SINGLE_SHOT) ||
 			    hcamcorder->support_zsl_capture || is_modified_size) {
-				cap_fourcc = _mmcamcorder_get_fourcc(cap_format, image_encoder, hcamcorder->use_zero_copy_format);
+				cap_fourcc = _mmcamcorder_get_fourcc(info->capture_format, image_encoder, hcamcorder->use_zero_copy_format);
 				_mmcam_dbg_log("Sensor JPEG Capture [is_modified_size:%d]", is_modified_size);
 			} else {
 				/* no need to encode internally if ITLV format */
@@ -444,10 +443,10 @@ int _mmcamcorder_image_cmd_capture(MMHandleType handle)
 					cap_fourcc, cap_fourcc>>8, cap_fourcc>>16, cap_fourcc>>24);
 			}
 		} else {
-			cap_fourcc = _mmcamcorder_get_fourcc(cap_format, MM_IMAGE_CODEC_INVALID, hcamcorder->use_zero_copy_format);
+			cap_fourcc = _mmcamcorder_get_fourcc(info->capture_format, MM_IMAGE_CODEC_INVALID, hcamcorder->use_zero_copy_format);
 		}
 
-		_mmcam_dbg_log("capture format (%d)", cap_format);
+		_mmcam_dbg_log("capture format (%d)", info->capture_format);
 
 		/* Note: width/height of capture is set in commit function of attribute or in create function of pipeline */
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, "capture-fourcc", cap_fourcc);
@@ -687,10 +686,11 @@ int _mmcamcorder_image_cmd_preview_start(MMHandleType handle)
 				return MM_ERROR_CAMCORDER_NOT_SUPPORTED;
 			}
 
+			current_framecount = sc->kpi.video_framecount;
+
 			control = GST_CAMERA_CONTROL(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst);
 			gst_camera_control_set_capture_command(control, GST_CAMERA_CONTROL_CAPTURE_COMMAND_STOP);
 
-			current_framecount = sc->kpi.video_framecount;
 			MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "stop-video", FALSE);
 			if (info->type == _MMCamcorder_SINGLE_SHOT) {
 				MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_QUE].gst, "empty-buffers", FALSE);
@@ -1523,8 +1523,8 @@ static void __mmcamcorder_image_capture_cb(GstElement *element, GstSample *sampl
 		_mmcam_dbg_log("Done Internal Encode - data %p, length %d", dest.data, dest.length);
 	}
 
-	if (pixtype_main < MM_PIXEL_FORMAT_ENCODED) {
-		_mmcam_dbg_log("raw capture, skip EXIF related functions");
+	if (info->capture_format != MM_PIXEL_FORMAT_ENCODED) {
+		_mmcam_dbg_log("not encoded format, skip exif related sequence");
 		goto _CAPTURE_CB_EXIF_DONE;
 	}
 

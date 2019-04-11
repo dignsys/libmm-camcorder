@@ -69,6 +69,7 @@ typedef struct {
 	int height;					/**< Height of capture image */
 	int interval;					/**< Capture interval */
 	int preview_format;				/**< Preview format */
+	int capture_format;				/**< Capture format */
 	int hdr_capture_mode;				/**< HDR Capture mode */
 	gboolean sound_status;				/**< sound status of system */
 	gboolean played_capture_sound;			/**< whether play capture sound when capture starts */
