@@ -519,7 +519,7 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 		else
 			MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_AQUE].gst, "empty-buffers", FALSE);
 
-		_mmcamcorder_gst_set_state(handle, sc->encode_element[_MMCAMCORDER_ENCSINK_SINK].gst, GST_STATE_NULL);
+		_mmcamcorder_gst_set_state(handle, pipeline, GST_STATE_NULL);
 
 		sc->pipeline_time = 0;
 		sc->pause_time = 0;
