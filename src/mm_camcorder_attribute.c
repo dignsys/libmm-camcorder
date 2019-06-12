@@ -2636,7 +2636,7 @@ bool _mmcamcorder_commit_camera_ptz_type(MMHandleType handle, int attr_idx, cons
 		for (item = controls ; item && item->data ; item = item->next) {
 			CameraControlChannel = item->data;
 			_mmcam_dbg_log("CameraControlChannel->label %s", CameraControlChannel->label);
-			if (!strcmp(CameraControlChannel->label, "ptz")) {
+			if (!strcmp(CameraControlChannel->label, "ptz_type")) {
 				if (gst_camera_control_set_value(CameraControl, CameraControlChannel, value->value.i_val)) {
 					_mmcam_dbg_warn("set ptz type %d done", value->value.i_val);
 					return TRUE;
@@ -4739,7 +4739,12 @@ bool _mmcamcorder_set_attribute_to_camsensor2(MMHandleType handle)
 	unsigned int i = 0;
 	int ret = TRUE;
 	int attr_idxs[] = {
-		MM_CAM_STROBE_MODE
+		MM_CAM_STROBE_MODE,
+		MM_CAM_CAMERA_PTZ_TYPE,
+		MM_CAM_CAMERA_PAN_MECHA,
+		MM_CAM_CAMERA_PAN_ELEC,
+		MM_CAM_CAMERA_TILT_MECHA,
+		MM_CAM_CAMERA_TILT_ELEC
 	};
 
 	mmf_return_val_if_fail(hcamcorder, FALSE);

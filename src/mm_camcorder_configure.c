@@ -826,6 +826,7 @@ int _mmcamcorder_conf_init(MMHandleType handle, int type, camera_conf *configure
 		{ "VideoStabilization",   CONFIGURE_VALUE_INT_ARRAY, {NULL} },
 		{ "FaceZoomMode",         CONFIGURE_VALUE_INT_ARRAY, {NULL} },
 		{ "FaceZoomLevel",        CONFIGURE_VALUE_INT_RANGE, {NULL} },
+		{ "PtzType",              CONFIGURE_VALUE_INT_ARRAY, {NULL} },
 		{ "PanMecha",             CONFIGURE_VALUE_INT_RANGE, {NULL} },
 		{ "PanElec",              CONFIGURE_VALUE_INT_RANGE, {NULL} },
 		{ "TiltMecha",            CONFIGURE_VALUE_INT_RANGE, {NULL} },
