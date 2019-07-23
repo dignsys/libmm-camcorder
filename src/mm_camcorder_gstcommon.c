@@ -1462,8 +1462,8 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 		}
 	} else if (!strcmp(videosink_name, "tizenwlsink") || !strcmp(videosink_name, "directvideosink")) {
 		if (overlay) {
-			_mmcam_dbg_log("wayland global surface id : %d", *(int *)(overlay));
-			gst_video_overlay_set_wl_window_wl_surface_id(GST_VIDEO_OVERLAY(vsink), (guintptr)*(int *)(overlay));
+			_mmcam_dbg_log("wayland global surface id : %d", *overlay);
+			gst_video_overlay_set_wl_window_wl_surface_id(GST_VIDEO_OVERLAY(vsink), *overlay);
 		} else {
 			_mmcam_dbg_warn("Handle is NULL. skip setting.");
 		}
