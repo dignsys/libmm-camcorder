@@ -155,6 +155,10 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_push_buffer_to_record(Gst
 static int __mmcamcorder_get_amrnb_bitrate_mode(int bitrate);
 static guint32 _mmcamcorder_convert_fourcc_string_to_value(const gchar* format_name);
 
+#ifdef _MMCAMCORDER_PRODUCT_TV
+static bool __mmcamcorder_find_max_resolution(MMHandleType handle, gint *max_width, gint *max_height);
+#endif /* _MMCAMCORDER_PRODUCT_TV */
+
 /*=======================================================================================
 |  FUNCTION DEFINITIONS									|
 =======================================================================================*/
@@ -322,7 +326,7 @@ int _mmcamcorder_create_preview_elements(MMHandleType handle)
 	}
 
 	/* make demux and decoder for H264 stream from videosrc */
-	if (sc->info_image->preview_format == MM_PIXEL_FORMAT_ENCODED_H264) {
+	if (sc->info_image->preview_format == MM_PIXEL_FORMAT_ENCODED_H264 && display_surface_type != MM_DISPLAY_SURFACE_NULL) {
 		int preview_bitrate = 0;
 		int gop_interval = 0;
 		const char *videodecoder_name = NULL;
@@ -1434,8 +1438,8 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 	_mmcam_dbg_log("(overlay=%p, size=%d)", overlay, size);
 
 	/* Set display handle */
-	if (!strcmp(videosink_name, "xvimagesink") ||
-	    !strcmp(videosink_name, "ximagesink")) {
+	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "ximagesink") ||
+		!strcmp(videosink_name, "directvideosink")) {
 		if (overlay) {
 			xid = *overlay;
 			_mmcam_dbg_log("xid = %lu )", xid);
@@ -1460,7 +1464,7 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 			_mmcam_dbg_err("display handle(eavs object) is NULL");
 			return MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
 		}
-	} else if (!strcmp(videosink_name, "tizenwlsink") || !strcmp(videosink_name, "directvideosink")) {
+	} else if (!strcmp(videosink_name, "tizenwlsink")) {
 		if (overlay) {
 			_mmcam_dbg_log("wayland global surface id : %d", *overlay);
 			gst_video_overlay_set_wl_window_wl_surface_id(GST_VIDEO_OVERLAY(vsink), *overlay);
@@ -2520,13 +2524,6 @@ bool _mmcamcorder_set_videosrc_caps(MMHandleType handle, unsigned int fourcc, in
 	gboolean do_set_caps = FALSE;
 
 	GstCaps *caps = NULL;
-#ifdef _MMCAMCORDER_PRODUCT_TV
-	GstPad *sinkpad;
-	GstCaps *decsink_caps = NULL;
-	GstStructure *decsink_struct = NULL;
-	int maxwidth = 0;
-	int maxheight = 0;
-#endif /*_MMCAMCORDER_PRODUCT_TV */
 
 	mmf_camcorder_t *hcamcorder = NULL;
 	_MMCamcorderSubContext *sc = NULL;
@@ -2689,34 +2686,21 @@ bool _mmcamcorder_set_videosrc_caps(MMHandleType handle, unsigned int fourcc, in
 	if (do_set_caps) {
 		if (sc->info_image->preview_format == MM_PIXEL_FORMAT_ENCODED_H264) {
 #ifdef _MMCAMCORDER_PRODUCT_TV
-			sinkpad = gst_element_get_static_pad(sc->element[_MMCAMCORDER_VIDEOSRC_DECODE].gst, "sink");
-			if (!sinkpad) {
-				_mmcam_dbg_err("There are no decoder caps");
-				return FALSE;
+			gint maxwidth = 0;
+			gint maxheight = 0;
+			int display_surface_type = MM_DISPLAY_SURFACE_NULL;
+			mm_camcorder_get_attributes(handle, NULL,
+					MMCAM_DISPLAY_SURFACE, &display_surface_type,
+					NULL);
+
+			if (display_surface_type != MM_DISPLAY_SURFACE_NULL && __mmcamcorder_find_max_resolution(handle, &maxwidth, &maxheight) == false) {
+				_mmcam_dbg_err("can not find max resolution limitation");
+				return false;
+			} else if (display_surface_type == MM_DISPLAY_SURFACE_NULL) {
+				maxwidth = set_width;
+				maxheight = set_height;
 			}
-
-			decsink_caps = gst_pad_get_pad_template_caps(sinkpad);
-			if (!decsink_caps) {
-				gst_object_unref(sinkpad);
-				_mmcam_dbg_err("There is no decoder sink caps");
-				return FALSE;
-			}
-
-			decsink_struct = gst_caps_get_structure(decsink_caps, 0);
-			if (!decsink_struct) {
-				_mmcam_dbg_err("There are no structure from caps");
-				gst_object_unref(decsink_caps);
-				gst_object_unref(sinkpad);
-				return FALSE;
-			}
-
-			if (gst_structure_has_field(decsink_struct, "maxwidth"))
-				gst_structure_get_int(decsink_struct, "maxwidth", &maxwidth);
-
-			if (gst_structure_has_field(decsink_struct, "maxheight"))
-				gst_structure_get_int(decsink_struct, "maxheight", &maxheight);
 #endif /* _MMCAMCORDER_PRODUCT_TV */
-
 			caps = gst_caps_new_simple("video/x-h264",
 				"width", G_TYPE_INT, set_width,
 				"height", G_TYPE_INT, set_height,
@@ -2728,11 +2712,6 @@ bool _mmcamcorder_set_videosrc_caps(MMHandleType handle, unsigned int fourcc, in
 				"alignment", G_TYPE_STRING, "au",
 #endif /* _MMCAMCORDER_PRODUCT_TV */
 				NULL);
-
-#ifdef _MMCAMCORDER_PRODUCT_TV
-			gst_object_unref(decsink_caps);
-			gst_object_unref(sinkpad);
-#endif /* _MMCAMCORDER_PRODUCT_TV */
 		} else {
 			char fourcc_string[sizeof(fourcc)+1];
 			strncpy(fourcc_string, (char*)&fourcc, sizeof(fourcc));
@@ -3173,3 +3152,65 @@ bool _mmcamcorder_recreate_decoder_for_encoded_preview(MMHandleType handle)
 
 	return TRUE;
 }
+
+#ifdef _MMCAMCORDER_PRODUCT_TV
+static bool __mmcamcorder_find_max_resolution(MMHandleType handle, gint *max_width, gint *max_height)
+{
+	_MMCamcorderSubContext *sc = NULL;
+	mmf_camcorder_t *hcamcorder = NULL;
+	int index = 0;
+	const gchar *mime = NULL;
+	GstPad *sinkpad;
+	GstCaps *decsink_caps = NULL;
+	GstStructure *decsink_struct = NULL;
+
+	mmf_return_val_if_fail(handle, false);
+	mmf_return_val_if_fail(max_width, false);
+	mmf_return_val_if_fail(max_height, false);
+
+	hcamcorder = MMF_CAMCORDER(handle);
+	mmf_return_val_if_fail(hcamcorder, false);
+
+	sc = MMF_CAMCORDER_SUBCONTEXT(hcamcorder);
+
+	sinkpad = gst_element_get_static_pad(sc->element[_MMCAMCORDER_VIDEOSRC_DECODE].gst, "sink");
+	if (!sinkpad) {
+		_mmcam_dbg_err("There are no decoder caps");
+		return false;
+	}
+
+	decsink_caps = gst_pad_get_pad_template_caps(sinkpad);
+	if (!decsink_caps) {
+		gst_object_unref(sinkpad);
+		_mmcam_dbg_err("There is no decoder sink caps");
+		return false;
+	}
+
+	for (index = 0; index < gst_caps_get_size(decsink_caps); index++) {
+		decsink_struct = gst_caps_get_structure(decsink_caps, index);
+		if (!decsink_struct) {
+			_mmcam_dbg_err("There are no structure from caps");
+			gst_object_unref(decsink_caps);
+			gst_object_unref(sinkpad);
+			return false;
+		}
+		mime = gst_structure_get_name(decsink_struct);
+		if (!strcmp(mime, "video/x-h264")) {
+			_mmcam_dbg_log("h264 caps structure found");
+			if (gst_structure_has_field(decsink_struct, "maxwidth"))
+				*max_width = gst_value_get_int_range_max(gst_structure_get_value(decsink_struct, "maxwidth"));
+			if (gst_structure_has_field(decsink_struct, "maxheight"))
+				*max_height = gst_value_get_int_range_max(gst_structure_get_value(decsink_struct, "maxheight"));
+			break;
+		}
+	}
+	_mmcam_dbg_log("maxwidth = %d , maxheight = %d", (int)*max_width, (int)*max_height);
+	gst_object_unref(decsink_caps);
+	gst_object_unref(sinkpad);
+
+	if (*max_width <= 0 || *max_height <= 0)
+		return false;
+
+	return true;
+}
+#endif /* _MMCAMCORDER_PRODUCT_TV */

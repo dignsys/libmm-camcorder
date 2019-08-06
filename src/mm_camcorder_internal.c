@@ -1010,82 +1010,84 @@ int _mmcamcorder_realize(MMHandleType handle)
 #endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 #ifdef _MMCAMCORDER_RM_SUPPORT
-		mm_camcorder_get_attributes(handle, NULL,
-			MMCAM_CLIENT_PID, &app_pid,
-			NULL);
-		rci.app_pid = app_pid;
-		aul_app_get_appid_bypid(rci.app_pid, rci.app_id, sizeof(rci.app_id));
+		if (display_surface_type != MM_DISPLAY_SURFACE_NULL) {
+			mm_camcorder_get_attributes(handle, NULL,
+				MMCAM_CLIENT_PID, &app_pid,
+				NULL);
+			rci.app_pid = app_pid;
+			aul_app_get_appid_bypid(rci.app_pid, rci.app_id, sizeof(rci.app_id));
 
-		/* RM register */
-		if (hcamcorder->rm_handle == 0) {
-			iret = rm_register((rm_resource_cb)_mmcamcorder_rm_callback, (void*)hcamcorder, &(hcamcorder->rm_handle), &rci);
+			/* RM register */
+			if (hcamcorder->rm_handle == 0) {
+				iret = rm_register((rm_resource_cb)_mmcamcorder_rm_callback, (void*)hcamcorder, &(hcamcorder->rm_handle), &rci);
+				if (iret != RM_OK) {
+					_mmcam_dbg_err("rm_register fail");
+					ret = MM_ERROR_RESOURCE_INTERNAL;
+					goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
+				}
+			}
+
+			mm_camcorder_get_attributes(handle, NULL,
+				MMCAM_CAMERA_FORMAT, &preview_format,
+				NULL);
+
+			resource_count = 0;
+			memset(&hcamcorder->request_resources, 0x0, sizeof(rm_category_request_s));
+			memset(&hcamcorder->returned_devices, 0x0, sizeof(rm_device_return_s));
+
+			if (preview_format == MM_PIXEL_FORMAT_ENCODED_H264) {
+				hcamcorder->request_resources.state[resource_count] = RM_STATE_EXCLUSIVE;
+				hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_VIDEO_DECODER;
+
+				_mmcam_dbg_log("request dec rsc - category 0x%x", RM_CATEGORY_VIDEO_DECODER);
+
+				resource_count++;
+			}
+
+			if (display_surface_type == MM_DISPLAY_SURFACE_OVERLAY) {
+				hcamcorder->request_resources.state[resource_count] = RM_STATE_EXCLUSIVE;
+				hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_SCALER;
+
+				_mmcam_dbg_log("request scaler rsc - category 0x%x", RM_CATEGORY_SCALER);
+
+				resource_count++;
+			}
+
+			hcamcorder->request_resources.request_num = resource_count;
+
+			if (resource_count > 0) {
+				qret = rm_query(hcamcorder->rm_handle, RM_QUERY_ALLOCATION, &(hcamcorder->request_resources), &qret_avail);
+				if (qret != RM_OK || qret_avail != 1) {
+					_mmcam_dbg_log("rm query failed. retry with sub devices");
+
+					resource_count = 0;
+
+					if (preview_format == MM_PIXEL_FORMAT_ENCODED_H264) {
+						hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_VIDEO_DECODER_SUB;
+						_mmcam_dbg_log("request dec rsc - category 0x%x", RM_CATEGORY_VIDEO_DECODER_SUB);
+						resource_count++;
+					}
+
+					if (display_surface_type == MM_DISPLAY_SURFACE_OVERLAY) {
+						hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_SCALER_SUB;
+						_mmcam_dbg_log("request scaler rsc - category 0x%x", RM_CATEGORY_SCALER_SUB);
+						resource_count++;
+					}
+				}
+			}
+
+			hcamcorder->request_resources.state[resource_count] = RM_STATE_EXCLUSIVE;
+			hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_CAMERA;
+
+			hcamcorder->request_resources.request_num = resource_count + 1;
+			_mmcam_dbg_log("request camera rsc - category 0x%x", RM_CATEGORY_CAMERA);
+
+			iret = rm_allocate_resources(hcamcorder->rm_handle, &(hcamcorder->request_resources), &hcamcorder->returned_devices);
 			if (iret != RM_OK) {
-				_mmcam_dbg_err("rm_register fail");
+				_mmcam_dbg_err("Resource allocation request failed");
 				ret = MM_ERROR_RESOURCE_INTERNAL;
 				goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 			}
-		}
-
-		mm_camcorder_get_attributes(handle, NULL,
-			MMCAM_CAMERA_FORMAT, &preview_format,
-			NULL);
-
-		resource_count = 0;
-		memset(&hcamcorder->request_resources, 0x0, sizeof(rm_category_request_s));
-		memset(&hcamcorder->returned_devices, 0x0, sizeof(rm_device_return_s));
-
-		if (preview_format == MM_PIXEL_FORMAT_ENCODED_H264) {
-			hcamcorder->request_resources.state[resource_count] = RM_STATE_EXCLUSIVE;
-			hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_VIDEO_DECODER;
-
-			_mmcam_dbg_log("request dec rsc - category 0x%x", RM_CATEGORY_VIDEO_DECODER);
-
-			resource_count++;
-		}
-
-		if (display_surface_type == MM_DISPLAY_SURFACE_OVERLAY) {
-			hcamcorder->request_resources.state[resource_count] = RM_STATE_EXCLUSIVE;
-			hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_SCALER;
-
-			_mmcam_dbg_log("request scaler rsc - category 0x%x", RM_CATEGORY_SCALER);
-
-			resource_count++;
-		}
-
-		hcamcorder->request_resources.request_num = resource_count;
-
-		if (resource_count > 0) {
-			qret = rm_query(hcamcorder->rm_handle, RM_QUERY_ALLOCATION, &(hcamcorder->request_resources), &qret_avail);
-			if (qret != RM_OK || qret_avail != 1) {
-				_mmcam_dbg_log("rm query failed. retry with sub devices");
-
-				resource_count = 0;
-
-				if (preview_format == MM_PIXEL_FORMAT_ENCODED_H264) {
-					hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_VIDEO_DECODER_SUB;
-					_mmcam_dbg_log("request dec rsc - category 0x%x", RM_CATEGORY_VIDEO_DECODER_SUB);
-					resource_count++;
-				}
-
-				if (display_surface_type == MM_DISPLAY_SURFACE_OVERLAY) {
-					hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_SCALER_SUB;
-					_mmcam_dbg_log("request scaler rsc - category 0x%x", RM_CATEGORY_SCALER_SUB);
-					resource_count++;
-				}
-			}
-		}
-
-		hcamcorder->request_resources.state[resource_count] = RM_STATE_EXCLUSIVE;
-		hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_CAMERA;
-
-		hcamcorder->request_resources.request_num = resource_count + 1;
-		_mmcam_dbg_log("request camera rsc - category 0x%x", RM_CATEGORY_CAMERA);
-
-		iret = rm_allocate_resources(hcamcorder->rm_handle, &(hcamcorder->request_resources), &hcamcorder->returned_devices);
-		if (iret != RM_OK) {
-			_mmcam_dbg_err("Resource allocation request failed");
-			ret = MM_ERROR_RESOURCE_INTERNAL;
-			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 		}
 #endif /* _MMCAMCORDER_RM_SUPPORT */
 	}

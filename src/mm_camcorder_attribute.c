@@ -2647,7 +2647,7 @@ bool _mmcamcorder_commit_camera_ptz_type(MMHandleType handle, int attr_idx, cons
 			}
 		}
 
-		_mmcam_dbg_warn("failed to find tilt control channel");
+		_mmcam_dbg_warn("failed to find ptz type control channel");
 	}
 
 	return FALSE;
@@ -3985,7 +3985,8 @@ bool _mmcamcorder_commit_display_geometry_method(MMHandleType handle, int attr_i
 	}
 
 	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "tizenwlsink") ||
-	    !strcmp(videosink_name, "evaspixmapsink") || !strcmp(videosink_name, "evasimagesink")) {
+	    !strcmp(videosink_name, "evaspixmapsink") || !strcmp(videosink_name, "evasimagesink") ||
+	    !strcmp(videosink_name, "directvideosink")) {
 		method = value->value.i_val;
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "display-geometry-method", method);
 	} else {
@@ -4030,7 +4031,7 @@ bool _mmcamcorder_commit_display_rect(MMHandleType handle, int attr_idx, const M
 	}
 
 	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "tizenwlsink") ||
-	    !strcmp(videosink_name, "evaspixmapsink")) {
+	    !strcmp(videosink_name, "evaspixmapsink") || !strcmp(videosink_name, "directvideosink")) {
 		int rect_x = 0;
 		int rect_y = 0;
 		int rect_width = 0;
