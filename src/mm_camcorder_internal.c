@@ -427,8 +427,16 @@ static gint __mmcamcorder_init_configure_video_capture(mmf_camcorder_t *hcamcord
 		MMCAM_CAMERA_WIDTH, &resolution_width,
 		MMCAM_CAMERA_HEIGHT, &resolution_height,
 		NULL);
+	if (ret != MM_ERROR_NONE) {
+		_mmcam_dbg_err("get attribute[resolution] error");
+		return MM_ERROR_CAMCORDER_INTERNAL;
+	}
 
-	mm_camcorder_get_fps_list_by_resolution((MMHandleType)hcamcorder, resolution_width, resolution_height, &fps_info);
+	ret = mm_camcorder_get_fps_list_by_resolution((MMHandleType)hcamcorder, resolution_width, resolution_height, &fps_info);
+	if (ret != MM_ERROR_NONE) {
+		_mmcam_dbg_err("get fps list failed with [%dx%d]", resolution_width, resolution_height);
+		return MM_ERROR_CAMCORDER_INTERNAL;
+	}
 
 	_mmcam_dbg_log("ZeroCopy %d, UserBuffer %d, Videoconvert %d, MPPreviewCb %d",
 		hcamcorder->use_zero_copy_format, hcamcorder->support_user_buffer,
