@@ -1700,10 +1700,12 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 		GstMemory *memory = NULL;
 		GstMapInfo mapinfo;
 
-		state = _mmcamcorder_get_state((MMHandleType)hcamcorder);
-		if (state < MM_CAMCORDER_STATE_PREPARE) {
-			_mmcam_dbg_warn("Not ready for stream callback");
-			return GST_PAD_PROBE_OK;
+		if (sc->info_image->preview_format != MM_PIXEL_FORMAT_ENCODED_H264) {
+			state = _mmcamcorder_get_state((MMHandleType)hcamcorder);
+			if (state < MM_CAMCORDER_STATE_PREPARE) {
+				_mmcam_dbg_warn("Not ready for stream callback");
+				return GST_PAD_PROBE_OK;
+			}
 		}
 
 		caps = gst_pad_get_current_caps(pad);
@@ -1749,7 +1751,10 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 		}
 
 		/* set size and timestamp */
-		memory = gst_buffer_peek_memory(buffer, 0);
+		if (sc->info_image->preview_format == MM_PIXEL_FORMAT_ENCODED_H264)
+			memory = gst_buffer_get_all_memory(buffer);
+		else
+			memory = gst_buffer_peek_memory(buffer, 0);
 		if (!memory) {
 			_mmcam_dbg_err("GstMemory get failed from buffer %p", buffer);
 			return GST_PAD_PROBE_OK;
@@ -1935,6 +1940,8 @@ static GstPadProbeReturn __mmcamcorder_video_dataprobe_preview(GstPad *pad, GstP
 		/* unmap memory */
 		if (mapinfo.data)
 			gst_memory_unmap(memory, &mapinfo);
+		if (sc->info_image->preview_format == MM_PIXEL_FORMAT_ENCODED_H264)
+			gst_memory_unref(memory);
 	}
 
 	return GST_PAD_PROBE_OK;
