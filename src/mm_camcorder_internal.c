@@ -71,6 +71,9 @@ static void     __mmcamcorder_deinit_configure(mmf_camcorder_t *hcamcorder);
 static gboolean __mmcamcorder_init_gstreamer(camera_conf *conf);
 static void     __mmcamcorder_get_system_info(mmf_camcorder_t *hcamcorder);
 
+static GstBusSyncReply __mmcamcorder_handle_gst_sync_error(mmf_camcorder_t *hcamcorder, GstMessage *message);
+static GstBusSyncReply __mmcamcorder_gst_handle_sync_audio_error(mmf_camcorder_t *hcamcorder, gint err_code);
+static GstBusSyncReply __mmcamcorder_gst_handle_sync_others_error(mmf_camcorder_t *hcamcorder, gint err_code);
 static gboolean __mmcamcorder_handle_gst_error(MMHandleType handle, GstMessage *message, GError *error);
 static gint     __mmcamcorder_gst_handle_stream_error(MMHandleType handle, int code, GstMessage *message);
 static gint     __mmcamcorder_gst_handle_resource_error(MMHandleType handle, int code, GstMessage *message);
@@ -2983,11 +2986,165 @@ DROP_MESSAGE:
 }
 
 
-GstBusSyncReply _mmcamcorder_encode_pipeline_bus_sync_callback(GstBus *bus, GstMessage *message, gpointer data)
+static GstBusSyncReply __mmcamcorder_gst_handle_sync_audio_error(mmf_camcorder_t *hcamcorder, gint err_code)
 {
-	GstElement *element = NULL;
+	_MMCamcorderMsgItem msg;
+
+	if (!hcamcorder) {
+		_mmcam_dbg_err("NULL handle");
+		return GST_BUS_PASS;
+	}
+
+	switch (err_code) {
+	case GST_RESOURCE_ERROR_OPEN_READ_WRITE:
+	case GST_RESOURCE_ERROR_OPEN_WRITE:
+		_mmcam_dbg_err("audio device [open failed]");
+
+		/* post error to application */
+		hcamcorder->error_occurs = TRUE;
+		hcamcorder->error_code = MM_ERROR_COMMON_INVALID_PERMISSION;
+
+		msg.id = MM_MESSAGE_CAMCORDER_ERROR;
+		msg.param.code = hcamcorder->error_code;
+
+		_mmcamcorder_send_message((MMHandleType)hcamcorder, &msg);
+
+		_mmcam_dbg_err("error : sc->error_occurs %d", hcamcorder->error_occurs);
+
+		return GST_BUS_DROP;
+	default:
+		break;
+	}
+
+	return GST_BUS_PASS;
+}
+
+
+static GstBusSyncReply __mmcamcorder_gst_handle_sync_others_error(mmf_camcorder_t *hcamcorder, gint err_code)
+{
+	gboolean b_commiting = FALSE;
+	storage_state_e storage_state = STORAGE_STATE_UNMOUNTABLE;
+	_MMCamcorderMsgItem msg;
+	_MMCamcorderSubContext *sc = NULL;
+
+	if (!hcamcorder) {
+		_mmcam_dbg_err("NULL handle");
+		return GST_BUS_PASS;
+	}
+
+	sc = MMF_CAMCORDER_SUBCONTEXT(hcamcorder);
+	mmf_return_val_if_fail(sc, GST_BUS_PASS);
+
+	if (hcamcorder->type != MM_CAMCORDER_MODE_AUDIO) {
+		mmf_return_val_if_fail(sc->info_video, GST_BUS_PASS);
+		b_commiting = sc->info_video->b_commiting;
+	} else {
+		mmf_return_val_if_fail(sc->info_audio, GST_BUS_PASS);
+		b_commiting = sc->info_audio->b_commiting;
+	}
+
+	_MMCAMCORDER_LOCK(hcamcorder);
+
+	switch (err_code) {
+	case GST_RESOURCE_ERROR_WRITE:
+		storage_get_state(hcamcorder->storage_info.id, &storage_state);
+		if (storage_state == STORAGE_STATE_REMOVED ||
+			storage_state == STORAGE_STATE_UNMOUNTABLE) {
+			_mmcam_dbg_err("storage was removed! [storage state %d]", storage_state);
+			hcamcorder->error_code = MM_ERROR_OUT_OF_STORAGE;
+		} else {
+			_mmcam_dbg_err("File write error, storage state %d", storage_state);
+			hcamcorder->error_code = MM_ERROR_FILE_WRITE;
+		}
+
+		if (sc->ferror_send == FALSE) {
+			sc->ferror_send = TRUE;
+		} else {
+			_mmcam_dbg_err("error was already sent");
+			_MMCAMCORDER_UNLOCK(hcamcorder);
+			return GST_BUS_DROP;
+		}
+		break;
+	case GST_RESOURCE_ERROR_NO_SPACE_LEFT:
+		_mmcam_dbg_err("No left space");
+		hcamcorder->error_code = MM_MESSAGE_CAMCORDER_NO_FREE_SPACE;
+		break;
+	case GST_RESOURCE_ERROR_OPEN_WRITE:
+		_mmcam_dbg_err("Out of storage");
+		hcamcorder->error_code = MM_ERROR_OUT_OF_STORAGE;
+		break;
+	case GST_RESOURCE_ERROR_SEEK:
+		_mmcam_dbg_err("File read(seek)");
+		hcamcorder->error_code = MM_ERROR_FILE_READ;
+		break;
+	default:
+		_mmcam_dbg_err("Resource error(%d)", err_code);
+		hcamcorder->error_code = MM_ERROR_CAMCORDER_GST_RESOURCE;
+		break;
+	}
+
+	if (b_commiting) {
+		_MMCAMCORDER_SIGNAL(hcamcorder);
+		_MMCAMCORDER_UNLOCK(hcamcorder);
+	} else {
+		_MMCAMCORDER_UNLOCK(hcamcorder);
+
+		msg.id = MM_MESSAGE_CAMCORDER_ERROR;
+		msg.param.code = hcamcorder->error_code;
+
+		_mmcamcorder_send_message((MMHandleType)hcamcorder, &msg);
+	}
+
+	return GST_BUS_DROP;
+}
+
+
+static GstBusSyncReply __mmcamcorder_handle_gst_sync_error(mmf_camcorder_t *hcamcorder, GstMessage *message)
+{
 	GError *err = NULL;
 	gchar *debug_info = NULL;
+	GstBusSyncReply ret = GST_BUS_PASS;
+	_MMCamcorderSubContext *sc = NULL;
+
+	if (!message || !hcamcorder) {
+		_mmcam_dbg_err("NULL message(%p) or handle(%p)", message, hcamcorder);
+		return GST_BUS_PASS;
+	}
+
+	sc = MMF_CAMCORDER_SUBCONTEXT(hcamcorder);
+	mmf_return_val_if_fail(sc, GST_BUS_PASS);
+
+	/* parse error message */
+	gst_message_parse_error(message, &err, &debug_info);
+
+	if (debug_info) {
+		_mmcam_dbg_err("GST ERROR : %s", debug_info);
+		g_free(debug_info);
+		debug_info = NULL;
+	}
+
+	if (!err) {
+		_mmcam_dbg_warn("failed to parse error message");
+		return GST_BUS_PASS;
+	}
+
+	/* check domain[RESOURCE] and element[AUDIOSRC] */
+	if (err->domain == GST_RESOURCE_ERROR &&
+		GST_ELEMENT_CAST(message->src) == GST_ELEMENT_CAST(sc->encode_element[_MMCAMCORDER_AUDIOSRC_SRC].gst))
+		ret = __mmcamcorder_gst_handle_sync_audio_error(hcamcorder, err->code);
+	else
+		ret = __mmcamcorder_gst_handle_sync_others_error(hcamcorder, err->code);
+
+	g_error_free(err);
+
+	return ret;
+}
+
+
+GstBusSyncReply _mmcamcorder_encode_pipeline_bus_sync_callback(GstBus *bus, GstMessage *message, gpointer data)
+{
+	GstBusSyncReply ret = GST_BUS_PASS;
+	GstElement *element = NULL;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(data);
 	_MMCamcorderSubContext *sc = NULL;
@@ -3008,135 +3165,17 @@ GstBusSyncReply _mmcamcorder_encode_pipeline_bus_sync_callback(GstBus *bus, GstM
 
 		_MMCAMCORDER_UNLOCK(hcamcorder);
 
-		goto DROP_MESSAGE;
+		ret = GST_BUS_DROP;
 	} else if (GST_MESSAGE_TYPE(message) == GST_MESSAGE_ERROR) {
-		_MMCamcorderMsgItem msg;
-
-		/* parse error message */
-		gst_message_parse_error(message, &err, &debug_info);
-
-		if (debug_info) {
-			_mmcam_dbg_err("GST ERROR : %s", debug_info);
-			g_free(debug_info);
-			debug_info = NULL;
-		}
-
-		if (!err) {
-			_mmcam_dbg_warn("failed to parse error message");
-			return GST_BUS_PASS;
-		}
-
-		/* set videosrc element to compare */
-		element = GST_ELEMENT_CAST(sc->encode_element[_MMCAMCORDER_AUDIOSRC_SRC].gst);
-
-		/* check domain[RESOURCE] and element[AUDIOSRC] */
-		if (err->domain == GST_RESOURCE_ERROR &&
-		    GST_ELEMENT_CAST(message->src) == element) {
-			switch (err->code) {
-			case GST_RESOURCE_ERROR_OPEN_READ_WRITE:
-			case GST_RESOURCE_ERROR_OPEN_WRITE:
-				_mmcam_dbg_err("audio device [open failed]");
-
-				/* post error to application */
-				hcamcorder->error_occurs = TRUE;
-				hcamcorder->error_code = MM_ERROR_COMMON_INVALID_PERMISSION;
-
-				msg.id = MM_MESSAGE_CAMCORDER_ERROR;
-				msg.param.code = hcamcorder->error_code;
-
-				_mmcamcorder_send_message((MMHandleType)hcamcorder, &msg);
-
-				_mmcam_dbg_err(" error : sc->error_occurs %d", hcamcorder->error_occurs);
-
-				goto DROP_MESSAGE;
-			default:
-				break;
-			}
-		} else {
-			gboolean b_commiting = FALSE;
-			storage_state_e storage_state = STORAGE_STATE_UNMOUNTABLE;
-
-			if (hcamcorder->type != MM_CAMCORDER_MODE_AUDIO) {
-				mmf_return_val_if_fail(sc->info_video, GST_BUS_PASS);
-				b_commiting = sc->info_video->b_commiting;
-			} else {
-				mmf_return_val_if_fail(sc->info_audio, GST_BUS_PASS);
-				b_commiting = sc->info_audio->b_commiting;
-			}
-
-			_MMCAMCORDER_LOCK(hcamcorder);
-
-			switch (err->code) {
-			case GST_RESOURCE_ERROR_WRITE:
-				storage_get_state(hcamcorder->storage_info.id, &storage_state);
-				if (storage_state == STORAGE_STATE_REMOVED ||
-					storage_state == STORAGE_STATE_UNMOUNTABLE) {
-					_mmcam_dbg_err("storage was removed! [storage state %d]", storage_state);
-					hcamcorder->error_code = MM_ERROR_OUT_OF_STORAGE;
-				} else {
-					_mmcam_dbg_err("File write error, storage state %d", storage_state);
-					hcamcorder->error_code = MM_ERROR_FILE_WRITE;
-				}
-
-				if (sc->ferror_send == FALSE) {
-					sc->ferror_send = TRUE;
-				} else {
-					_mmcam_dbg_err("error was already sent");
-					_MMCAMCORDER_UNLOCK(hcamcorder);
-					goto DROP_MESSAGE;
-				}
-				break;
-			case GST_RESOURCE_ERROR_NO_SPACE_LEFT:
-				_mmcam_dbg_err("No left space");
-				hcamcorder->error_code = MM_MESSAGE_CAMCORDER_NO_FREE_SPACE;
-				break;
-			case GST_RESOURCE_ERROR_OPEN_WRITE:
-				_mmcam_dbg_err("Out of storage");
-				hcamcorder->error_code = MM_ERROR_OUT_OF_STORAGE;
-				break;
-			case GST_RESOURCE_ERROR_SEEK:
-				_mmcam_dbg_err("File read(seek)");
-				hcamcorder->error_code = MM_ERROR_FILE_READ;
-				break;
-			default:
-				_mmcam_dbg_err("Resource error(%d)", err->code);
-				hcamcorder->error_code = MM_ERROR_CAMCORDER_GST_RESOURCE;
-				break;
-			}
-
-			if (b_commiting) {
-				_MMCAMCORDER_SIGNAL(hcamcorder);
-				_MMCAMCORDER_UNLOCK(hcamcorder);
-			} else {
-				_MMCAMCORDER_UNLOCK(hcamcorder);
-
-				msg.id = MM_MESSAGE_CAMCORDER_ERROR;
-				msg.param.code = hcamcorder->error_code;
-
-				_mmcamcorder_send_message((MMHandleType)hcamcorder, &msg);
-			}
-
-			goto DROP_MESSAGE;
-		}
+		ret = __mmcamcorder_handle_gst_sync_error(hcamcorder, message);
 	}
 
-	if (err) {
-		g_error_free(err);
-		err = NULL;
+	if (ret == GST_BUS_DROP) {
+		gst_message_unref(message);
+		message = NULL;
 	}
 
-	return GST_BUS_PASS;
-
-DROP_MESSAGE:
-	if (err) {
-		g_error_free(err);
-		err = NULL;
-	}
-
-	gst_message_unref(message);
-	message = NULL;
-
-	return GST_BUS_DROP;
+	return ret;
 }
 
 
