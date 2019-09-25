@@ -2241,7 +2241,7 @@ bool _mmcamcorder_commit_camera_fps(MMHandleType handle, int attr_idx, const MMA
 	mmf_return_val_if_fail(hcamcorder && value, FALSE);
 
 	current_state = _mmcamcorder_get_state(handle);
-	if (current_state > MM_CAMCORDER_STATE_PREPARE) {
+	if (current_state > MM_CAMCORDER_STATE_NULL) {
 		_mmcam_dbg_err("invalid state %d", current_state);
 		hcamcorder->error_code = MM_ERROR_CAMCORDER_INVALID_STATE;
 		return FALSE;
