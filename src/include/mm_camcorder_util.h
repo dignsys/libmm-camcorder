@@ -293,8 +293,10 @@ gboolean _mmcamcorder_write_udta(FILE *f, int gps_enable, _MMCamcorderLocationIn
 guint64 _mmcamcorder_get_container_size(const guchar *size);
 guint64 _mmcamcorder_get_container_size64(const guchar *size);
 gboolean _mmcamcorder_update_composition_matrix(FILE *f, int orientation);
+void _mmcamcorder_adjust_recording_max_size(const char *filename, guint64 *max_size);
 
 /* File system */
+int _mmcamcorder_get_storage_validity(MMHandleType handle, const char *filename, guint64 min_space, gboolean *storage_validity);
 int _mmcamcorder_get_storage_info(const gchar *path, const gchar *root_directory, _MMCamcorderStorageInfo *storage_info);
 int _mmcamcorder_get_freespace(storage_type_e type, guint64 *free_space);
 int _mmcamcorder_get_file_size(const char *filename, guint64 *size);

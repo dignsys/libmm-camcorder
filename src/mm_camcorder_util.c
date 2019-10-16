@@ -704,6 +704,86 @@ static int __mmcamcorder_storage_supported_cb(int storage_id, storage_type_e typ
 }
 
 
+int _mmcamcorder_get_storage_validity(MMHandleType handle, const char *filename, guint64 min_space, gboolean *storage_validity)
+{
+	int ret = MM_ERROR_NONE;
+	int err = 0;
+	char *dir_name = NULL;
+	guint64 free_space = 0;
+	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
+
+	mmf_return_val_if_fail(hcamcorder, MM_ERROR_CAMCORDER_NOT_INITIALIZED);
+	mmf_return_val_if_fail(storage_validity, MM_ERROR_CAMCORDER_INVALID_ARGUMENT);
+
+	if (!filename) {
+		_mmcam_dbg_warn("NULL filename, but keep going...");
+		*storage_validity = TRUE;
+		return MM_ERROR_NONE;
+	}
+
+	dir_name = g_path_get_dirname(filename);
+	mmf_return_val_if_fail(dir_name, MM_ERROR_OUT_OF_STORAGE);
+
+	err = _mmcamcorder_get_storage_info(dir_name, hcamcorder->root_directory, &hcamcorder->storage_info);
+	if (err != 0) {
+		_mmcam_dbg_err("get storage info failed");
+		ret = MM_ERROR_CAMCORDER_INTERNAL;
+		goto _CHECK_DONE;
+	}
+
+	err = _mmcamcorder_get_freespace(hcamcorder->storage_info.type, &free_space);
+	if (err != 0) {
+		_mmcam_dbg_err("get free space failed");
+		ret = MM_ERROR_CAMCORDER_INTERNAL;
+		goto _CHECK_DONE;
+	}
+
+	_mmcam_dbg_warn("current free space - %s [%" G_GUINT64_FORMAT "]", dir_name, free_space);
+
+_CHECK_DONE:
+	g_free(dir_name);
+
+	if (ret == MM_ERROR_NONE && free_space > min_space) {
+		*storage_validity = TRUE;
+		_mmcam_dbg_log("validity and free space of storage : OK");
+	} else {
+		*storage_validity = FALSE;
+		_mmcam_dbg_err("OUT of STORAGE [err:%d or free space [%"G_GUINT64_FORMAT"] is smaller than [%"G_GUINT64_FORMAT"]",
+			err, free_space, min_space);
+	}
+
+	return ret;
+}
+
+
+void _mmcamcorder_adjust_recording_max_size(const char *filename, guint64 *max_size)
+{
+	int file_system_type = 0;
+	char *dir_name = NULL;
+
+	mmf_return_if_fail(max_size);
+	mmf_return_if_fail(filename);
+
+	dir_name = g_path_get_dirname(filename);
+	mmf_return_if_fail(dir_name);
+
+	if (_mmcamcorder_get_file_system_type(dir_name, &file_system_type) == 0) {
+		/* MSDOS_SUPER_MAGIC : 0x4d44 */
+		if (file_system_type == MSDOS_SUPER_MAGIC &&
+			(*max_size == 0 || *max_size > FAT32_FILE_SYSTEM_MAX_SIZE)) {
+			_mmcam_dbg_warn("FAT32 and too large max[%"G_GUINT64_FORMAT"], set max as %lu",
+				*max_size, FAT32_FILE_SYSTEM_MAX_SIZE);
+			*max_size = FAT32_FILE_SYSTEM_MAX_SIZE;
+		} else {
+			_mmcam_dbg_warn("file system 0x%x, max size %"G_GUINT64_FORMAT,
+				file_system_type, *max_size);
+		}
+	}
+
+	g_free(dir_name);
+}
+
+
 int _mmcamcorder_get_storage_info(const gchar *path, const gchar *root_directory, _MMCamcorderStorageInfo *info)
 {
 	int ret = 0;

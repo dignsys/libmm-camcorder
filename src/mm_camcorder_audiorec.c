@@ -324,8 +324,6 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 {
 	int cmd = command;
 	int ret = MM_ERROR_NONE;
-	int err = 0;
-	guint64 free_space = 0;
 	char *err_attr_name = NULL;
 
 	GstElement *pipeline = NULL;
@@ -352,11 +350,10 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 	case _MMCamcorder_CMD_RECORD:
 		/* check status for resume case */
 		if (_mmcamcorder_get_state((MMHandleType)hcamcorder) != MM_CAMCORDER_STATE_PAUSED) {
+			gboolean storage_validity = FALSE;
 			guint imax_size = 0;
 			guint imax_time = 0;
-			char *temp_filename = NULL;
-			char *dir_name = NULL;
-			int file_system_type = 0;
+			char *target_filename = NULL;
 			int filename_length = 0;
 			int root_directory_length = 0;
 
@@ -369,7 +366,7 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 				MMCAM_TARGET_MAX_SIZE, &imax_size,
 				MMCAM_TARGET_TIME_LIMIT, &imax_time,
 				MMCAM_FILE_FORMAT, &(info->fileformat),
-				MMCAM_TARGET_FILENAME, &temp_filename, &filename_length,
+				MMCAM_TARGET_FILENAME, &target_filename, &filename_length,
 				MMCAM_ROOT_DIRECTORY, &hcamcorder->root_directory, &root_directory_length,
 				NULL);
 			if (ret != MM_ERROR_NONE) {
@@ -378,7 +375,7 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 				goto _ERR_CAMCORDER_AUDIO_COMMAND;
 			}
 
-			if (!temp_filename && !hcamcorder->mstream_cb) {
+			if (!target_filename && !hcamcorder->mstream_cb) {
 				_mmcam_dbg_err("filename is not set and muxed stream cb is NULL");
 				ret = MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
 				goto _ERR_CAMCORDER_AUDIO_COMMAND;
@@ -386,10 +383,10 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 
 			SAFE_G_FREE(info->filename);
 
-			if (temp_filename) {
-				info->filename = g_strdup(temp_filename);
+			if (target_filename) {
+				info->filename = g_strdup(target_filename);
 				if (!info->filename) {
-					_mmcam_dbg_err("STRDUP was failed for [%s]", temp_filename);
+					_mmcam_dbg_err("STRDUP was failed for [%s]", target_filename);
 					goto _ERR_CAMCORDER_AUDIO_COMMAND;
 				}
 
@@ -419,49 +416,14 @@ _mmcamcorder_audio_command(MMHandleType handle, int command)
 			else
 				info->max_time = ((guint64)imax_time) * 1000; /* to millisecond */
 
-			/* TODO : check free space before recording start */
-			dir_name = g_path_get_dirname(info->filename);
-			if (dir_name) {
-				err = _mmcamcorder_get_storage_info(dir_name, hcamcorder->root_directory, &hcamcorder->storage_info);
-				if (err != 0) {
-					_mmcam_dbg_err("get storage info failed");
-					g_free(dir_name);
-					dir_name = NULL;
-					return MM_ERROR_OUT_OF_STORAGE;
-				}
-
-				err = _mmcamcorder_get_freespace(hcamcorder->storage_info.type, &free_space);
-
-				_mmcam_dbg_warn("current space - %s [%" G_GUINT64_FORMAT "]", dir_name, free_space);
-
-				if (_mmcamcorder_get_file_system_type(dir_name, &file_system_type) == 0) {
-					/* MSDOS_SUPER_MAGIC : 0x4d44 */
-					if (file_system_type == MSDOS_SUPER_MAGIC &&
-					    (info->max_size == 0 || info->max_size > FAT32_FILE_SYSTEM_MAX_SIZE)) {
-						_mmcam_dbg_warn("FAT32 and too large max[%"G_GUINT64_FORMAT"], set max as %lu",
-							info->max_size, FAT32_FILE_SYSTEM_MAX_SIZE);
-						info->max_size = FAT32_FILE_SYSTEM_MAX_SIZE;
-					} else {
-						_mmcam_dbg_warn("file system 0x%x, max size %"G_GUINT64_FORMAT,
-										file_system_type, info->max_size);
-					}
-				} else {
-					_mmcam_dbg_warn("_mmcamcorder_get_file_system_type failed");
-				}
-
-				g_free(dir_name);
-				dir_name = NULL;
-			} else {
-				_mmcam_dbg_err("failed to get directory name");
-				err = -1;
+			ret = _mmcamcorder_get_storage_validity(handle, info->filename,
+				_MMCAMCORDER_AUDIO_MINIMUM_SPACE, &storage_validity);
+			if (ret != MM_ERROR_NONE || !storage_validity) {
+				_mmcam_dbg_err("storage validation failed[0x%x]:%d", ret, storage_validity);
+				return ret;
 			}
 
-			if (temp_filename &&
-				(err == -1 || free_space <= _MMCAMCORDER_AUDIO_MINIMUM_SPACE)) {
-				_mmcam_dbg_err("OUT of STORAGE [err:%d or free space [%" G_GUINT64_FORMAT "] is smaller than [%d]",
-					err, free_space, _MMCAMCORDER_AUDIO_MINIMUM_SPACE);
-				return MM_ERROR_OUT_OF_STORAGE;
-			}
+			_mmcamcorder_adjust_recording_max_size(info->filename, &info->max_size);
 		}
 
 		ret = _mmcamcorder_gst_set_state(handle, pipeline, GST_STATE_PLAYING);

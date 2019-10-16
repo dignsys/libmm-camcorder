@@ -504,7 +504,7 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 	int ret = MM_ERROR_NONE;
 	double motion_rate = _MMCAMCORDER_DEFAULT_RECORDING_MOTION_RATE;
 	char *err_name = NULL;
-	char *temp_filename = NULL;
+	char *target_filename = NULL;
 	GstCameraControl *CameraControl = NULL;
 	GstCameraControlChannel *CameraControlChannel = NULL;
 	const GList *controls = NULL;
@@ -537,12 +537,9 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 			/**
 			 * start recording
 			 */
+			gboolean storage_validity = FALSE;
 			guint imax_size = 0;
 			guint imax_time = 0;
-			int ret_free_space = 0;
-			char *dir_name = NULL;
-			guint64 free_space = 0;
-			int file_system_type = 0;
 			int root_directory_length = 0;
 
 			/* Recording */
@@ -589,7 +586,7 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 				MMCAM_VIDEO_WIDTH, &(info->video_width),
 				MMCAM_VIDEO_HEIGHT, &(info->video_height),
 				MMCAM_FILE_FORMAT, &fileformat,
-				MMCAM_TARGET_FILENAME, &temp_filename, &size,
+				MMCAM_TARGET_FILENAME, &target_filename, &size,
 				MMCAM_TARGET_MAX_SIZE, &imax_size,
 				MMCAM_TARGET_TIME_LIMIT, &imax_time,
 				MMCAM_FILE_FORMAT, &(info->fileformat),
@@ -602,7 +599,7 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 				goto _ERR_CAMCORDER_VIDEO_COMMAND;
 			}
 
-			if (!temp_filename && !hcamcorder->mstream_cb) {
+			if (!target_filename && !hcamcorder->mstream_cb) {
 				_mmcam_dbg_err("filename is not set and muxed stream cb is NULL");
 				ret = MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
 				goto _ERR_CAMCORDER_VIDEO_COMMAND;
@@ -620,48 +617,14 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 			else
 				info->max_time = (guint64)((double)imax_time * (double)1000 * motion_rate); /* to millisecond */
 
-			dir_name = g_path_get_dirname(temp_filename);
-			if (dir_name) {
-				ret = _mmcamcorder_get_storage_info(dir_name, hcamcorder->root_directory, &hcamcorder->storage_info);
-				if (ret != 0) {
-					_mmcam_dbg_err("get storage info failed");
-					g_free(dir_name);
-					dir_name = NULL;
-					return MM_ERROR_OUT_OF_STORAGE;
-				}
-
-				ret_free_space = _mmcamcorder_get_freespace(hcamcorder->storage_info.type, &free_space);
-
-				_mmcam_dbg_warn("current space - %s [%" G_GUINT64_FORMAT "]", dir_name, free_space);
-
-				if (_mmcamcorder_get_file_system_type(dir_name, &file_system_type) == 0) {
-					/* MSDOS_SUPER_MAGIC : 0x4d44 */
-					if (file_system_type == MSDOS_SUPER_MAGIC &&
-					    (info->max_size == 0 || info->max_size > FAT32_FILE_SYSTEM_MAX_SIZE)) {
-						_mmcam_dbg_warn("FAT32 and too large max[%"G_GUINT64_FORMAT"], set max as %lu",
-							info->max_size, FAT32_FILE_SYSTEM_MAX_SIZE);
-						info->max_size = FAT32_FILE_SYSTEM_MAX_SIZE;
-					} else {
-						_mmcam_dbg_warn("file system 0x%x, max size %"G_GUINT64_FORMAT,
-							file_system_type, info->max_size);
-					}
-				} else {
-					_mmcam_dbg_warn("_mmcamcorder_get_file_system_type failed");
-				}
-
-				g_free(dir_name);
-				dir_name = NULL;
-			} else {
-				_mmcam_dbg_err("failed to get directory name");
-				ret_free_space = -1;
+			ret = _mmcamcorder_get_storage_validity(hcamcorder, target_filename,
+				_MMCAMCORDER_VIDEO_MINIMUM_SPACE, &storage_validity);
+			if (ret != MM_ERROR_NONE) {
+				_mmcam_dbg_err("storage validation failed[0x%x]:%d", ret, storage_validity);
+				return ret;
 			}
 
-			if (temp_filename &&
-				(ret_free_space == -1 || free_space <= _MMCAMCORDER_VIDEO_MINIMUM_SPACE)) {
-				_mmcam_dbg_err("OUT of STORAGE [ret_free_space:%d or free space [%" G_GUINT64_FORMAT "] is smaller than [%d]",
-					ret_free_space, free_space, _MMCAMCORDER_VIDEO_MINIMUM_SPACE);
-				return MM_ERROR_OUT_OF_STORAGE;
-			}
+			_mmcamcorder_adjust_recording_max_size(target_filename, &info->max_size);
 
 			g_mutex_lock(&hcamcorder->task_thread_lock);
 			if (sc->encode_element[_MMCAMCORDER_ENCODE_MAIN_PIPE].gst == NULL &&

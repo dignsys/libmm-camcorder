@@ -3144,7 +3144,6 @@ static GstBusSyncReply __mmcamcorder_handle_gst_sync_error(mmf_camcorder_t *hcam
 GstBusSyncReply _mmcamcorder_encode_pipeline_bus_sync_callback(GstBus *bus, GstMessage *message, gpointer data)
 {
 	GstBusSyncReply ret = GST_BUS_PASS;
-	GstElement *element = NULL;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(data);
 	_MMCamcorderSubContext *sc = NULL;
