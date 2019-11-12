@@ -1381,7 +1381,8 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 #ifdef _MMCAMCORDER_RM_SUPPORT
 	int display_scaler = 0;
 #endif /* _MMCAMCORDER_RM_SUPPORT */
-	int *overlay = NULL;
+	int *dp_handle = NULL;
+	MMCamWindowInfo *window_info = NULL;
 	gulong xid;
 	char *err_name = NULL;
 	const char *videosink_name = NULL;
@@ -1411,7 +1412,7 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 		MMCAM_DISPLAY_ROTATION, &rotation,
 		MMCAM_DISPLAY_FLIP, &flip,
 		MMCAM_DISPLAY_VISIBLE, &visible,
-		MMCAM_DISPLAY_HANDLE, (void**)&overlay, &size,
+		MMCAM_DISPLAY_HANDLE, (void **)&dp_handle, &size,
 		MMCAM_DISPLAY_MODE, &display_mode,
 		MMCAM_DISPLAY_GEOMETRY_METHOD, &display_geometry_method,
 		MMCAM_DISPLAY_SCALE, &zoom_attr,
@@ -1435,13 +1436,13 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 		return MM_ERROR_CAMCORDER_INTERNAL;
 	}
 
-	_mmcam_dbg_log("(overlay=%p, size=%d)", overlay, size);
+	_mmcam_dbg_log("(dp_handle=%p, size=%d)", dp_handle, size);
 
 	/* Set display handle */
 	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "ximagesink") ||
 		!strcmp(videosink_name, "directvideosink")) {
-		if (overlay) {
-			xid = *overlay;
+		if (dp_handle) {
+			xid = *dp_handle;
 			_mmcam_dbg_log("xid = %lu )", xid);
 			gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(vsink), xid);
 		} else {
@@ -1455,19 +1456,20 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 		MMCAMCORDER_G_OBJECT_SET(vsink, "device-scaler", display_scaler);
 #endif /* _MMCAMCORDER_RM_SUPPORT */
 	} else if (!strcmp(videosink_name, "evasimagesink") || !strcmp(videosink_name, "evaspixmapsink")) {
-		_mmcam_dbg_log("videosink : %s, handle : %p", videosink_name, overlay);
+		_mmcam_dbg_log("videosink : %s, handle : %p", videosink_name, dp_handle);
 
-		if (overlay) {
-			MMCAMCORDER_G_OBJECT_SET_POINTER(vsink, "evas-object", overlay);
+		if (dp_handle) {
+			MMCAMCORDER_G_OBJECT_SET_POINTER(vsink, "evas-object", dp_handle);
 			MMCAMCORDER_G_OBJECT_SET(vsink, "origin-size", !do_scaling);
 		} else {
 			_mmcam_dbg_err("display handle(eavs object) is NULL");
 			return MM_ERROR_CAMCORDER_INVALID_ARGUMENT;
 		}
 	} else if (!strcmp(videosink_name, "tizenwlsink")) {
-		if (overlay) {
-			_mmcam_dbg_log("wayland global surface id : %d", *overlay);
-			gst_video_overlay_set_wl_window_wl_surface_id(GST_VIDEO_OVERLAY(vsink), *overlay);
+		if (dp_handle) {
+			window_info = (MMCamWindowInfo *)dp_handle;
+			_mmcam_dbg_log("wayland global surface id : %d", window_info->surface_id);
+			gst_video_overlay_set_wl_window_wl_surface_id(GST_VIDEO_OVERLAY(vsink), window_info->surface_id);
 		} else {
 			_mmcam_dbg_warn("Handle is NULL. skip setting.");
 		}

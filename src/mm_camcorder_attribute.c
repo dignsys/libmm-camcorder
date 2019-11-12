@@ -3758,7 +3758,8 @@ bool _mmcamcorder_commit_display_handle(MMHandleType handle, int attr_idx, const
 {
 	int current_state = MM_CAMCORDER_STATE_NONE;
 	const char *videosink_name = NULL;
-	void *p_handle = NULL;
+	void *dp_handle = NULL;
+	MMCamWindowInfo *window_info = NULL;
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 	_MMCamcorderSubContext *sc = NULL;
@@ -3778,34 +3779,35 @@ bool _mmcamcorder_commit_display_handle(MMHandleType handle, int attr_idx, const
 		return TRUE;
 	}
 
+	dp_handle = value->value.p_val;
+	if (!dp_handle) {
+		_mmcam_dbg_warn("Display handle is NULL");
+		return FALSE;
+	}
+
 	sc = MMF_CAMCORDER_SUBCONTEXT(handle);
 
-	p_handle = value->value.p_val;
-	if (p_handle) {
-		/* get videosink name */
-		_mmcamcorder_conf_get_value_element_name(sc->VideosinkElement, &videosink_name);
-		if (videosink_name == NULL) {
-			_mmcam_dbg_err("Please check videosink element in configuration file");
-			return FALSE;
-		}
+	/* get videosink name */
+	_mmcamcorder_conf_get_value_element_name(sc->VideosinkElement, &videosink_name);
+	if (!videosink_name) {
+		_mmcam_dbg_err("Please check videosink element in configuration file");
+		return FALSE;
+	}
 
-		_mmcam_dbg_log("Commit : videosinkname[%s]", videosink_name);
+	_mmcam_dbg_log("Commit : videosinkname[%s]", videosink_name);
 
-		if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "ximagesink")) {
-			_mmcam_dbg_log("Commit : Set XID[%x]", *(int *)(p_handle));
-			gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst), *(int *)(p_handle));
-		} else if (!strcmp(videosink_name, "evasimagesink") || !strcmp(videosink_name, "evaspixmapsink")) {
-			_mmcam_dbg_log("Commit : Set evas object [%p]", p_handle);
-			MMCAMCORDER_G_OBJECT_SET_POINTER(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "evas-object", p_handle);
-		} else if (!strcmp(videosink_name, "tizenwlsink")) {
-			_mmcam_dbg_log("wayland global surface id : %d", *(int *)(p_handle));
-			gst_video_overlay_set_wl_window_wl_surface_id(GST_VIDEO_OVERLAY(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst), (guintptr)*(int *)(p_handle));
-		} else {
-			_mmcam_dbg_warn("Commit : Nothing to commit with this element[%s]", videosink_name);
-			return FALSE;
-		}
+	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "ximagesink")) {
+		_mmcam_dbg_log("Commit : Set XID[%x]", *(int *)(dp_handle));
+		gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst), *(int *)(dp_handle));
+	} else if (!strcmp(videosink_name, "evasimagesink") || !strcmp(videosink_name, "evaspixmapsink")) {
+		_mmcam_dbg_log("Commit : Set evas object [%p]", dp_handle);
+		MMCAMCORDER_G_OBJECT_SET_POINTER(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "evas-object", dp_handle);
+	} else if (!strcmp(videosink_name, "tizenwlsink")) {
+		window_info = (MMCamWindowInfo *)dp_handle;
+		_mmcam_dbg_log("wayland global surface id : %d", window_info->surface_id);
+		gst_video_overlay_set_wl_window_wl_surface_id(GST_VIDEO_OVERLAY(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst), (guintptr)window_info->surface_id);
 	} else {
-		_mmcam_dbg_warn("Display handle is NULL");
+		_mmcam_dbg_warn("Commit : Nothing to commit with this element[%s]", videosink_name);
 		return FALSE;
 	}
 

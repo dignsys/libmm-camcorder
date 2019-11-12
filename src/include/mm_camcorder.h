@@ -1870,6 +1870,14 @@ typedef struct _MMCamFaceDetectInfo {
 	MMCamFaceInfo *face_info;               /**< face information, this should be freed after use it. */
 } MMCamFaceDetectInfo;
 
+/**
+ * Window information
+ */
+typedef struct _MMCamWindowInfo {
+	int surface_id;
+	MMRectType rect;
+} MMCamWindowInfo;
+
 
 /*=======================================================================================
 | TYPE DEFINITIONS									|
