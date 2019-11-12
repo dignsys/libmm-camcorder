@@ -1439,8 +1439,7 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 	_mmcam_dbg_log("(dp_handle=%p, size=%d)", dp_handle, size);
 
 	/* Set display handle */
-	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "ximagesink") ||
-		!strcmp(videosink_name, "directvideosink")) {
+	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "ximagesink")) {
 		if (dp_handle) {
 			xid = *dp_handle;
 			_mmcam_dbg_log("xid = %lu )", xid);
@@ -1473,6 +1472,29 @@ int _mmcamcorder_videosink_window_set(MMHandleType handle, type_element* Videosi
 		} else {
 			_mmcam_dbg_warn("Handle is NULL. skip setting.");
 		}
+	} else if (!strcmp(videosink_name, "directvideosink")) {
+		if (dp_handle) {
+			window_info = (MMCamWindowInfo *)dp_handle;
+			_mmcam_dbg_log("wayland global surface id : %d, x,y,w,h (%d,%d,%d,%d)",
+				window_info->surface_id,
+				window_info->rect.x,
+				window_info->rect.y,
+				window_info->rect.width,
+				window_info->rect.height);
+			gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(vsink), (guintptr)window_info->surface_id);
+			gst_video_overlay_set_render_rectangle(GST_VIDEO_OVERLAY(vsink),
+				window_info->rect.x,
+				window_info->rect.y,
+				window_info->rect.width,
+				window_info->rect.height);
+		} else {
+			_mmcam_dbg_warn("dp_handle is null");
+		}
+#ifdef _MMCAMCORDER_RM_SUPPORT
+		if (hcamcorder->request_resources.category_id[0] == RM_CATEGORY_VIDEO_DECODER_SUB)
+			display_scaler = 1;
+		MMCAMCORDER_G_OBJECT_SET(vsink, "device-scaler", display_scaler);
+#endif /* _MMCAMCORDER_RM_SUPPORT */
 	} else {
 		_mmcam_dbg_warn("Who are you?? (Videosink: %s)", videosink_name);
 	}

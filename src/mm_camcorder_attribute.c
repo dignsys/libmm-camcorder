@@ -3806,6 +3806,20 @@ bool _mmcamcorder_commit_display_handle(MMHandleType handle, int attr_idx, const
 		window_info = (MMCamWindowInfo *)dp_handle;
 		_mmcam_dbg_log("wayland global surface id : %d", window_info->surface_id);
 		gst_video_overlay_set_wl_window_wl_surface_id(GST_VIDEO_OVERLAY(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst), (guintptr)window_info->surface_id);
+	} else if (!strcmp(videosink_name, "directvideosink")) {
+		window_info = (MMCamWindowInfo *)dp_handle;
+		_mmcam_dbg_log("wayland global surface id : %d, x,y,w,h (%d,%d,%d,%d)",
+			window_info->surface_id,
+			window_info->rect.x,
+			window_info->rect.y,
+			window_info->rect.width,
+			window_info->rect.height);
+		gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst), (guintptr)window_info->surface_id);
+		gst_video_overlay_set_render_rectangle(GST_VIDEO_OVERLAY(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst),
+			window_info->rect.x,
+			window_info->rect.y,
+			window_info->rect.width,
+			window_info->rect.height);
 	} else {
 		_mmcam_dbg_warn("Commit : Nothing to commit with this element[%s]", videosink_name);
 		return FALSE;
@@ -3942,7 +3956,8 @@ bool _mmcamcorder_commit_display_visible(MMHandleType handle, int attr_idx, cons
 	}
 
 	if (!strcmp(videosink_name, "xvimagesink") || !strcmp(videosink_name, "tizenwlsink") ||
-		!strcmp(videosink_name, "evaspixmapsink") || !strcmp(videosink_name, "evasimagesink")) {
+		!strcmp(videosink_name, "evaspixmapsink") || !strcmp(videosink_name, "evasimagesink") ||
+		!strcmp(videosink_name, "directvideosink")) {
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSINK_SINK].gst, "visible", value->value.i_val);
 		_mmcam_dbg_log("Set visible [%d] done.", value->value.i_val);
 	} else {
