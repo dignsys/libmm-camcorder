@@ -42,7 +42,7 @@
 #include <system_info.h>
 
 #ifdef _MMCAMCORDER_RM_SUPPORT
-#include <aul.h>
+#include "mm_camcorder_rm.h"
 #endif /* _MMCAMCORDER_RM_SUPPORT */
 
 /*---------------------------------------------------------------------------------------
@@ -85,10 +85,6 @@ static gboolean __mmcamcorder_handle_gst_warning(MMHandleType handle, GstMessage
 static int      __mmcamcorder_resource_release_cb(mm_resource_manager_h rm,
 	mm_resource_manager_res_h res, void *user_data);
 #endif /* _MMCAMCORDER_MM_RM_SUPPORT */
-#ifdef _MMCAMCORDER_RM_SUPPORT
-rm_cb_result    _mmcamcorder_rm_callback(int handle, rm_callback_type event_src,
-	rm_device_request_s *info, void *cb_data);
-#endif /* _MMCAMCORDER_RM_SUPPORT */
 #ifdef _MMCAMCORDER_USE_SET_ATTR_CB
 static gboolean __mmcamcorder_set_attr_to_camsensor_cb(gpointer data);
 #endif /* _MMCAMCORDER_USE_SET_ATTR_CB */
@@ -676,9 +672,6 @@ int _mmcamcorder_destroy(MMHandleType handle)
 {
 	int ret = MM_ERROR_NONE;
 	int state = MM_CAMCORDER_STATE_NONE;
-#ifdef _MMCAMCORDER_RM_SUPPORT
-	int iret = RM_OK;
-#endif /* _MMCAMCORDER_RM_SUPPORT */
 	GstElement *sink_element = NULL;
 	int sink_element_size = 0;
 
@@ -754,12 +747,7 @@ int _mmcamcorder_destroy(MMHandleType handle)
 	_mmcamcorder_remove_message_all(handle);
 
 #ifdef _MMCAMCORDER_RM_SUPPORT
-	if (hcamcorder->rm_handle != 0) {
-		iret = rm_unregister(hcamcorder->rm_handle);
-		if (iret != RM_OK)
-			_mmcam_dbg_err("rm_unregister() failed");
-		hcamcorder->rm_handle = 0;
-	}
+	_mmcamcorder_rm_release(handle);
 #endif /* _MMCAMCORDER_RM_SUPPORT */
 
 	/* release DPM handle */
@@ -809,15 +797,6 @@ int _mmcamcorder_realize(MMHandleType handle)
 	char *socket_path = NULL;
 	int socket_path_len = 0;
 	int conn_size = 0;
-#ifdef _MMCAMCORDER_RM_SUPPORT
-	int iret = RM_OK;
-	int preview_format = MM_PIXEL_FORMAT_NV12;
-	int qret = RM_OK;
-	int qret_avail = 0; /* 0: not available, 1: available */
-	rm_consumer_info rci;
-	int app_pid = 0;
-	int resource_count = 0;
-#endif /* _MMCAMCORDER_RM_SUPPORT */
 
 	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(handle);
 
@@ -1021,84 +1000,16 @@ int _mmcamcorder_realize(MMHandleType handle)
 #endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 #ifdef _MMCAMCORDER_RM_SUPPORT
-		if (display_surface_type != MM_DISPLAY_SURFACE_NULL) {
-			mm_camcorder_get_attributes(handle, NULL,
-				MMCAM_CLIENT_PID, &app_pid,
-				NULL);
-			rci.app_pid = app_pid;
-			aul_app_get_appid_bypid(rci.app_pid, rci.app_id, sizeof(rci.app_id));
-
-			/* RM register */
-			if (hcamcorder->rm_handle == 0) {
-				iret = rm_register((rm_resource_cb)_mmcamcorder_rm_callback, (void*)hcamcorder, &(hcamcorder->rm_handle), &rci);
-				if (iret != RM_OK) {
-					_mmcam_dbg_err("rm_register fail");
-					ret = MM_ERROR_RESOURCE_INTERNAL;
-					goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
-				}
-			}
-
-			mm_camcorder_get_attributes(handle, NULL,
-				MMCAM_CAMERA_FORMAT, &preview_format,
-				NULL);
-
-			resource_count = 0;
-			memset(&hcamcorder->request_resources, 0x0, sizeof(rm_category_request_s));
-			memset(&hcamcorder->returned_devices, 0x0, sizeof(rm_device_return_s));
-
-			if (preview_format == MM_PIXEL_FORMAT_ENCODED_H264) {
-				hcamcorder->request_resources.state[resource_count] = RM_STATE_EXCLUSIVE;
-				hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_VIDEO_DECODER;
-
-				_mmcam_dbg_log("request dec rsc - category 0x%x", RM_CATEGORY_VIDEO_DECODER);
-
-				resource_count++;
-			}
-
-			if (display_surface_type == MM_DISPLAY_SURFACE_OVERLAY) {
-				hcamcorder->request_resources.state[resource_count] = RM_STATE_EXCLUSIVE;
-				hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_SCALER;
-
-				_mmcam_dbg_log("request scaler rsc - category 0x%x", RM_CATEGORY_SCALER);
-
-				resource_count++;
-			}
-
-			hcamcorder->request_resources.request_num = resource_count;
-
-			if (resource_count > 0) {
-				qret = rm_query(hcamcorder->rm_handle, RM_QUERY_ALLOCATION, &(hcamcorder->request_resources), &qret_avail);
-				if (qret != RM_OK || qret_avail != 1) {
-					_mmcam_dbg_log("rm query failed. retry with sub devices");
-
-					resource_count = 0;
-
-					if (preview_format == MM_PIXEL_FORMAT_ENCODED_H264) {
-						hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_VIDEO_DECODER_SUB;
-						_mmcam_dbg_log("request dec rsc - category 0x%x", RM_CATEGORY_VIDEO_DECODER_SUB);
-						resource_count++;
-					}
-
-					if (display_surface_type == MM_DISPLAY_SURFACE_OVERLAY) {
-						hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_SCALER_SUB;
-						_mmcam_dbg_log("request scaler rsc - category 0x%x", RM_CATEGORY_SCALER_SUB);
-						resource_count++;
-					}
-				}
-			}
-
-			hcamcorder->request_resources.state[resource_count] = RM_STATE_EXCLUSIVE;
-			hcamcorder->request_resources.category_id[resource_count] = RM_CATEGORY_CAMERA;
-
-			hcamcorder->request_resources.request_num = resource_count + 1;
-			_mmcam_dbg_log("request camera rsc - category 0x%x", RM_CATEGORY_CAMERA);
-
-			iret = rm_allocate_resources(hcamcorder->rm_handle, &(hcamcorder->request_resources), &hcamcorder->returned_devices);
-			if (iret != RM_OK) {
-				_mmcam_dbg_err("Resource allocation request failed");
-				ret = MM_ERROR_RESOURCE_INTERNAL;
-				goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
-			}
+		ret = _mmcamcorder_rm_create(handle);
+		if (ret != MM_ERROR_NONE) {
+			_mmcam_dbg_err("Resource create failed");
+			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
+		}
+		ret = _mmcamcorder_rm_allocate(handle);
+		if (ret != MM_ERROR_NONE) {
+			_mmcam_dbg_err("Resource allocation request failed");
+			_mmcamcorder_rm_release(handle);
+			goto _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK;
 		}
 #endif /* _MMCAMCORDER_RM_SUPPORT */
 	}
@@ -1158,26 +1069,8 @@ _ERR_CAMCORDER_CMD:
 	_MMCAMCORDER_UNLOCK_RESOURCE(hcamcorder);
 #endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 #ifdef _MMCAMCORDER_RM_SUPPORT
-	if (hcamcorder->rm_handle) {
-		if (hcamcorder->returned_devices.allocated_num > 0) {
-			int idx = 0;
-			rm_device_request_s requested;
-			memset(&requested, 0x0, sizeof(rm_device_request_s));
-			requested.request_num = hcamcorder->returned_devices.allocated_num;
-			for (idx = 0; idx < requested.request_num; idx++)
-				requested.device_id[idx] = hcamcorder->returned_devices.device_id[idx];
-
-			iret = rm_deallocate_resources(hcamcorder->rm_handle, &requested);
-			if (iret != RM_OK)
-				_mmcam_dbg_err("Resource deallocation request failed ");
-		}
-
-		/* unregister RM */
-		int ires = rm_unregister(hcamcorder->rm_handle);
-		if (ires != RM_OK)
-			_mmcam_dbg_err("rm_unregister() failed");
-		hcamcorder->rm_handle = 0;
-	}
+	_mmcamcorder_rm_deallocate(handle);
+	_mmcamcorder_rm_release(handle);
 #endif /* _MMCAMCORDER_RM_SUPPORT*/
 
 _ERR_CAMCORDER_CMD_PRECON_AFTER_LOCK:
@@ -1284,19 +1177,7 @@ int _mmcamcorder_unrealize(MMHandleType handle)
 #endif /* _MMCAMCORDER_MM_RM_SUPPORT */
 
 #ifdef _MMCAMCORDER_RM_SUPPORT
-	if (hcamcorder->rm_handle && (hcamcorder->returned_devices.allocated_num > 0)) {
-			int iret = RM_OK;
-			int idx = 0;
-			rm_device_request_s requested;
-			memset(&requested, 0x0, sizeof(rm_device_request_s));
-			requested.request_num = hcamcorder->returned_devices.allocated_num;
-			for (idx = 0; idx < requested.request_num; idx++)
-				requested.device_id[idx] = hcamcorder->returned_devices.device_id[idx];
-
-			iret = rm_deallocate_resources(hcamcorder->rm_handle, &requested);
-			if (iret != RM_OK)
-				_mmcam_dbg_err("Resource deallocation request failed ");
-		}
+	_mmcamcorder_rm_deallocate(handle);
 #endif /* _MMCAMCORDER_RM_SUPPORT*/
 
 	/* Deinitialize main context member */
@@ -4080,43 +3961,6 @@ static int __mmcamcorder_resource_release_cb(mm_resource_manager_h rm,
 	return FALSE;
 }
 #endif /* _MMCAMCORDER_MM_RM_SUPPORT */
-
-
-#ifdef _MMCAMCORDER_RM_SUPPORT
-rm_cb_result _mmcamcorder_rm_callback(int handle, rm_callback_type event_src,
-	rm_device_request_s *info, void* cb_data)
-{
-	mmf_camcorder_t *hcamcorder = MMF_CAMCORDER(cb_data);
-	int current_state = MM_CAMCORDER_STATE_NONE;
-	rm_cb_result cb_res = RM_CB_RESULT_OK;
-
-	mmf_return_val_if_fail((MMHandleType)hcamcorder, RM_CB_RESULT_OK);
-
-	current_state = _mmcamcorder_get_state((MMHandleType)hcamcorder);
-
-	_mmcam_dbg_warn("current state %d (handle %p)", current_state, hcamcorder);
-
-	_MMCAMCORDER_LOCK_INTERRUPT(hcamcorder);
-
-	/* set RM event code for sending it to application */
-	hcamcorder->interrupt_code = event_src;
-
-	_mmcam_dbg_log("RM conflict callback : event code 0x%x", event_src);
-	switch (event_src) {
-	case RM_CALLBACK_TYPE_RESOURCE_CONFLICT:
-	case RM_CALLBACK_TYPE_RESOURCE_CONFLICT_UD:
-		__mmcamcorder_force_stop(hcamcorder, _MMCAMCORDER_STATE_CHANGE_BY_RM);
-		break;
-	default:
-		break;
-	}
-
-	_MMCAMCORDER_UNLOCK_INTERRUPT(hcamcorder);
-
-	return cb_res;
-}
-#endif /* _MMCAMCORDER_RM_SUPPORT */
-
 
 int _mmcamcorder_manage_external_storage_state(MMHandleType handle, int storage_state)
 {

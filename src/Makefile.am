@@ -18,6 +18,9 @@ noinst_HEADERS = include/mm_camcorder_audiorec.h \
 		 include/mm_camcorder_exifinfo.h \
 		 include/mm_camcorder_exifdef.h \
 		 include/mm_camcorder_sound.h
+if RM_SUPPORT
+noinst_HEADERS += include/mm_camcorder_rm.h
+endif
 
 libmmfcamcorder_la_SOURCES = mm_camcorder.c \
 			     mm_camcorder_internal.c \
@@ -31,6 +34,9 @@ libmmfcamcorder_la_SOURCES = mm_camcorder.c \
 			     mm_camcorder_util.c \
 			     mm_camcorder_exifinfo.c \
 			     mm_camcorder_sound.c
+if RM_SUPPORT
+libmmfcamcorder_la_SOURCES += mm_camcorder_rm.c
+endif
 
 libmmfcamcorder_la_CFLAGS = -I$(srcdir)/include \
 			     $(GST_CFLAGS) \
