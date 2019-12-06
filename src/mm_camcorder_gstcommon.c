@@ -2953,10 +2953,6 @@ bool _mmcamcorder_set_camera_resolution(MMHandleType handle, int width, int heig
 bool _mmcamcorder_set_encoded_preview_bitrate(MMHandleType handle, int bitrate)
 {
 	_MMCamcorderSubContext *sc = NULL;
-	GstCameraControl *CameraControl = NULL;
-	GstCameraControlChannel *CameraControlChannel = NULL;
-	const GList *controls = NULL;
-	const GList *item = NULL;
 
 	if ((void *)handle == NULL) {
 		_mmcam_dbg_warn("handle is NULL");
@@ -2976,27 +2972,13 @@ bool _mmcamcorder_set_encoded_preview_bitrate(MMHandleType handle, int bitrate)
 
 	_mmcam_dbg_log("set encoded preview bitrate : %d bps", bitrate);
 
-	CameraControl = GST_CAMERA_CONTROL(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst);
-	controls = gst_camera_control_list_channels(CameraControl);
-	_mmcam_dbg_log("controls : %p", controls);
-	if (controls != NULL) {
-		for (item = controls ; item && item->data ; item = item->next) {
-			CameraControlChannel = item->data;
-			_mmcam_dbg_log("label : %s", CameraControlChannel->label);
-			if (!strcmp(CameraControlChannel->label, "bitrate")) {
-				_mmcam_dbg_log("set encoded preview bitrate %d", bitrate);
-				return gst_camera_control_set_value(CameraControl, CameraControlChannel, bitrate);
-			}
-		}
+	MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, "bitrate", bitrate);
 
-		_mmcam_dbg_warn("failed to find \"bitrate\" control channel");
-	}
-
-	return FALSE;
+	return TRUE;
 }
 
 
-bool _mmcamcorder_set_encoded_preview_gop_interval(MMHandleType handle, int interval)
+bool _mmcamcorder_set_encoded_preview_gop_interval(MMHandleType handle, int gop_interval)
 {
 	_MMCamcorderSubContext *sc = NULL;
 
@@ -3016,9 +2998,9 @@ bool _mmcamcorder_set_encoded_preview_gop_interval(MMHandleType handle, int inte
 		return FALSE;
 	}
 
-	_mmcam_dbg_log("set encoded preview GOP interval : %d ms", interval);
+	_mmcam_dbg_log("set encoded preview GOP interval : %d ms", gop_interval);
 
-	MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, "newgop-interval", interval);
+	MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, "gop-interval", gop_interval);
 
 	return TRUE;
 }

@@ -178,7 +178,7 @@ bool _mmcamcorder_set_videosrc_anti_shake(MMHandleType handle, int anti_shake);
 bool _mmcamcorder_set_videosrc_stabilization(MMHandleType handle, int stabilization);
 bool _mmcamcorder_set_camera_resolution(MMHandleType handle, int width, int height);
 bool _mmcamcorder_set_encoded_preview_bitrate(MMHandleType handle, int bitrate);
-bool _mmcamcorder_set_encoded_preview_gop_interval(MMHandleType handle, int gop);
+bool _mmcamcorder_set_encoded_preview_gop_interval(MMHandleType handle, int gop_interval);
 bool _mmcamcorder_set_sound_stream_info(GstElement *element, char *stream_type, int stream_index);
 void _mmcamcorder_set_encoder_bitrate(MMCamcorderEncoderType type, int codec, int bitrate, GstElement *element);
 GstPadProbeReturn __mmcamcorder_muxed_dataprobe(GstPad *pad, GstPadProbeInfo *info, gpointer u_data);

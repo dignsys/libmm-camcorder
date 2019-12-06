@@ -53,8 +53,6 @@ do { \
 #define THUMBNAIL_JPEG_QUALITY  90
 #define TRY_LOCK_MAX_COUNT      100
 #define TRY_LOCK_TIME           20000   /* ms */
-#define H264_PREVIEW_BITRATE    1024*10 /* kbps */
-#define H264_PREVIEW_NEWGOP_INTERVAL    1000 /* ms */
 #define _MMCAMCORDER_MAKE_THUMBNAIL_INTERNAL_ENCODE
 
 
@@ -633,6 +631,8 @@ int _mmcamcorder_image_cmd_preview_start(MMHandleType handle)
 	int height = 0;
 	int fps = 0;
 	int rotation = 0;
+	int bitrate = 0;
+	int gop_interval = 0;
 	unsigned int current_framecount = 0;
 	int current_state = MM_CAMCORDER_STATE_NONE;
 	gboolean fps_auto = FALSE;
@@ -817,8 +817,16 @@ int _mmcamcorder_image_cmd_preview_start(MMHandleType handle)
 			_mmcamcorder_sound_finalize(handle);
 	} else {
 		if (info->preview_format == MM_PIXEL_FORMAT_ENCODED_H264) {
-			MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, "bitrate", H264_PREVIEW_BITRATE);
-			MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst, "newgop-interval", H264_PREVIEW_NEWGOP_INTERVAL);
+			ret = mm_camcorder_get_attributes(handle, NULL,
+				MMCAM_ENCODED_PREVIEW_BITRATE, &bitrate,
+				MMCAM_ENCODED_PREVIEW_GOP_INTERVAL, &gop_interval,
+				NULL);
+			if (ret == MM_ERROR_NONE) {
+				_mmcamcorder_set_encoded_preview_bitrate(handle, bitrate);
+				_mmcamcorder_set_encoded_preview_gop_interval(handle, gop_interval);
+			} else {
+				_mmcam_dbg_err("failed to get encoded preview setting");
+			}
 		}
 
 		MMCAMCORDER_G_OBJECT_SET(sc->element[_MMCAMCORDER_VIDEOSRC_QUE].gst, "empty-buffers", FALSE);

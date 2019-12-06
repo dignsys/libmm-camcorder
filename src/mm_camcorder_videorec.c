@@ -501,14 +501,12 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 	int size = 0;
 	int fileformat = 0;
 	int count = 0;
+	int gop_interval = 0;
 	int ret = MM_ERROR_NONE;
 	double motion_rate = _MMCAMCORDER_DEFAULT_RECORDING_MOTION_RATE;
 	char *err_name = NULL;
 	char *target_filename = NULL;
 	GstCameraControl *CameraControl = NULL;
-	GstCameraControlChannel *CameraControlChannel = NULL;
-	const GList *controls = NULL;
-	const GList *item = NULL;
 
 	gint fps = 0;
 	GstElement *pipeline = NULL;
@@ -822,49 +820,22 @@ int _mmcamcorder_video_command(MMHandleType handle, int command)
 				goto _ERR_CAMCORDER_VIDEO_COMMAND;
 			}
 
-			/*set the camera control to create the GOP so that video record will get a new key frame*/
-			if (sc->info_image->preview_format == MM_PIXEL_FORMAT_ENCODED_H264 &&
-			    GST_IS_CAMERA_CONTROL(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst)) {
-				CameraControl = GST_CAMERA_CONTROL(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst);
-				controls = gst_camera_control_list_channels(CameraControl);
-				if (controls != NULL) {
-					for (item = controls ; item && item->data ; item = item->next) {
-						CameraControlChannel = item->data;
-						_mmcam_dbg_log("CameraControlChannel->label %s", CameraControlChannel->label);
-						if (!strcmp(CameraControlChannel->label, "new-gop")) {
-							/* gst_camera_control_set_value(CameraControl, CameraControlChannel, 1); */
-							break;
-						}
-					}
-
-					if (item == NULL)
-						_mmcam_dbg_warn("failed to find new-gop control channel");
-				}
-			} else {
-				_mmcam_dbg_warn("Can't cast Video source into camera control or not H264 prevew format[%d]",
-					sc->info_image->preview_format);
+			/*set the GOP so that video record will get a new key frame*/
+			if (sc->info_image->preview_format == MM_PIXEL_FORMAT_ENCODED_H264) {
+				if (mm_camcorder_get_attributes(handle, NULL,
+					MMCAM_ENCODED_PREVIEW_GOP_INTERVAL, &gop_interval, NULL) == MM_ERROR_NONE)
+					_mmcamcorder_set_encoded_preview_gop_interval(handle, gop_interval);
+				else
+					_mmcam_dbg_err("get gop interval failed");
 			}
 		} else {
 			/* Resume case */
-
-			if (sc->info_image->preview_format == MM_PIXEL_FORMAT_ENCODED_H264 &&
-			    GST_IS_CAMERA_CONTROL(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst)) {
-				/* generate and I-frame on resuming */
-				CameraControl = GST_CAMERA_CONTROL(sc->element[_MMCAMCORDER_VIDEOSRC_SRC].gst);
-				controls = gst_camera_control_list_channels(CameraControl);
-				if (controls != NULL) {
-					for (item = controls ; item && item->data ; item = item->next) {
-						CameraControlChannel = item->data;
-						_mmcam_dbg_log("CameraControlChannel->label %s", CameraControlChannel->label);
-						if (!strcmp(CameraControlChannel->label, "new-gop")) {
-							/* gst_camera_control_set_value(CameraControl, CameraControlChannel, 1); */
-							break;
-						}
-					}
-
-					if (item == NULL)
-						_mmcam_dbg_warn("failed to find new-gop control channel");
-				}
+			if (sc->info_image->preview_format == MM_PIXEL_FORMAT_ENCODED_H264) {
+				if (mm_camcorder_get_attributes(handle, NULL,
+					MMCAM_ENCODED_PREVIEW_GOP_INTERVAL, &gop_interval, NULL) == MM_ERROR_NONE)
+					_mmcamcorder_set_encoded_preview_gop_interval(handle, gop_interval);
+				else
+					_mmcam_dbg_err("get gop interval failed");
 			}
 
 			MMCAMCORDER_G_OBJECT_SET(sc->encode_element[_MMCAMCORDER_ENCSINK_ENCBIN].gst, "runtime-pause", FALSE);
