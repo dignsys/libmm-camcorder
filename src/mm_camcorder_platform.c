@@ -718,7 +718,7 @@ int _mmcamcorder_get_fps_array_by_resolution(MMHandleType handle, int width, int
 	MMCamAttrsInfo *infoW = NULL;
 	MMCamAttrsInfo *infoH = NULL;
 	int i = 0;
-	char nameFps[10] = {0,};
+	char nameFps[16] = {0,};
 	bool valid_check = false;
 
 	type_int_array *fps_array;
@@ -750,7 +750,7 @@ int _mmcamcorder_get_fps_array_by_resolution(MMHandleType handle, int width, int
 		/* _mmcam_dbg_log("width :%d, height : %d\n", infoW->int_array.array[i], infoH->int_array.array[i]); */
 		if (infoW->int_array.array[i] == width && infoH->int_array.array[i] == height) {
 			valid_check = true;
-			snprintf(nameFps, 10, "FPS%d", i);
+			snprintf(nameFps, sizeof(nameFps), "FPS%d", i);
 			_mmcam_dbg_log("nameFps : %s!!!", nameFps);
 			break;
 		}

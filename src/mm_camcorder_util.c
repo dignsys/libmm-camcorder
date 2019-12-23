@@ -447,50 +447,50 @@ gboolean _mmcamcorder_write_loci(FILE *f, _MMCamcorderLocationInfo info)
 
 void _mmcamcorder_write_Latitude(FILE *f, int value)
 {
-	char s_latitude[9];
+	char s_latitude[16];
 	int l_decimal = 0;
 	int l_below_decimal = 0;
 
 	l_decimal = value / 10000;
 	if (value < 0) {
 		if (l_decimal == 0)
-			snprintf(s_latitude, 5, "-%.2d.", l_decimal);
+			snprintf(s_latitude, sizeof(s_latitude), "-%.2d.", l_decimal);
 		else
-			snprintf(s_latitude, 5, "%.2d.", l_decimal);
+			snprintf(s_latitude, sizeof(s_latitude), "%.2d.", l_decimal);
 	} else {
-		snprintf(s_latitude, 5, "+%.2d.", l_decimal);
+		snprintf(s_latitude, sizeof(s_latitude), "+%.2d.", l_decimal);
 	}
 
 	l_below_decimal = value - (l_decimal * 10000);
 	if (l_below_decimal < 0)
 		l_below_decimal = -l_below_decimal;
 
-	snprintf(&s_latitude[4], 5, "%.4d", l_below_decimal);
+	snprintf(&s_latitude[4], sizeof(s_latitude) - 4, "%.4d", l_below_decimal);
 
 	write_tag(f, s_latitude);
 }
 
 void _mmcamcorder_write_Longitude(FILE *f, int value)
 {
-	char s_longitude[10];
+	char s_longitude[24];
 	int l_decimal = 0;
 	int l_below_decimal = 0;
 
 	l_decimal = value / 10000;
 	if (value < 0) {
 		if (l_decimal == 0)
-			snprintf(s_longitude, 6, "-%.3d.", l_decimal);
+			snprintf(s_longitude, sizeof(s_longitude), "-%.3d.", l_decimal);
 		else
-			snprintf(s_longitude, 6, "%.3d.", l_decimal);
+			snprintf(s_longitude, sizeof(s_longitude), "%.3d.", l_decimal);
 	} else {
-		snprintf(s_longitude, 6, "+%.3d.", l_decimal);
+		snprintf(s_longitude, sizeof(s_longitude), "+%.3d.", l_decimal);
 	}
 
 	l_below_decimal = value - (l_decimal * 10000);
 	if (l_below_decimal < 0)
 		l_below_decimal = -l_below_decimal;
 
-	snprintf(&s_longitude[5], 5, "%.4d", l_below_decimal);
+	snprintf(&s_longitude[5], sizeof(s_longitude) - 5, "%.4d", l_below_decimal);
 
 	write_tag(f, s_longitude);
 }

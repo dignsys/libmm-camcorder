@@ -2231,31 +2231,22 @@ int __mmcamcorder_set_exif_basic_info(MMHandleType handle, int image_width, int 
 
 	/*13. EXIF_TAG_DATE_TIME_DIGITIZED*/
 	{
-		unsigned char *b;
+		gchar *b = NULL;
 		time_t t;
 		struct tm tm;
-
-		b = malloc(20 * sizeof(unsigned char));
-		if (b == NULL) {
-			_mmcam_dbg_err("failed to alloc b");
-			ret = MM_ERROR_CAMCORDER_LOW_MEMORY;
-			EXIF_SET_ERR(ret, EXIF_TAG_DATE_TIME);
-		}
-
-		memset(b, '\0', 20);
 
 		t = time(NULL);
 		tzset();
 		localtime_r(&t, &tm);
 
-		snprintf((char *)b, 20, "%04i:%02i:%02i %02i:%02i:%02i",
+		b = g_strdup_printf("%04i:%02i:%02i %02i:%02i:%02i",
 			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 			tm.tm_hour, tm.tm_min, tm.tm_sec);
 
 		ret = mm_exif_set_add_entry(ed, EXIF_IFD_0, EXIF_TAG_DATE_TIME, EXIF_FORMAT_ASCII, 20, (const char *)b);
 		if (ret != MM_ERROR_NONE) {
 			if (ret == (int)MM_ERROR_CAMCORDER_LOW_MEMORY)
-				free(b);
+				g_free(b);
 
 			EXIF_SET_ERR(ret, EXIF_TAG_DATE_TIME);
 		}
@@ -2263,7 +2254,7 @@ int __mmcamcorder_set_exif_basic_info(MMHandleType handle, int image_width, int 
 		ret = mm_exif_set_add_entry(ed, EXIF_IFD_EXIF, EXIF_TAG_DATE_TIME_ORIGINAL, EXIF_FORMAT_ASCII, 20, (const char *)b);
 		if (ret != MM_ERROR_NONE) {
 			if (ret == (int)MM_ERROR_CAMCORDER_LOW_MEMORY)
-				free(b);
+				g_free(b);
 
 			EXIF_SET_ERR(ret, EXIF_TAG_DATE_TIME_ORIGINAL);
 		}
@@ -2271,12 +2262,12 @@ int __mmcamcorder_set_exif_basic_info(MMHandleType handle, int image_width, int 
 		ret = mm_exif_set_add_entry(ed, EXIF_IFD_EXIF, EXIF_TAG_DATE_TIME_DIGITIZED, EXIF_FORMAT_ASCII, 20, (const char *)b);
 		if (ret != MM_ERROR_NONE) {
 			if (ret == (int)MM_ERROR_CAMCORDER_LOW_MEMORY)
-				free(b);
+				g_free(b);
 
 			EXIF_SET_ERR(ret, EXIF_TAG_DATE_TIME_DIGITIZED);
 		}
 
-		free(b);
+		g_free(b);
 	}
 
 	/*5. EXIF_TAG_MAKE */
