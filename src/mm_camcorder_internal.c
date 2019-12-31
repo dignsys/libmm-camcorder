@@ -49,7 +49,7 @@
 |    LOCAL VARIABLE DEFINITIONS for internal						|
 ---------------------------------------------------------------------------------------*/
 #define __MMCAMCORDER_CMD_ITERATE_MAX           3
-#define __MMCAMCORDER_SET_GST_STATE_TIMEOUT     5
+#define __MMCAMCORDER_SET_GST_STATE_TIMEOUT     20
 #define __MMCAMCORDER_FORCE_STOP_TRY_COUNT      30
 #define __MMCAMCORDER_FORCE_STOP_WAIT_TIME      100000  /* us */
 #define __MMCAMCORDER_SOUND_WAIT_TIMEOUT        3
